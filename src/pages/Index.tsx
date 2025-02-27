@@ -1,85 +1,104 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Users, Flag, ArrowRight } from "lucide-react";
+import React, { useState } from "react";
+import { useProject } from "@/context/ProjectContext";
+import Project from "@/components/Project";
+import ProjectForm from "@/components/ProjectForm";
 import { Button } from "@/components/ui/button";
-
-const stats = [
-  {
-    title: "Active Sprint",
-    value: "Sprint 23",
-    icon: Calendar,
-    description: "Ends in 5 days",
-  },
-  {
-    title: "Team Members",
-    value: "8",
-    icon: Users,
-    description: "2 recently added",
-  },
-  {
-    title: "Sprint Goals",
-    value: "4/6",
-    icon: Flag,
-    description: "On track",
-  },
-];
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { PlusIcon, ExternalLinkIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 const Index = () => {
+  const { projects, selectedProject, selectProject } = useProject();
+  const [showProjectForm, setShowProjectForm] = useState(false);
+
   return (
-    <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-4xl font-bold tracking-tight">Welcome back</h1>
-          <p className="text-lg text-gray-500 mt-2">
-            Here's what's happening with your team today.
-          </p>
-        </div>
-        <Button className="bg-primary hover:bg-primary/90">
-          <span>New Sprint</span>
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {stats.map((stat) => (
-          <Card key={stat.title} className="overflow-hidden transition-all duration-200 hover:shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">
-                {stat.title}
-              </CardTitle>
-              <stat.icon className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-sm text-gray-500 mt-1">{stat.description}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="flex items-center p-4 bg-white rounded-lg shadow-sm"
-              >
-                <div className="w-2 h-2 bg-primary rounded-full mr-4" />
-                <div>
-                  <p className="font-medium">Task updated</p>
-                  <p className="text-sm text-gray-500">
-                    John Doe updated the status of "Implement dashboard"
-                  </p>
-                </div>
-              </div>
-            ))}
+    <div className="min-h-screen bg-background">
+      {selectedProject ? (
+        <div className="container mx-auto px-4">
+          <div className="py-4">
+            <Button
+              variant="ghost"
+              onClick={() => selectProject("")}
+              className="mb-6"
+            >
+              ← Back to Projects
+            </Button>
+            <Project project={selectedProject} />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      ) : (
+        <div className="container mx-auto px-4 py-8 animate-fade-in">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h1 className="text-3xl font-bold">Scrumify Hub</h1>
+              <p className="text-muted-foreground mt-2">
+                Manage your agile projects with ease
+              </p>
+            </div>
+            <Button onClick={() => setShowProjectForm(true)}>
+              <PlusIcon className="h-4 w-4 mr-1" /> New Project
+            </Button>
+          </div>
+
+          {projects.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 bg-accent/30 rounded-lg border border-border animate-fade-in">
+              <div className="text-center max-w-md">
+                <h2 className="text-2xl font-bold mb-2">Welcome to Scrumify Hub</h2>
+                <p className="text-muted-foreground mb-6">
+                  Get started by creating your first project.
+                </p>
+                <Button onClick={() => setShowProjectForm(true)}>
+                  <PlusIcon className="h-4 w-4 mr-1" /> Create Project
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {projects.map((project) => (
+                <Card key={project.id} className="hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between">
+                      <CardTitle className="text-xl">{project.title}</CardTitle>
+                      <Badge variant="outline">
+                        {new Date(project.createdAt).toLocaleDateString()}
+                      </Badge>
+                    </div>
+                    <CardDescription className="line-clamp-2">
+                      {project.description}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="mb-2">
+                      <span className="text-xs text-muted-foreground">End goal:</span>
+                      <p className="text-sm line-clamp-3">{project.endGoal}</p>
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button
+                      className="w-full"
+                      onClick={() => selectProject(project.id)}
+                    >
+                      Open Project <ExternalLinkIcon className="h-3 w-3 ml-1" />
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {showProjectForm && (
+        <ProjectForm onClose={() => setShowProjectForm(false)} />
+      )}
     </div>
   );
 };
