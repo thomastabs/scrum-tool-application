@@ -1,33 +1,15 @@
 
 import React, { createContext, useState, useContext, useEffect } from "react";
-import { v4 as uuidv4 } from "uuid";
 import { useToast } from "@/components/ui/use-toast";
-import { Project, Sprint, Column, Task, BacklogItem } from "@/types";
+import { Project, Sprint, Column, BacklogItem } from "@/types";
+import { ProjectContextType } from "./ProjectContextTypes";
 
-interface ProjectContextType {
-  projects: Project[];
-  sprints: Sprint[];
-  columns: Column[];
-  backlogItems: BacklogItem[];
-  createProject: (projectData: { title: string; description: string; endGoal: string }) => void;
-  updateProject: (id: string, projectData: { title: string; description: string; endGoal: string }) => void;
-  deleteProject: (id: string) => void;
-  createSprint: (sprintData: { title: string; description: string; startDate: Date; endDate: Date; projectId: string }) => void;
-  updateSprint: (id: string, sprintData: { title: string; description: string; startDate: Date; endDate: Date }) => void;
-  deleteSprint: (id: string) => void;
-  completeSprint: (id: string) => void;
-  createColumn: (sprintId: string, title: string) => void;
-  deleteColumn: (id: string) => void;
-  createTask: (sprintId: string, columnId: string, taskData: { title: string; description: string; priority: "low" | "medium" | "high"; assignee: string; storyPoints: number }) => void;
-  updateTask: (id: string, taskData: { title: string; description: string; priority: "low" | "medium" | "high"; assignee: string; storyPoints: number }) => void;
-  deleteTask: (id: string) => void;
-  moveTask: (taskId: string, sourceColumnId: string, destinationColumnId: string) => void;
-  createBacklogItem: (itemData: { title: string; description: string; priority: "low" | "medium" | "high"; storyPoints: number; projectId: string }) => void;
-  updateBacklogItem: (id: string, itemData: { title: string; description: string; priority: "low" | "medium" | "high"; storyPoints: number }) => void;
-  deleteBacklogItem: (id: string) => void;
-  moveBacklogItemToSprint: (itemId: string, sprintId: string) => void;
-  moveToSprint: (itemId: string, sprintId: string) => void;
-}
+// Import action creators
+import { createProject, updateProject, deleteProject } from "./actions/projectActions";
+import { createSprint, updateSprint, deleteSprint, completeSprint } from "./actions/sprintActions";
+import { createColumn, deleteColumn } from "./actions/columnActions";
+import { createTask, updateTask, deleteTask, moveTask } from "./actions/taskActions";
+import { createBacklogItem, updateBacklogItem, deleteBacklogItem, moveToSprint } from "./actions/backlogActions";
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
@@ -68,447 +50,111 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     localStorage.setItem("backlogItems", JSON.stringify(backlogItems));
   }, [backlogItems]);
 
-  const createProject = (projectData: { title: string; description: string; endGoal: string }) => {
-    const newProject: Project = {
-      id: uuidv4(),
-      title: projectData.title,
-      description: projectData.description,
-      endGoal: projectData.endGoal,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    
-    setProjects([...projects, newProject]);
-    
-    toast({
-      title: "Project created",
-      description: `${projectData.title} has been created successfully.`
-    });
+  // Project handlers
+  const handleCreateProject = (projectData: { title: string; description: string; endGoal: string }) => {
+    setProjects(prevProjects => createProject(prevProjects, projectData, toast));
   };
 
-  const updateProject = (id: string, projectData: { title: string; description: string; endGoal: string }) => {
-    setProjects(
-      projects.map(project => 
-        project.id === id
-          ? { 
-              ...project, 
-              ...projectData,
-              updatedAt: new Date()
-            }
-          : project
-      )
-    );
-    
-    toast({
-      title: "Project updated",
-      description: `${projectData.title} has been updated successfully.`
-    });
+  const handleUpdateProject = (id: string, projectData: { title: string; description: string; endGoal: string }) => {
+    setProjects(prevProjects => updateProject(prevProjects, id, projectData, toast));
   };
 
-  const deleteProject = (id: string) => {
-    const projectToDelete = projects.find(project => project.id === id);
-    
-    if (!projectToDelete) return;
-    
-    // Delete all sprints for this project
-    setSprints(sprints.filter(sprint => sprint.projectId !== id));
-    
-    // Delete all columns and their tasks associated with this project's sprints
-    const projectSprintIds = sprints
-      .filter(sprint => sprint.projectId === id)
-      .map(sprint => sprint.id);
-    
-    // Filter out columns that have tasks associated with this project's sprints
-    setColumns(
-      columns.filter(column => 
-        !column.tasks.some(task => 
-          projectSprintIds.includes(task.sprintId)
-        )
-      )
-    );
-    
-    // Delete the project itself
-    setProjects(projects.filter(project => project.id !== id));
-    
-    toast({
-      title: "Project deleted",
-      description: `${projectToDelete.title} has been deleted successfully.`
-    });
-  };
-
-  const createSprint = (sprintData: { title: string; description: string; startDate: Date; endDate: Date; projectId: string }) => {
-    const newSprint: Sprint = {
-      id: uuidv4(),
-      title: sprintData.title,
-      description: sprintData.description,
-      startDate: sprintData.startDate,
-      endDate: sprintData.endDate,
-      projectId: sprintData.projectId,
-      isCompleted: false,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    
-    // No longer create default columns here - they will be handled by the SprintBoard component
-    
-    setSprints([...sprints, newSprint]);
-    
-    toast({
-      title: "Sprint created",
-      description: `${sprintData.title} has been created successfully.`
-    });
-    
-    return newSprint;
-  };
-
-  const updateSprint = (id: string, sprintData: { title: string; description: string; startDate: Date; endDate: Date }) => {
-    setSprints(
-      sprints.map(sprint => 
-        sprint.id === id
-          ? { 
-              ...sprint, 
-              ...sprintData,
-              updatedAt: new Date()
-            }
-          : sprint
-      )
-    );
-    
-    toast({
-      title: "Sprint updated",
-      description: `${sprintData.title} has been updated successfully.`
-    });
-  };
-
-  const deleteSprint = (id: string) => {
-    const sprintToDelete = sprints.find(sprint => sprint.id === id);
-    
-    if (!sprintToDelete) return;
-    
-    // Delete all tasks associated with this sprint
-    setColumns(
-      columns.map(column => ({
-        ...column,
-        tasks: column.tasks.filter(task => task.sprintId !== id)
-      }))
-    );
-    
-    // Delete the sprint itself
-    setSprints(sprints.filter(sprint => sprint.id !== id));
-    
-    toast({
-      title: "Sprint deleted",
-      description: `${sprintToDelete.title} has been deleted successfully.`
-    });
-  };
-
-  const completeSprint = (id: string) => {
-    setSprints(
-      sprints.map(sprint => 
-        sprint.id === id
-          ? { 
-              ...sprint, 
-              isCompleted: true,
-              updatedAt: new Date()
-            }
-          : sprint
-      )
-    );
-    
-    toast({
-      title: "Sprint completed",
-      description: "The sprint has been marked as completed."
-    });
-  };
-
-  const createColumn = (sprintId: string, title: string) => {
-    // Check if the column already exists with the same title
-    const existingColumn = columns.find(col => 
-      col.title === title && 
-      col.tasks.some(task => task.sprintId === sprintId)
-    );
-
-    if (existingColumn) {
-      toast({
-        title: "Column already exists",
-        description: `A column named "${title}" already exists for this sprint.`,
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const newColumn: Column = {
-      id: uuidv4(),
-      title,
-      tasks: []
-    };
-    
-    setColumns([...columns, newColumn]);
-    
-    toast({
-      title: "Column created",
-      description: `${title} column has been created successfully.`
-    });
-  };
-
-  const deleteColumn = (id: string) => {
-    const columnToDelete = columns.find(column => column.id === id);
-    
-    if (!columnToDelete) return;
-    
-    setColumns(columns.filter(column => column.id !== id));
-    
-    toast({
-      title: "Column deleted",
-      description: `${columnToDelete.title} column has been deleted successfully.`
-    });
-  };
-
-  const createTask = (sprintId: string, columnId: string, taskData: { title: string; description: string; priority: "low" | "medium" | "high"; assignee: string; storyPoints: number }) => {
-    const newTask: Task = {
-      id: uuidv4(),
-      title: taskData.title,
-      description: taskData.description,
-      priority: taskData.priority,
-      assignee: taskData.assignee,
-      storyPoints: taskData.storyPoints,
-      sprintId,
-      columnId,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    
-    setColumns(
-      columns.map(column => 
-        column.id === columnId
-          ? { 
-              ...column, 
-              tasks: [...column.tasks, newTask]
-            }
-          : column
-      )
-    );
-    
-    toast({
-      title: "Task created",
-      description: `${taskData.title} has been created successfully.`
-    });
-  };
-
-  const updateTask = (id: string, taskData: { title: string; description: string; priority: "low" | "medium" | "high"; assignee: string; storyPoints: number }) => {
-    setColumns(
-      columns.map(column => ({
-        ...column,
-        tasks: column.tasks.map(task => 
-          task.id === id
-            ? { 
-                ...task, 
-                ...taskData,
-                updatedAt: new Date()
-              }
-            : task
-        )
-      }))
-    );
-    
-    toast({
-      title: "Task updated",
-      description: `${taskData.title} has been updated successfully.`
-    });
-  };
-
-  const deleteTask = (id: string) => {
-    let taskTitle = "";
-    
-    setColumns(
-      columns.map(column => {
-        const taskToDelete = column.tasks.find(task => task.id === id);
-        if (taskToDelete) {
-          taskTitle = taskToDelete.title;
-        }
-        
-        return {
-          ...column,
-          tasks: column.tasks.filter(task => task.id !== id)
-        };
-      })
-    );
-    
-    if (taskTitle) {
-      toast({
-        title: "Task deleted",
-        description: `${taskTitle} has been deleted successfully.`
-      });
-    }
-  };
-
-  const moveTask = (taskId: string, sourceColumnId: string, destinationColumnId: string) => {
-    // Don't do anything if source and destination are the same
-    if (sourceColumnId === destinationColumnId) return;
-    
-    const sourceColumn = columns.find(column => column.id === sourceColumnId);
-    if (!sourceColumn) return;
-    
-    const taskToMove = sourceColumn.tasks.find(task => task.id === taskId);
-    if (!taskToMove) return;
-    
-    // Remove task from source column
-    const updatedSourceColumn = {
-      ...sourceColumn,
-      tasks: sourceColumn.tasks.filter(task => task.id !== taskId)
-    };
-    
-    // Add task to destination column
-    const updatedColumns = columns.map(column => {
-      if (column.id === sourceColumnId) {
-        return updatedSourceColumn;
-      }
-      
-      if (column.id === destinationColumnId) {
-        return {
-          ...column,
-          tasks: [...column.tasks, { ...taskToMove, columnId: destinationColumnId }]
-        };
-      }
-      
-      return column;
-    });
-    
+  const handleDeleteProject = (id: string) => {
+    const { updatedProjects, updatedSprints, updatedColumns } = deleteProject(projects, sprints, columns, id, toast);
+    setProjects(updatedProjects);
+    setSprints(updatedSprints);
     setColumns(updatedColumns);
   };
 
-  const createBacklogItem = (itemData: { title: string; description: string; priority: "low" | "medium" | "high"; storyPoints: number; projectId: string }) => {
-    const newItem: BacklogItem = {
-      id: uuidv4(),
-      title: itemData.title,
-      description: itemData.description,
-      priority: itemData.priority,
-      storyPoints: itemData.storyPoints,
-      projectId: itemData.projectId,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    
-    setBacklogItems([...backlogItems, newItem]);
-    
-    toast({
-      title: "Backlog item created",
-      description: `${itemData.title} has been added to the backlog.`
-    });
+  // Sprint handlers
+  const handleCreateSprint = (sprintData: { title: string; description: string; startDate: Date; endDate: Date; projectId: string }) => {
+    const newSprint = createSprint(sprints, sprintData, toast);
+    setSprints(prevSprints => [...prevSprints, newSprint]);
   };
 
-  const updateBacklogItem = (id: string, itemData: { title: string; description: string; priority: "low" | "medium" | "high"; storyPoints: number }) => {
-    setBacklogItems(
-      backlogItems.map(item => 
-        item.id === id
-          ? { 
-              ...item, 
-              ...itemData,
-              updatedAt: new Date()
-            }
-          : item
-      )
-    );
-    
-    toast({
-      title: "Backlog item updated",
-      description: `${itemData.title} has been updated successfully.`
-    });
+  const handleUpdateSprint = (id: string, sprintData: { title: string; description: string; startDate: Date; endDate: Date }) => {
+    setSprints(prevSprints => updateSprint(prevSprints, id, sprintData, toast));
   };
 
-  const deleteBacklogItem = (id: string) => {
-    const itemToDelete = backlogItems.find(item => item.id === id);
-    
-    if (!itemToDelete) return;
-    
-    setBacklogItems(backlogItems.filter(item => item.id !== id));
-    
-    toast({
-      title: "Backlog item deleted",
-      description: `${itemToDelete.title} has been removed from the backlog.`
-    });
+  const handleDeleteSprint = (id: string) => {
+    const { updatedSprints, updatedColumns } = deleteSprint(sprints, columns, id, toast);
+    setSprints(updatedSprints);
+    setColumns(updatedColumns);
   };
 
-  const moveToSprint = (itemId: string, sprintId: string) => {
-    const item = backlogItems.find(item => item.id === itemId);
-    if (!item) return;
-    
-    // Find the TO DO column for this sprint
-    const todoColumn = columns.find(column => 
-      column.title === "TO DO" && 
-      column.tasks.some(task => task.sprintId === sprintId)
-    );
-    
-    if (!todoColumn) {
-      toast({
-        title: "Error",
-        description: "Could not find the TO DO column for this sprint.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // Create a new task from the backlog item
-    const newTask: Task = {
-      id: uuidv4(),
-      title: item.title,
-      description: item.description,
-      priority: item.priority,
-      assignee: "",
-      storyPoints: item.storyPoints,
-      sprintId,
-      columnId: todoColumn.id,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    
-    // Add the task to the TO DO column
-    setColumns(
-      columns.map(column => 
-        column.id === todoColumn.id
-          ? { 
-              ...column, 
-              tasks: [...column.tasks, newTask]
-            }
-          : column
-      )
-    );
-    
-    // Remove the item from the backlog
-    setBacklogItems(backlogItems.filter(item => item.id !== itemId));
-    
-    toast({
-      title: "Item moved to sprint",
-      description: `${item.title} has been moved to the sprint.`
-    });
+  const handleCompleteSprint = (id: string) => {
+    setSprints(prevSprints => completeSprint(prevSprints, id, toast));
   };
 
-  // Add alias for moveToSprint function to fix the error
-  const moveBacklogItemToSprint = moveToSprint;
+  // Column handlers
+  const handleCreateColumn = (sprintId: string, title: string) => {
+    setColumns(prevColumns => createColumn(prevColumns, sprintId, title, toast));
+  };
 
+  const handleDeleteColumn = (id: string) => {
+    setColumns(prevColumns => deleteColumn(prevColumns, id, toast));
+  };
+
+  // Task handlers
+  const handleCreateTask = (sprintId: string, columnId: string, taskData: { title: string; description: string; priority: "low" | "medium" | "high"; assignee: string; storyPoints: number }) => {
+    setColumns(prevColumns => createTask(prevColumns, sprintId, columnId, taskData, toast));
+  };
+
+  const handleUpdateTask = (id: string, taskData: { title: string; description: string; priority: "low" | "medium" | "high"; assignee: string; storyPoints: number }) => {
+    setColumns(prevColumns => updateTask(prevColumns, id, taskData, toast));
+  };
+
+  const handleDeleteTask = (id: string) => {
+    setColumns(prevColumns => deleteTask(prevColumns, id, toast));
+  };
+
+  const handleMoveTask = (taskId: string, sourceColumnId: string, destinationColumnId: string) => {
+    setColumns(prevColumns => moveTask(prevColumns, taskId, sourceColumnId, destinationColumnId));
+  };
+
+  // Backlog item handlers
+  const handleCreateBacklogItem = (itemData: { title: string; description: string; priority: "low" | "medium" | "high"; storyPoints: number; projectId: string }) => {
+    setBacklogItems(prevItems => createBacklogItem(prevItems, itemData, toast));
+  };
+
+  const handleUpdateBacklogItem = (id: string, itemData: { title: string; description: string; priority: "low" | "medium" | "high"; storyPoints: number }) => {
+    setBacklogItems(prevItems => updateBacklogItem(prevItems, id, itemData, toast));
+  };
+
+  const handleDeleteBacklogItem = (id: string) => {
+    setBacklogItems(prevItems => deleteBacklogItem(prevItems, id, toast));
+  };
+
+  const handleMoveToSprint = (itemId: string, sprintId: string) => {
+    const { updatedBacklogItems, updatedColumns } = moveToSprint(backlogItems, columns, itemId, sprintId, toast);
+    setBacklogItems(updatedBacklogItems);
+    setColumns(updatedColumns);
+  };
+
+  // Create context value object with all handlers
   const contextValue: ProjectContextType = {
     projects,
     sprints,
     columns,
     backlogItems,
-    createProject,
-    updateProject,
-    deleteProject,
-    createSprint,
-    updateSprint,
-    deleteSprint,
-    completeSprint,
-    createColumn,
-    deleteColumn,
-    createTask,
-    updateTask,
-    deleteTask,
-    moveTask,
-    createBacklogItem,
-    updateBacklogItem,
-    deleteBacklogItem,
-    moveToSprint,
-    moveBacklogItemToSprint
+    createProject: handleCreateProject,
+    updateProject: handleUpdateProject,
+    deleteProject: handleDeleteProject,
+    createSprint: handleCreateSprint,
+    updateSprint: handleUpdateSprint,
+    deleteSprint: handleDeleteSprint,
+    completeSprint: handleCompleteSprint,
+    createColumn: handleCreateColumn,
+    deleteColumn: handleDeleteColumn,
+    createTask: handleCreateTask,
+    updateTask: handleUpdateTask,
+    deleteTask: handleDeleteTask,
+    moveTask: handleMoveTask,
+    createBacklogItem: handleCreateBacklogItem,
+    updateBacklogItem: handleUpdateBacklogItem,
+    deleteBacklogItem: handleDeleteBacklogItem,
+    moveToSprint: handleMoveToSprint,
+    moveBacklogItemToSprint: handleMoveToSprint // Alias for compatibility
   };
 
   return (
