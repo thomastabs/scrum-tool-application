@@ -59,6 +59,7 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
   const handleEditTask = (task: Task) => {
     setTaskToEdit(task);
     setShowTaskForm(true);
+    setActiveColumnId(task.columnId);
   };
 
   const handleAddTask = (columnId: string) => {
@@ -160,7 +161,7 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
         {sprintColumns.map((column) => (
           <div
             key={column.id}
-            className="board-column"
+            className="board-column bg-gray-50 p-4 rounded-lg border border-gray-200"
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, column.id)}
           >
@@ -212,7 +213,7 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
             </div>
           </div>
         ) : (
-          <div className="board-column">
+          <div className="board-column bg-gray-50 p-4 rounded-lg border border-gray-200">
             <div className="flex flex-col gap-2">
               <Input
                 placeholder="Column name"

@@ -84,11 +84,10 @@ export const moveToSprint = (
   
   // Find the TO DO column for this sprint
   let todoColumn = columns.find(column => 
-    column.title === "TO DO" && 
-    column.tasks.some(task => task.sprintId === sprintId)
+    column.title === "TO DO"
   );
   
-  // If TO DO column doesn't exist, create one for this sprint
+  // If TO DO column doesn't exist, create one
   if (!todoColumn) {
     const newTodoColumn: Column = {
       id: `todo-${sprintId}`,

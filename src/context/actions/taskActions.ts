@@ -126,7 +126,7 @@ export const moveTask = (
     if (column.id === destinationColumnId) {
       return {
         ...column,
-        tasks: [...column.tasks, { ...taskToMove, columnId: destinationColumnId }]
+        tasks: [...column.tasks, { ...taskToMove, columnId: destinationColumnId, updatedAt: new Date() }]
       };
     }
     
