@@ -1,10 +1,10 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useProject } from "@/context/ProjectContext";
-import SprintBoard from "./SprintBoard";
-import SprintForm from "./SprintForm";
-import Backlog from "./Backlog";
-import { Project as ProjectType, Sprint } from "@/types";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import SprintForm from "@/components/SprintForm";
+import Backlog from "@/components/Backlog";
+import { Sprint } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -25,30 +25,35 @@ import {
   PlusIcon,
   TrashIcon,
   LayoutDashboardIcon,
-  ListIcon,
   CalendarIcon,
   ListChecksIcon,
+  ArrowLeftIcon,
 } from "lucide-react";
-import ProjectForm from "./ProjectForm";
+import ProjectForm from "@/components/ProjectForm";
 
-interface ProjectViewProps {
-  project: ProjectType;
-}
-
-const Project: React.FC<ProjectViewProps> = ({ project }) => {
-  const { sprints, deleteProject } = useProject();
+const ProjectDetailsPage = () => {
+  const { projectId } = useParams<{ projectId: string }>();
+  const { projects, sprints, deleteProject } = useProject();
   const [showSprintForm, setShowSprintForm] = useState(false);
   const [showEditProject, setShowEditProject] = useState(false);
-  const [activeSprintId, setActiveSprintId] = useState<string | null>(null);
   const [sprintToEdit, setSprintToEdit] = useState<Sprint | null>(null);
+  const navigate = useNavigate();
 
+  const project = projects.find((p) => p.id === projectId);
   const projectSprints = sprints.filter(
-    (sprint) => sprint.projectId === project.id
+    (sprint) => sprint.projectId === projectId
   );
+
+  useEffect(() => {
+    if (!project) {
+      navigate("/projects");
+    }
+  }, [project, navigate]);
 
   const handleDeleteProject = () => {
     if (window.confirm("Are you sure you want to delete this project?")) {
-      deleteProject(project.id);
+      deleteProject(project!.id);
+      navigate("/projects");
     }
   };
 
@@ -57,8 +62,20 @@ const Project: React.FC<ProjectViewProps> = ({ project }) => {
     setShowSprintForm(true);
   };
 
+  if (!project) {
+    return null;
+  }
+
   return (
     <div className="container mx-auto py-8 animate-fade-in">
+      <Button
+        variant="ghost"
+        onClick={() => navigate("/projects")}
+        className="mb-6"
+      >
+        <ArrowLeftIcon className="h-4 w-4 mr-2" /> Back to Projects
+      </Button>
+
       <div className="flex justify-between items-start mb-8">
         <div>
           <div className="flex items-center gap-2">
@@ -113,75 +130,54 @@ const Project: React.FC<ProjectViewProps> = ({ project }) => {
               </Button>
             </div>
           ) : (
-            <div className="space-y-8">
-              {activeSprintId ? (
-                <>
-                  <Button
-                    variant="outline"
-                    onClick={() => setActiveSprintId(null)}
-                    className="mb-4"
-                  >
-                    Back to Sprints
-                  </Button>
-                  <SprintBoard
-                    sprint={
-                      projectSprints.find(
-                        (sprint) => sprint.id === activeSprintId
-                      )!
-                    }
-                  />
-                </>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {projectSprints.map((sprint) => (
-                    <Card
-                      key={sprint.id}
-                      className={`hover:shadow-md transition-shadow ${
-                        sprint.isCompleted
-                          ? "bg-secondary/30"
-                          : "bg-background"
-                      }`}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {projectSprints.map((sprint) => (
+                <Card
+                  key={sprint.id}
+                  className={`hover:shadow-md transition-shadow ${
+                    sprint.isCompleted
+                      ? "bg-secondary/30"
+                      : "bg-background"
+                  }`}
+                >
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between">
+                      <CardTitle className="text-xl">
+                        {sprint.title}
+                      </CardTitle>
+                      {sprint.isCompleted && (
+                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                          Completed
+                        </span>
+                      )}
+                    </div>
+                    <CardDescription>
+                      {new Date(sprint.startDate).toLocaleDateString()} -{" "}
+                      {new Date(sprint.endDate).toLocaleDateString()}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm line-clamp-2">
+                      {sprint.description}
+                    </p>
+                  </CardContent>
+                  <CardFooter className="flex justify-between pt-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditSprint(sprint)}
                     >
-                      <CardHeader className="pb-2">
-                        <div className="flex justify-between">
-                          <CardTitle className="text-xl">
-                            {sprint.title}
-                          </CardTitle>
-                          {sprint.isCompleted && (
-                            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                              Completed
-                            </span>
-                          )}
-                        </div>
-                        <CardDescription>
-                          {new Date(sprint.startDate).toLocaleDateString()} -{" "}
-                          {new Date(sprint.endDate).toLocaleDateString()}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm line-clamp-2">
-                          {sprint.description}
-                        </p>
-                      </CardContent>
-                      <CardFooter className="flex justify-between pt-0">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditSprint(sprint)}
-                        >
-                          <PencilIcon className="h-3 w-3 mr-1" /> Edit
-                        </Button>
-                        <Button
-                          onClick={() => setActiveSprintId(sprint.id)}
-                          size="sm"
-                        >
-                          View Board
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
-                </div>
-              )}
+                      <PencilIcon className="h-3 w-3 mr-1" /> Edit
+                    </Button>
+                    <Button
+                      onClick={() => navigate(`/projects/${projectId}/sprint/${sprint.id}`)}
+                      size="sm"
+                    >
+                      View Board
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
             </div>
           )}
         </TabsContent>
@@ -225,4 +221,4 @@ const Project: React.FC<ProjectViewProps> = ({ project }) => {
   );
 };
 
-export default Project;
+export default ProjectDetailsPage;
