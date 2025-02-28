@@ -7,7 +7,7 @@ export const createColumn = (
   columns: Column[],
   sprintId: string,
   title: string,
-  toast: ({ title: string, description: string, variant?: "default" | "destructive" }) => void
+  toast: (props: { title: string; description: string; variant?: "default" | "destructive" }) => void
 ): Column[] => {
   // Check if the column already exists with the same title
   const existingColumn = columns.find(col => 
