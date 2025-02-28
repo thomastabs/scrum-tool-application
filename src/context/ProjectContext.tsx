@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useToast } from "@/components/ui/use-toast";
@@ -21,9 +22,10 @@ interface ProjectContextType {
   updateTask: (id: string, taskData: { title: string; description: string; priority: "low" | "medium" | "high"; assignee: string; storyPoints: number }) => void;
   deleteTask: (id: string) => void;
   moveTask: (taskId: string, sourceColumnId: string, destinationColumnId: string) => void;
-  createBacklogItem: (itemData: { title: string; description: string; priority: "low" | "medium" | "high"; storyPoints: number }) => void;
+  createBacklogItem: (itemData: { title: string; description: string; priority: "low" | "medium" | "high"; storyPoints: number; projectId: string }) => void;
   updateBacklogItem: (id: string, itemData: { title: string; description: string; priority: "low" | "medium" | "high"; storyPoints: number }) => void;
   deleteBacklogItem: (id: string) => void;
+  moveBacklogItemToSprint: (itemId: string, sprintId: string) => void;
   moveToSprint: (itemId: string, sprintId: string) => void;
 }
 
@@ -375,13 +377,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setColumns(updatedColumns);
   };
 
-  const createBacklogItem = (itemData: { title: string; description: string; priority: "low" | "medium" | "high"; storyPoints: number }) => {
+  const createBacklogItem = (itemData: { title: string; description: string; priority: "low" | "medium" | "high"; storyPoints: number; projectId: string }) => {
     const newItem: BacklogItem = {
       id: uuidv4(),
       title: itemData.title,
       description: itemData.description,
       priority: itemData.priority,
       storyPoints: itemData.storyPoints,
+      projectId: itemData.projectId,
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -480,6 +483,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
+  // Add alias for moveToSprint function to fix the error
+  const moveBacklogItemToSprint = moveToSprint;
+
   const contextValue: ProjectContextType = {
     projects,
     sprints,
@@ -501,7 +507,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     createBacklogItem,
     updateBacklogItem,
     deleteBacklogItem,
-    moveToSprint
+    moveToSprint,
+    moveBacklogItemToSprint
   };
 
   return (

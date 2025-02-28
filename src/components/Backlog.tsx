@@ -218,6 +218,7 @@ const Backlog: React.FC<BacklogProps> = ({ projectId }) => {
 
       {showItemForm && (
         <BacklogItemForm
+          projectId={projectId}
           onClose={() => {
             setShowItemForm(false);
             setItemToEdit(null);

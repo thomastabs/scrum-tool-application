@@ -61,6 +61,7 @@ export interface SprintFormData {
   description: string;
   startDate: Date;
   endDate: Date;
+  projectId?: string;  // Adding projectId as optional
   justification?: string;
 }
 
@@ -77,4 +78,5 @@ export interface BacklogItemFormData {
   description: string;
   priority: "low" | "medium" | "high";
   storyPoints: number;
+  projectId?: string;  // Adding projectId as optional
 }
