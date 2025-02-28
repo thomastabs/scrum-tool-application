@@ -34,6 +34,7 @@ const formSchema = z.object({
 });
 
 interface BacklogItemFormProps {
+  projectId: string; // Added projectId as a required prop
   onClose: () => void;
   itemToEdit?: {
     id: string;
@@ -44,7 +45,7 @@ interface BacklogItemFormProps {
   };
 }
 
-const BacklogItemForm: React.FC<BacklogItemFormProps> = ({ onClose, itemToEdit }) => {
+const BacklogItemForm: React.FC<BacklogItemFormProps> = ({ projectId, onClose, itemToEdit }) => {
   const { createBacklogItem, updateBacklogItem } = useProject();
   const isEditMode = !!itemToEdit;
 
@@ -62,7 +63,11 @@ const BacklogItemForm: React.FC<BacklogItemFormProps> = ({ onClose, itemToEdit }
     if (isEditMode && itemToEdit) {
       updateBacklogItem(itemToEdit.id, data);
     } else {
-      createBacklogItem(data);
+      // Include the projectId when creating a new backlog item
+      createBacklogItem({
+        ...data,
+        projectId: projectId
+      });
     }
     onClose();
   };
