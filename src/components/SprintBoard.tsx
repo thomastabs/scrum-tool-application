@@ -21,23 +21,27 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
   const [newColumnName, setNewColumnName] = useState("");
   const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
 
-  // Filter columns for this sprint only
+  // Filter columns that have tasks for this sprint or create default columns if needed
+  const defaultColumns = ["TO DO", "IN PROGRESS", "DONE"];
+  
+  // Get all columns that have tasks for this sprint
   let sprintColumns = columns.filter(column =>
     column.tasks.some(task => task.sprintId === sprint.id)
   );
-
-  // Get the default column titles that already exist in this sprint
+  
+  // Get the titles of columns that already exist for this sprint
   const existingColumnTitles = new Set(sprintColumns.map(col => col.title));
-
-  // Add default columns if they don't exist
-  const defaultColumns = ["TO DO", "IN PROGRESS", "DONE"];
+  
+  // Add default columns if they don't exist for this sprint
   defaultColumns.forEach(title => {
     if (!existingColumnTitles.has(title)) {
-      sprintColumns.push({
+      const defaultColumn: Column = {
         id: `${title.toLowerCase().replace(/\s+/g, '-')}-${sprint.id}`,
         title,
         tasks: []
-      } as Column);
+      };
+      
+      sprintColumns.push(defaultColumn);
     }
   });
 

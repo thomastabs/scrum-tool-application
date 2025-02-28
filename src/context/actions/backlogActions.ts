@@ -83,18 +83,21 @@ export const moveToSprint = (
   }
   
   // Find the TO DO column for this sprint
-  const todoColumn = columns.find(column => 
+  let todoColumn = columns.find(column => 
     column.title === "TO DO" && 
     column.tasks.some(task => task.sprintId === sprintId)
   );
   
+  // If TO DO column doesn't exist, create one for this sprint
   if (!todoColumn) {
-    toast({
-      title: "Error",
-      description: "Could not find the TO DO column for this sprint.",
-      variant: "destructive"
-    });
-    return { updatedBacklogItems: backlogItems, updatedColumns: columns };
+    const newTodoColumn: Column = {
+      id: `todo-${sprintId}`,
+      title: "TO DO",
+      tasks: []
+    };
+    
+    columns = [...columns, newTodoColumn];
+    todoColumn = newTodoColumn;
   }
   
   // Create a new task from the backlog item
@@ -113,7 +116,7 @@ export const moveToSprint = (
   
   // Add the task to the TO DO column
   const updatedColumns = columns.map(column => 
-    column.id === todoColumn.id
+    column.id === todoColumn!.id
       ? { 
           ...column, 
           tasks: [...column.tasks, newTask]

@@ -9,7 +9,7 @@ export const createColumn = (
   title: string,
   toast: (props: Toast) => void
 ): Column[] => {
-  // Check if the column already exists with the same title
+  // Check if the column already exists with the same title for this sprint
   const existingColumn = columns.find(col => 
     col.title === title && 
     col.tasks.some(task => task.sprintId === sprintId)
