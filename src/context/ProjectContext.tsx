@@ -162,37 +162,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       updatedAt: new Date()
     };
     
-    // Create default columns specifically for this sprint
-    const sprintId = newSprint.id;
-    const defaultColumns: Column[] = [
-      {
-        id: uuidv4(),
-        title: "TO DO",
-        tasks: []
-      },
-      {
-        id: uuidv4(),
-        title: "IN PROGRESS",
-        tasks: []
-      },
-      {
-        id: uuidv4(),
-        title: "DONE",
-        tasks: []
-      }
-    ];
-    
-    // Update the tasks in each column to include the sprintId
-    const columnsWithSprintId = defaultColumns.map(column => ({
-      ...column,
-      tasks: column.tasks.map(task => ({
-        ...task,
-        sprintId
-      }))
-    }));
+    // No longer create default columns here - they will be handled by the SprintBoard component
     
     setSprints([...sprints, newSprint]);
-    setColumns([...columns, ...columnsWithSprintId]);
     
     toast({
       title: "Sprint created",
@@ -234,6 +206,21 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const createColumn = (sprintId: string, title: string) => {
+    // Check if the column already exists with the same title
+    const existingColumn = columns.find(col => 
+      col.title === title && 
+      col.tasks.some(task => task.sprintId === sprintId)
+    );
+
+    if (existingColumn) {
+      toast({
+        title: "Column already exists",
+        description: `A column named "${title}" already exists for this sprint.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
     const newColumn: Column = {
       id: uuidv4(),
       title,

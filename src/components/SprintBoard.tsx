@@ -21,22 +21,36 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
   const [newColumnName, setNewColumnName] = useState("");
   const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
 
+  // Filter columns for this sprint only
   let sprintColumns = columns.filter(column =>
-    column.tasks.some(task => task.sprintId === sprint.id) ||
-    (column.tasks.length === 0 && ["TO DO", "IN PROGRESS", "DONE"].includes(column.title))
+    column.tasks.some(task => task.sprintId === sprint.id)
   );
 
-  // Ensure "TO DO" column exists even if there are no tasks
-  if (!sprintColumns.some(column => column.title === "TO DO")) {
-    sprintColumns.unshift({
-      id: "todo-placeholder",
-      title: "TO DO",
-      tasks: []
-    } as Column);
-  }
-  
-  
-  
+  // Get the default column titles that already exist in this sprint
+  const existingColumnTitles = new Set(sprintColumns.map(col => col.title));
+
+  // Add default columns if they don't exist
+  const defaultColumns = ["TO DO", "IN PROGRESS", "DONE"];
+  defaultColumns.forEach(title => {
+    if (!existingColumnTitles.has(title)) {
+      sprintColumns.push({
+        id: `${title.toLowerCase().replace(/\s+/g, '-')}-${sprint.id}`,
+        title,
+        tasks: []
+      } as Column);
+    }
+  });
+
+  // Sort columns to ensure consistent order with default columns first
+  sprintColumns.sort((a, b) => {
+    const aIndex = defaultColumns.indexOf(a.title);
+    const bIndex = defaultColumns.indexOf(b.title);
+    
+    if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+    if (aIndex !== -1) return -1;
+    if (bIndex !== -1) return 1;
+    return a.title.localeCompare(b.title);
+  });
 
   const handleEditTask = (task: Task) => {
     setTaskToEdit(task);
@@ -70,6 +84,12 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
 
   const handleAddColumn = () => {
     if (newColumnName.trim()) {
+      // Prevent creating a column with a default name
+      if (defaultColumns.includes(newColumnName.trim())) {
+        alert(`Cannot create a new column named "${newColumnName.trim()}" as it's a reserved name.`);
+        return;
+      }
+      
       createColumn(sprint.id, newColumnName.trim());
       setNewColumnName("");
       setShowAddColumn(false);
@@ -143,9 +163,7 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-medium">{column.title}</h3>
               <div className="flex gap-1">
-                {column.title !== "TO DO" && 
-                 column.title !== "IN PROGRESS" && 
-                 column.title !== "DONE" && (
+                {!defaultColumns.includes(column.title) && (
                   <Button
                     variant="ghost"
                     size="icon"
