@@ -1,12 +1,12 @@
 
 import { v4 as uuidv4 } from "uuid";
 import { BacklogItem, Column } from "@/types";
-import { Toast } from "@/components/ui/use-toast";
+import { Toast } from "@/types/toast";
 
 export const createBacklogItem = (
   backlogItems: BacklogItem[],
   itemData: { title: string; description: string; priority: "low" | "medium" | "high"; storyPoints: number; projectId: string },
-  toast: ({ title, description }: Toast) => void
+  toast: (props: Toast) => void
 ): BacklogItem[] => {
   const newItem: BacklogItem = {
     id: uuidv4(),
@@ -31,7 +31,7 @@ export const updateBacklogItem = (
   backlogItems: BacklogItem[],
   id: string,
   itemData: { title: string; description: string; priority: "low" | "medium" | "high"; storyPoints: number },
-  toast: ({ title, description }: Toast) => void
+  toast: (props: Toast) => void
 ): BacklogItem[] => {
   const updatedBacklogItems = backlogItems.map(item => 
     item.id === id
@@ -54,7 +54,7 @@ export const updateBacklogItem = (
 export const deleteBacklogItem = (
   backlogItems: BacklogItem[],
   id: string,
-  toast: ({ title, description }: Toast) => void
+  toast: (props: Toast) => void
 ): BacklogItem[] => {
   const itemToDelete = backlogItems.find(item => item.id === id);
   
@@ -75,7 +75,7 @@ export const moveToSprint = (
   columns: Column[],
   itemId: string,
   sprintId: string,
-  toast: ({ title, description, variant }: { title: string; description: string; variant?: "default" | "destructive" }) => void
+  toast: (props: Toast) => void
 ): { updatedBacklogItems: BacklogItem[], updatedColumns: Column[] } => {
   const item = backlogItems.find(item => item.id === itemId);
   if (!item) {

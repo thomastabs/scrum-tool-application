@@ -1,12 +1,12 @@
 
 import { v4 as uuidv4 } from "uuid";
 import { Sprint } from "@/types";
-import { Toast } from "@/components/ui/use-toast";
+import { Toast } from "@/types/toast";
 
 export const createSprint = (
   sprints: Sprint[],
   sprintData: { title: string; description: string; startDate: Date; endDate: Date; projectId: string },
-  toast: ({ title, description }: Toast) => void
+  toast: (props: Toast) => void
 ): Sprint => {
   const newSprint: Sprint = {
     id: uuidv4(),
@@ -32,7 +32,7 @@ export const updateSprint = (
   sprints: Sprint[],
   id: string,
   sprintData: { title: string; description: string; startDate: Date; endDate: Date },
-  toast: ({ title, description }: Toast) => void
+  toast: (props: Toast) => void
 ): Sprint[] => {
   const updatedSprints = sprints.map(sprint => 
     sprint.id === id
@@ -56,7 +56,7 @@ export const deleteSprint = (
   sprints: Sprint[],
   columns: any[],
   id: string,
-  toast: ({ title, description }: Toast) => void
+  toast: (props: Toast) => void
 ): { updatedSprints: Sprint[], updatedColumns: any[] } => {
   const sprintToDelete = sprints.find(sprint => sprint.id === id);
   
@@ -84,7 +84,7 @@ export const deleteSprint = (
 export const completeSprint = (
   sprints: Sprint[],
   id: string,
-  toast: ({ title, description }: Toast) => void
+  toast: (props: Toast) => void
 ): Sprint[] => {
   const updatedSprints = sprints.map(sprint => 
     sprint.id === id

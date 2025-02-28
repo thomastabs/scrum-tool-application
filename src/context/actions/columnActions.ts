@@ -1,13 +1,13 @@
 
 import { v4 as uuidv4 } from "uuid";
 import { Column } from "@/types";
-import { Toast } from "@/components/ui/use-toast";
+import { Toast } from "@/types/toast";
 
 export const createColumn = (
   columns: Column[],
   sprintId: string,
   title: string,
-  toast: (props: { title: string; description: string; variant?: "default" | "destructive" }) => void
+  toast: (props: Toast) => void
 ): Column[] => {
   // Check if the column already exists with the same title
   const existingColumn = columns.find(col => 
@@ -41,7 +41,7 @@ export const createColumn = (
 export const deleteColumn = (
   columns: Column[],
   id: string,
-  toast: ({ title, description }: Toast) => void
+  toast: (props: Toast) => void
 ): Column[] => {
   const columnToDelete = columns.find(column => column.id === id);
   

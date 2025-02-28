@@ -1,12 +1,12 @@
 
 import { v4 as uuidv4 } from "uuid";
 import { Project } from "@/types";
-import { Toast } from "@/components/ui/use-toast";
+import { Toast } from "@/types/toast";
 
 export const createProject = (
   projects: Project[],
   projectData: { title: string; description: string; endGoal: string },
-  toast: ({ title, description }: Toast) => void
+  toast: (props: Toast) => void
 ): Project[] => {
   const newProject: Project = {
     id: uuidv4(),
@@ -31,7 +31,7 @@ export const updateProject = (
   projects: Project[],
   id: string,
   projectData: { title: string; description: string; endGoal: string },
-  toast: ({ title, description }: Toast) => void
+  toast: (props: Toast) => void
 ): Project[] => {
   const updatedProjects = projects.map(project => 
     project.id === id
@@ -56,7 +56,7 @@ export const deleteProject = (
   sprints: any[],
   columns: any[],
   id: string,
-  toast: ({ title, description }: Toast) => void
+  toast: (props: Toast) => void
 ): { updatedProjects: Project[], updatedSprints: any[], updatedColumns: any[] } => {
   const projectToDelete = projects.find(project => project.id === id);
   

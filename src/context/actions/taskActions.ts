@@ -1,14 +1,14 @@
 
 import { v4 as uuidv4 } from "uuid";
 import { Column, Task } from "@/types";
-import { Toast } from "@/components/ui/use-toast";
+import { Toast } from "@/types/toast";
 
 export const createTask = (
   columns: Column[],
   sprintId: string,
   columnId: string,
   taskData: { title: string; description: string; priority: "low" | "medium" | "high"; assignee: string; storyPoints: number },
-  toast: ({ title, description }: Toast) => void
+  toast: (props: Toast) => void
 ): Column[] => {
   const newTask: Task = {
     id: uuidv4(),
@@ -44,7 +44,7 @@ export const updateTask = (
   columns: Column[],
   id: string,
   taskData: { title: string; description: string; priority: "low" | "medium" | "high"; assignee: string; storyPoints: number },
-  toast: ({ title, description }: Toast) => void
+  toast: (props: Toast) => void
 ): Column[] => {
   const updatedColumns = columns.map(column => ({
     ...column,
@@ -70,7 +70,7 @@ export const updateTask = (
 export const deleteTask = (
   columns: Column[],
   id: string,
-  toast: ({ title, description }: Toast) => void
+  toast: (props: Toast) => void
 ): Column[] => {
   let taskTitle = "";
   
