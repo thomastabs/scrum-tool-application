@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { CalendarIcon, X } from "lucide-react";
-import { useProject } from "@/context/ProjectContext";
+import { useProject } from "@/context/project";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useParams } from "react-router-dom";
 
 const formSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -56,7 +55,6 @@ interface SprintFormProps {
 
 const SprintForm: React.FC<SprintFormProps> = ({ onClose, sprintToEdit }) => {
   const { createSprint, updateSprint } = useProject();
-  const { projectId } = useParams<{ projectId: string }>();
   const isEditMode = !!sprintToEdit;
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -78,10 +76,7 @@ const SprintForm: React.FC<SprintFormProps> = ({ onClose, sprintToEdit }) => {
     if (isEditMode && sprintToEdit) {
       updateSprint(sprintToEdit.id, data);
     } else {
-      // Include the projectId in the data
-      if (projectId) {
-        createSprint({...data, projectId});
-      }
+      createSprint(data);
     }
     onClose();
   };

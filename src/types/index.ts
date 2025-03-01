@@ -4,6 +4,7 @@ export interface Project {
   title: string;
   description: string;
   endGoal: string;
+  ownerId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -50,6 +51,16 @@ export interface BacklogItem {
   updatedAt: Date;
 }
 
+export interface Collaborator {
+  id: string;
+  projectId: string;
+  email: string;
+  role: "viewer" | "editor" | "admin";
+  status: "pending" | "accepted" | "rejected";
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface ProjectFormData {
   title: string;
   description: string;
@@ -61,7 +72,6 @@ export interface SprintFormData {
   description: string;
   startDate: Date;
   endDate: Date;
-  projectId?: string;  // Adding projectId as optional
   justification?: string;
 }
 
@@ -78,5 +88,9 @@ export interface BacklogItemFormData {
   description: string;
   priority: "low" | "medium" | "high";
   storyPoints: number;
-  projectId?: string;  // Adding projectId as optional
+}
+
+export interface CollaboratorFormData {
+  email: string;
+  role: "viewer" | "editor" | "admin";
 }

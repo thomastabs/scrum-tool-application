@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useProject } from "@/context/ProjectContext";
+import { useProject } from "@/context/project";
 import { X } from "lucide-react";
 
 const formSchema = z.object({
@@ -34,7 +34,6 @@ const formSchema = z.object({
 });
 
 interface BacklogItemFormProps {
-  projectId: string; // Added projectId as a required prop
   onClose: () => void;
   itemToEdit?: {
     id: string;
@@ -45,7 +44,7 @@ interface BacklogItemFormProps {
   };
 }
 
-const BacklogItemForm: React.FC<BacklogItemFormProps> = ({ projectId, onClose, itemToEdit }) => {
+const BacklogItemForm: React.FC<BacklogItemFormProps> = ({ onClose, itemToEdit }) => {
   const { createBacklogItem, updateBacklogItem } = useProject();
   const isEditMode = !!itemToEdit;
 
@@ -63,11 +62,7 @@ const BacklogItemForm: React.FC<BacklogItemFormProps> = ({ projectId, onClose, i
     if (isEditMode && itemToEdit) {
       updateBacklogItem(itemToEdit.id, data);
     } else {
-      // Include the projectId when creating a new backlog item
-      createBacklogItem({
-        ...data,
-        projectId: projectId
-      });
+      createBacklogItem(data);
     }
     onClose();
   };

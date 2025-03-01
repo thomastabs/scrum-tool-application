@@ -2,7 +2,7 @@
 import React from "react";
 import { Task } from "@/types";
 import { PencilIcon, TrashIcon, User } from "lucide-react";
-import { useProject } from "@/context/ProjectContext";
+import { useProject } from "@/context/project";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -39,7 +39,6 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit }) => {
       taskId: task.id,
       sourceColumnId: task.columnId,
     }));
-    e.stopPropagation();
   };
 
   return (
@@ -63,7 +62,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit }) => {
       <CardFooter className="p-3 pt-0 flex justify-between">
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <User className="h-3 w-3" />
-          <span>{task.assignee || "Unassigned"}</span>
+          <span>{task.assignee}</span>
         </div>
         <div className="flex gap-1">
           <Button 
