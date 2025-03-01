@@ -1,436 +1,92 @@
+import React, { createContext, useState, useContext, useEffect } from "react";
+import { useToast } from "@/components/ui/use-toast";
+import { Project, Sprint, Column, BacklogItem } from "@/types";
+import { ProjectContextType } from "./ProjectContextTypes";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { v4 as uuidv4 } from "uuid";
-import { useNavigate } from "react-router-dom";
-import { 
-  Project, 
-  Sprint, 
-  Column, 
-  Task, 
-  BacklogItem, 
-  ProjectFormData, 
-  SprintFormData, 
-  TaskFormData, 
-  BacklogItemFormData, 
-  Collaborator, 
-  CollaboratorFormData 
-} from "@/types";
-import { toast } from "@/components/ui/use-toast";
-import { 
-  supabase, 
-  getSession, 
-  createColumnInDB, 
-  getColumnsFromDB, 
-  deleteColumnFromDB,
-  createTaskInDB,
-  getTasksFromDB,
-  updateTaskInDB,
-  updateTaskColumnInDB,
-  deleteTaskFromDB
-} from "@/lib/supabase";
-import { ProjectContextType } from "./types";
-import { 
-  fetchProjects, 
-  createProject as createProjectUtil, 
-  updateProject as updateProjectUtil,
-  deleteProject as deleteProjectUtil
-} from "./projectUtils";
-import {
-  fetchSprints,
-  createSprint as createSprintUtil,
-  updateSprint as updateSprintUtil,
-  completeSprint as completeSprintUtil
-} from "./sprintUtils";
-import {
-  inviteCollaborator as inviteCollaboratorUtil
-} from "./collaboratorUtils";
+// Import action creators
+import { createProject, updateProject, deleteProject } from "./actions/projectActions";
+import { createSprint, updateSprint, deleteSprint, completeSprint } from "./actions/sprintActions";
+import { createColumn, deleteColumn } from "./actions/columnActions";
+import { createTask, updateTask, deleteTask, moveTask } from "./actions/taskActions";
+import { createBacklogItem, updateBacklogItem, deleteBacklogItem, moveToSprint } from "./actions/backlogActions";
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { toast } = useToast();
   const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [sprints, setSprints] = useState<Sprint[]>([]);
   const [columns, setColumns] = useState<Column[]>([]);
   const [backlogItems, setBacklogItems] = useState<BacklogItem[]>([]);
-  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+
+  // Load data from localStorage on component mount
+  useEffect(() => {
+    const storedProjects = localStorage.getItem("projects");
+    const storedSprints = localStorage.getItem("sprints");
+    const storedColumns = localStorage.getItem("columns");
+    const storedBacklogItems = localStorage.getItem("backlogItems");
+
+    if (storedProjects) setProjects(JSON.parse(storedProjects));
+    if (storedSprints) setSprints(JSON.parse(storedSprints));
+    if (storedColumns) setColumns(JSON.parse(storedColumns));
+    if (storedBacklogItems) setBacklogItems(JSON.parse(storedBacklogItems));
+  }, []);
+
+  // Save data to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem("projects", JSON.stringify(projects));
+  }, [projects]);
 
   useEffect(() => {
-    const getUser = async () => {
-      const { session } = await getSession();
-      setUser(session?.user || null);
-      setLoading(false);
-      
-      // Redirect to sign-in if not authenticated
-      if (!session?.user) {
-        navigate("/sign-in");
-      }
-    };
-    
-    getUser();
-
-    const authListener = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user || null);
-      
-      if (!session?.user) {
-        setProjects([]);
-        setSprints([]);
-        setColumns([]);
-        setBacklogItems([]);
-        setCollaborators([]);
-        setSelectedProject(null);
-        navigate("/sign-in");
-      } else {
-        fetchProjectsData();
-        fetchSprintsData();
-        fetchColumnsData();
-        fetchTasksData();
-      }
-    });
-
-    return () => {
-      authListener.data.subscription.unsubscribe();
-    };
-  }, [navigate]);
-
-  const fetchProjectsData = async () => {
-    if (!user) return;
-    
-    const { data, error } = await fetchProjects(user);
-    
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load projects. Please try again.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (data) {
-      setProjects(data);
-    }
-  };
-
-  const fetchSprintsData = async () => {
-    if (!user) return;
-    
-    const { data, error } = await fetchSprints(user);
-    
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load sprints. Please try again.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (data) {
-      setSprints(data);
-    }
-  };
-
-  const fetchColumnsData = async () => {
-    if (!user) return;
-    
-    const { data, error } = await getColumnsFromDB();
-    
-    if (error) {
-      console.error("Error fetching columns:", error);
-      return;
-    }
-    
-    if (data) {
-      // Convert database fields to match our Column type
-      const formattedColumns = data.map(column => ({
-        id: column.id,
-        title: column.title,
-        tasks: []
-      }));
-      
-      setColumns(formattedColumns);
-    }
-  };
-
-  const fetchTasksData = async () => {
-    if (!user) return;
-    
-    const { data, error } = await getTasksFromDB();
-    
-    if (error) {
-      console.error("Error fetching tasks:", error);
-      return;
-    }
-    
-    if (data) {
-      // We need to update the columns with tasks
-      const updatedColumns = [...columns];
-      
-      data.forEach(task => {
-        const columnIndex = updatedColumns.findIndex(col => col.id === task.column_id);
-        
-        if (columnIndex !== -1) {
-          const formattedTask = {
-            id: task.id,
-            title: task.title,
-            description: task.description || "",
-            priority: task.priority || "medium",
-            assignee: task.assignee || "",
-            storyPoints: task.story_points || 1,
-            columnId: task.column_id,
-            sprintId: task.sprint_id,
-            createdAt: new Date(task.created_at),
-            updatedAt: new Date(task.updated_at)
-          };
-          
-          if (!updatedColumns[columnIndex].tasks) {
-            updatedColumns[columnIndex].tasks = [];
-          }
-          
-          updatedColumns[columnIndex].tasks.push(formattedTask);
-        }
-      });
-      
-      setColumns(updatedColumns);
-    }
-  };
+    localStorage.setItem("sprints", JSON.stringify(sprints));
+  }, [sprints]);
 
   useEffect(() => {
-    if (user) {
-      fetchProjectsData();
-      fetchSprintsData();
-      fetchColumnsData();
-      fetchTasksData();
-      
-      // Load backlog items and collaborators from localStorage for now
-      const userIdPrefix = `user_${user.id}_`;
-      const storedBacklogItems = localStorage.getItem(`${userIdPrefix}backlogItems`);
-      const storedCollaborators = localStorage.getItem(`${userIdPrefix}collaborators`);
-
-      if (storedBacklogItems) setBacklogItems(JSON.parse(storedBacklogItems));
-      if (storedCollaborators) setCollaborators(JSON.parse(storedCollaborators));
-    }
-  }, [user]);
+    localStorage.setItem("columns", JSON.stringify(columns));
+  }, [columns]);
 
   useEffect(() => {
-    if (!user) return;
-    
-    const userIdPrefix = `user_${user.id}_`;
-    localStorage.setItem(`${userIdPrefix}backlogItems`, JSON.stringify(backlogItems));
-  }, [backlogItems, user]);
+    localStorage.setItem("backlogItems", JSON.stringify(backlogItems));
+  }, [backlogItems]);
 
-  useEffect(() => {
-    if (!user) return;
-    
-    const userIdPrefix = `user_${user.id}_`;
-    localStorage.setItem(`${userIdPrefix}collaborators`, JSON.stringify(collaborators));
-  }, [collaborators, user]);
-
-  const createProject = async (data: ProjectFormData) => {
-    const { data: newProject, error } = await createProjectUtil(data, user);
-    
-    if (error) {
-      toast({
-        title: "Error",
-        description: error,
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (newProject) {
-      setProjects([...projects, newProject]);
-      setSelectedProject(newProject);
-      
-      toast({
-        title: "Project created",
-        description: `${data.title} has been created successfully.`,
-      });
-    }
+  // Project handlers
+  const handleCreateProject = (projectData: { title: string; description: string; endGoal: string }) => {
+    setProjects(prevProjects => createProject(prevProjects, projectData, toast));
   };
 
-  const updateProject = async (id: string, data: ProjectFormData) => {
-    const { data: updatedProject, error } = await updateProjectUtil(id, data, user);
-    
-    if (error) {
-      toast({
-        title: "Error",
-        description: error,
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (updatedProject) {
-      const updatedProjects = projects.map(project => 
-        project.id === id ? updatedProject : project
-      );
-      
-      setProjects(updatedProjects);
-      
-      if (selectedProject && selectedProject.id === id) {
-        setSelectedProject(updatedProject);
-      }
-      
-      toast({
-        title: "Project updated",
-        description: `${data.title} has been updated successfully.`,
-      });
-    }
+  const handleUpdateProject = (id: string, projectData: { title: string; description: string; endGoal: string }) => {
+    setProjects(prevProjects => updateProject(prevProjects, id, projectData, toast));
   };
 
-  const deleteProject = async (id: string) => {
-    const projectToDelete = projects.find(project => project.id === id);
-    if (!projectToDelete) return;
-    
-    const { success, error } = await deleteProjectUtil(id, user);
-    
-    if (error) {
-      toast({
-        title: "Error",
-        description: error,
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (success) {
-      setProjects(projects.filter(project => project.id !== id));
-      
-      const projectSprints = sprints.filter(sprint => sprint.projectId === id);
-      const sprintIds = projectSprints.map(sprint => sprint.id);
-      
-      setSprints(sprints.filter(sprint => sprint.projectId !== id));
-      
-      setColumns(
-        columns.map(column => ({
-          ...column,
-          tasks: column.tasks.filter(task => !sprintIds.includes(task.sprintId))
-        }))
-      );
-      
-      setBacklogItems(backlogItems.filter(item => item.projectId !== id));
-      
-      setCollaborators(collaborators.filter(collab => collab.projectId !== id));
-      
-      if (selectedProject && selectedProject.id === id) {
-        setSelectedProject(null);
-      }
-      
-      toast({
-        title: "Project deleted",
-        description: `${projectToDelete.title} has been deleted successfully.`,
-      });
-    }
+  const handleDeleteProject = (id: string) => {
+    const { updatedProjects, updatedSprints, updatedColumns } = deleteProject(projects, sprints, columns, id, toast);
+    setProjects(updatedProjects);
+    setSprints(updatedSprints);
+    setColumns(updatedColumns);
   };
 
-  const selectProject = (id: string) => {
-    if (!id) {
-      setSelectedProject(null);
-      return;
-    }
-    
-    const project = projects.find(p => p.id === id);
-    if (project) {
-      setSelectedProject(project);
-    }
+  // Sprint handlers
+  const handleCreateSprint = (sprintData: { title: string; description: string; startDate: Date; endDate: Date; projectId: string }) => {
+    const newSprint = createSprint(sprints, sprintData, toast);
+    setSprints(prevSprints => [...prevSprints, newSprint]);
   };
 
-  const createSprint = async (data: SprintFormData) => {
-    if (!selectedProject) {
-      toast({
-        title: "Error",
-        description: "No project selected.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    const { data: newSprint, error } = await createSprintUtil(data, selectedProject.id, user);
-    
-    if (error) {
-      toast({
-        title: "Error",
-        description: error,
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (newSprint) {
-      setSprints([...sprints, newSprint]);
-      
-      // Create default columns for the new sprint
-      const defaultColumns = ["TO DO", "IN PROGRESS", "DONE"];
-      
-      for (const title of defaultColumns) {
-        await createColumn(newSprint.id, title);
-      }
-      
-      toast({
-        title: "Sprint created",
-        description: `${data.title} has been created successfully.`,
-      });
-    }
+  const handleUpdateSprint = (id: string, sprintData: { title: string; description: string; startDate: Date; endDate: Date }) => {
+    setSprints(prevSprints => updateSprint(prevSprints, id, sprintData, toast));
   };
 
-  const updateSprint = async (id: string, data: SprintFormData) => {
-    const { data: updatedSprint, error } = await updateSprintUtil(id, data, user);
-    
-    if (error) {
-      toast({
-        title: "Error",
-        description: error,
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (updatedSprint) {
-      const updatedSprints = sprints.map(sprint => 
-        sprint.id === id ? updatedSprint : sprint
-      );
-      
-      setSprints(updatedSprints);
-      
-      toast({
-        title: "Sprint updated",
-        description: `${data.title} has been updated successfully.`,
-      });
-    }
+  const handleDeleteSprint = (id: string) => {
+    const { updatedSprints, updatedColumns } = deleteSprint(sprints, columns, id, toast);
+    setSprints(updatedSprints);
+    setColumns(updatedColumns);
   };
 
-  const completeSprint = async (id: string) => {
-    const { data: updatedSprint, error } = await completeSprintUtil(id, user);
-    
-    if (error) {
-      toast({
-        title: "Error",
-        description: error,
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (updatedSprint) {
-      const updatedSprints = sprints.map(sprint => 
-        sprint.id === id ? updatedSprint : sprint
-      );
-      
-      setSprints(updatedSprints);
-      
-      toast({
-        title: "Sprint completed",
-        description: `${updatedSprint.title} has been marked as completed.`,
-      });
-    }
+  const handleCompleteSprint = (id: string) => {
+    setSprints(prevSprints => completeSprint(prevSprints, id, toast));
   };
 
-  const createColumn = async (sprintId: string, title: string) => {
+  // Column handlers
+  const handleCreateColumn = async (sprintId: string, title: string) => {
     const columnExists = columns.some(col => col.title === title && col.tasks.some(task => task.sprintId === sprintId));
     
     if (columnExists) {
@@ -445,9 +101,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const { data, error } = await createColumnInDB(title, sprintId);
     
     if (error) {
+      const errorMessage = typeof error === 'string' ? error : error.message;
       toast({
         title: "Error",
-        description: `Failed to create column: ${error.message}`,
+        description: `Failed to create column: ${errorMessage}`,
         variant: "destructive"
       });
       return;
@@ -469,139 +126,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const deleteColumn = async (id: string) => {
-    const columnToDelete = columns.find(column => column.id === id);
-    if (!columnToDelete) return;
-    
-    if (columnToDelete.tasks.length > 0) {
-      toast({
-        title: "Cannot delete column",
-        description: "This column still has tasks. Move or delete them first.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (["TO DO", "IN PROGRESS", "DONE"].includes(columnToDelete.title)) {
-      toast({
-        title: "Cannot delete default column",
-        description: "The default columns (TO DO, IN PROGRESS, DONE) cannot be deleted.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    const { error } = await deleteColumnFromDB(id);
-    
-    if (error) {
-      toast({
-        title: "Error",
-        description: `Failed to delete column: ${error.message}`,
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setColumns(columns.filter(column => column.id !== id));
-    
-    toast({
-      title: "Column deleted",
-      description: `${columnToDelete.title} column has been deleted successfully.`,
-    });
+  const handleDeleteColumn = (id: string) => {
+    setColumns(prevColumns => deleteColumn(prevColumns, id, toast));
   };
 
-  const createTask = async (sprintId: string, columnId: string, data: TaskFormData) => {
-    const column = columns.find(col => col.id === columnId);
-    if (!column) {
-      toast({
-        title: "Error",
-        description: "Column not found.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    const { data: newTask, error } = await createTaskInDB(data, columnId, sprintId);
-    
-    if (error) {
-      toast({
-        title: "Error",
-        description: `Failed to create task: ${error.message}`,
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (newTask) {
-      const formattedTask: Task = {
-        id: newTask.id,
-        title: newTask.title,
-        description: newTask.description || "",
-        priority: newTask.priority || "medium",
-        assignee: newTask.assignee || "",
-        storyPoints: newTask.story_points || 1,
-        columnId,
-        sprintId,
-        createdAt: new Date(newTask.created_at),
-        updatedAt: new Date(newTask.updated_at)
-      };
-      
-      const updatedColumns = columns.map(col => 
-        col.id === columnId 
-          ? { ...col, tasks: [...col.tasks, formattedTask] } 
-          : col
-      );
-      
-      setColumns(updatedColumns);
-      
-      toast({
-        title: "Task created",
-        description: `${data.title} has been created successfully.`,
-      });
-    }
+  // Task handlers
+  const handleCreateTask = async (sprintId: string, columnId: string, taskData: { title: string; description: string; priority: "low" | "medium" | "high"; assignee: string; storyPoints: number }) => {
+    setColumns(prevColumns => createTask(prevColumns, sprintId, columnId, taskData, toast));
   };
 
-  const updateTask = async (id: string, data: TaskFormData) => {
-    const { data: updatedTask, error } = await updateTaskInDB(id, data);
-    
-    if (error) {
-      toast({
-        title: "Error",
-        description: `Failed to update task: ${error.message}`,
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (updatedTask) {
-      const updatedColumns = columns.map(column => {
-        const taskIndex = column.tasks.findIndex(task => task.id === id);
-        
-        if (taskIndex !== -1) {
-          const updatedTasks = [...column.tasks];
-          updatedTasks[taskIndex] = { 
-            ...updatedTasks[taskIndex], 
-            title: updatedTask.title,
-            description: updatedTask.description || "",
-            priority: updatedTask.priority || "medium",
-            assignee: updatedTask.assignee || "",
-            storyPoints: updatedTask.story_points || 1,
-            updatedAt: new Date(updatedTask.updated_at)
-          };
-          
-          return { ...column, tasks: updatedTasks };
-        }
-        
-        return column;
-      });
-      
-      setColumns(updatedColumns);
-      
-      toast({
-        title: "Task updated",
-        description: `${data.title} has been updated successfully.`,
-      });
-    }
+  const handleUpdateTask = async (id: string, taskData: { title: string; description: string; priority: "low" | "medium" | "high"; assignee: string; storyPoints: number }) => {
+    setColumns(prevColumns => updateTask(prevColumns, id, taskData, toast));
   };
 
   const deleteTask = async (id: string) => {
@@ -610,9 +145,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const { error } = await deleteTaskFromDB(id);
     
     if (error) {
+      const errorMessage = typeof error === 'string' ? error : error.message;
       toast({
         title: "Error",
-        description: `Failed to delete task: ${error.message}`,
+        description: `Failed to delete task: ${errorMessage}`,
         variant: "destructive"
       });
       return;
@@ -638,286 +174,57 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const moveTask = async (taskId: string, sourceColumnId: string, destinationColumnId: string) => {
-    const sourceColumn = columns.find(col => col.id === sourceColumnId);
-    if (!sourceColumn) return;
-    
-    const taskIndex = sourceColumn.tasks.findIndex(task => task.id === taskId);
-    if (taskIndex === -1) return;
-    
-    const task = { ...sourceColumn.tasks[taskIndex], columnId: destinationColumnId };
-    
-    const { data, error } = await updateTaskColumnInDB(taskId, destinationColumnId);
-    
-    if (error) {
-      toast({
-        title: "Error",
-        description: `Failed to move task: ${error.message}`,
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    const updatedColumns = columns.map(col => {
-      if (col.id === sourceColumnId) {
-        return {
-          ...col,
-          tasks: col.tasks.filter(t => t.id !== taskId)
-        };
-      }
-      
-      if (col.id === destinationColumnId) {
-        return {
-          ...col,
-          tasks: [...col.tasks, task]
-        };
-      }
-      
-      return col;
-    });
-    
+  const handleMoveTask = (taskId: string, sourceColumnId: string, destinationColumnId: string) => {
+    setColumns(prevColumns => moveTask(prevColumns, taskId, sourceColumnId, destinationColumnId));
+  };
+
+  // Backlog item handlers
+  const handleCreateBacklogItem = (itemData: { title: string; description: string; priority: "low" | "medium" | "high"; storyPoints: number; projectId: string }) => {
+    setBacklogItems(prevItems => createBacklogItem(prevItems, itemData, toast));
+  };
+
+  const handleUpdateBacklogItem = (id: string, itemData: { title: string; description: string; priority: "low" | "medium" | "high"; storyPoints: number }) => {
+    setBacklogItems(prevItems => updateBacklogItem(prevItems, id, itemData, toast));
+  };
+
+  const handleDeleteBacklogItem = (id: string) => {
+    setBacklogItems(prevItems => deleteBacklogItem(prevItems, id, toast));
+  };
+
+  const handleMoveToSprint = (itemId: string, sprintId: string) => {
+    const { updatedBacklogItems, updatedColumns } = moveToSprint(backlogItems, columns, itemId, sprintId, toast);
+    setBacklogItems(updatedBacklogItems);
     setColumns(updatedColumns);
   };
 
-  const createBacklogItem = (data: BacklogItemFormData) => {
-    if (!selectedProject) {
-      toast({
-        title: "Error",
-        description: "No project selected.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    const newBacklogItem: BacklogItem = {
-      id: uuidv4(),
-      projectId: selectedProject.id,
-      ...data,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    
-    setBacklogItems([...backlogItems, newBacklogItem]);
-    
-    toast({
-      title: "Backlog item created",
-      description: `${data.title} has been added to the backlog.`,
-    });
+  // Create context value object with all handlers
+  const contextValue: ProjectContextType = {
+    projects,
+    sprints,
+    columns,
+    backlogItems,
+    createProject: handleCreateProject,
+    updateProject: handleUpdateProject,
+    deleteProject: handleDeleteProject,
+    createSprint: handleCreateSprint,
+    updateSprint: handleUpdateSprint,
+    deleteSprint: handleDeleteSprint,
+    completeSprint: handleCompleteSprint,
+    createColumn: handleCreateColumn,
+    deleteColumn: handleDeleteColumn,
+    createTask: handleCreateTask,
+    updateTask: handleUpdateTask,
+    deleteTask: deleteTask,
+    moveTask: handleMoveTask,
+    createBacklogItem: handleCreateBacklogItem,
+    updateBacklogItem: handleUpdateBacklogItem,
+    deleteBacklogItem: handleDeleteBacklogItem,
+    moveToSprint: handleMoveToSprint,
+    moveBacklogItemToSprint: handleMoveToSprint // Alias for compatibility
   };
-
-  const updateBacklogItem = (id: string, data: BacklogItemFormData) => {
-    const updatedBacklogItems = backlogItems.map(item => 
-      item.id === id 
-        ? { ...item, ...data, updatedAt: new Date() } 
-        : item
-    );
-    
-    setBacklogItems(updatedBacklogItems);
-    
-    toast({
-      title: "Backlog item updated",
-      description: `${data.title} has been updated successfully.`,
-    });
-  };
-
-  const deleteBacklogItem = (id: string) => {
-    const itemToDelete = backlogItems.find(item => item.id === id);
-    if (!itemToDelete) return;
-    
-    setBacklogItems(backlogItems.filter(item => item.id !== id));
-    
-    toast({
-      title: "Backlog item deleted",
-      description: `${itemToDelete.title} has been deleted from the backlog.`,
-    });
-  };
-
-  const moveBacklogItemToSprint = (backlogItemId: string, sprintId: string) => {
-    const backlogItem = backlogItems.find(item => item.id === backlogItemId);
-    if (!backlogItem) return;
-    
-    const todoColumn = columns.find(col => col.title === "TO DO");
-    if (!todoColumn) {
-      toast({
-        title: "Error",
-        description: "TO DO column not found. Please create a sprint first.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    const newTask: Task = {
-      id: uuidv4(),
-      title: backlogItem.title,
-      description: backlogItem.description,
-      priority: backlogItem.priority,
-      assignee: "",
-      storyPoints: backlogItem.storyPoints,
-      columnId: todoColumn.id,
-      sprintId: sprintId,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    
-    const updatedColumns = columns.map(col => 
-      col.id === todoColumn.id 
-        ? { ...col, tasks: [...col.tasks, newTask] } 
-        : col
-    );
-    
-    const updatedBacklogItems = backlogItems.filter(item => item.id !== backlogItemId);
-    
-    setColumns(updatedColumns);
-    setBacklogItems(updatedBacklogItems);
-    
-    toast({
-      title: "Item moved to sprint",
-      description: `${backlogItem.title} has been moved to the selected sprint.`,
-    });
-  };
-
-  const inviteCollaborator = async (projectId: string, projectTitle: string, data: CollaboratorFormData) => {
-    const project = projects.find(p => p.id === projectId);
-    if (!project) {
-      toast({
-        title: "Error",
-        description: "Project not found.",
-        variant: "destructive"
-      });
-      return { success: false, error: "Project not found" };
-    }
-    
-    if (project.ownerId !== user.id) {
-      toast({
-        title: "Permission denied",
-        description: "Only the project owner can invite collaborators.",
-        variant: "destructive"
-      });
-      return { success: false, error: "Permission denied" };
-    }
-    
-    const { success, error } = await inviteCollaboratorUtil(
-      projectId, 
-      projectTitle, 
-      data, 
-      user
-    );
-    
-    if (error) {
-      toast({
-        title: "Error",
-        description: error,
-        variant: "destructive"
-      });
-      return { success: false, error };
-    }
-    
-    const existingCollaborator = collaborators.find(
-      collab => collab.projectId === projectId && collab.email === data.email
-    );
-    
-    if (existingCollaborator) {
-      toast({
-        title: "Already invited",
-        description: `${data.email} has already been invited to this project.`,
-        variant: "destructive"
-      });
-      return { success: false, error: "Collaborator already invited" };
-    }
-    
-    const newCollaborator: Collaborator = {
-      id: uuidv4(),
-      projectId,
-      email: data.email,
-      role: data.role,
-      status: "pending",
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    
-    setCollaborators([...collaborators, newCollaborator]);
-    
-    toast({
-      title: "Invitation sent",
-      description: `Invitation has been sent to ${data.email}.`,
-    });
-    
-    return { success: true, error: null };
-  };
-
-  const removeCollaborator = (id: string) => {
-    if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "You need to sign in to remove collaborators",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    const collaboratorToRemove = collaborators.find(collab => collab.id === id);
-    if (!collaboratorToRemove) return;
-    
-    const project = projects.find(p => p.id === collaboratorToRemove.projectId);
-    if (!project) return;
-    
-    if (project.ownerId !== user.id) {
-      toast({
-        title: "Permission denied",
-        description: "Only the project owner can remove collaborators.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setCollaborators(collaborators.filter(collab => collab.id !== id));
-    
-    toast({
-      title: "Collaborator removed",
-      description: `${collaboratorToRemove.email} has been removed from the project.`,
-    });
-  };
-
-  const getProjectCollaborators = (projectId: string) => {
-    return collaborators.filter(collab => collab.projectId === projectId);
-  };
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
 
   return (
-    <ProjectContext.Provider
-      value={{
-        projects,
-        selectedProject,
-        sprints,
-        columns,
-        backlogItems,
-        collaborators,
-        user,
-        createProject,
-        updateProject,
-        deleteProject,
-        selectProject,
-        createSprint,
-        updateSprint,
-        completeSprint,
-        createColumn,
-        deleteColumn,
-        createTask,
-        updateTask,
-        deleteTask,
-        moveTask,
-        createBacklogItem,
-        updateBacklogItem,
-        deleteBacklogItem,
-        moveBacklogItemToSprint,
-        inviteCollaborator,
-        removeCollaborator,
-        getProjectCollaborators
-      }}
-    >
+    <ProjectContext.Provider value={contextValue}>
       {children}
     </ProjectContext.Provider>
   );
