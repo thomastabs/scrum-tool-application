@@ -1,5 +1,7 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
+import { useNavigate } from "react-router-dom";
 import { 
   Project, 
   Sprint, 
@@ -14,7 +16,18 @@ import {
   CollaboratorFormData 
 } from "@/types";
 import { toast } from "@/components/ui/use-toast";
-import { supabase, getSession } from "@/lib/supabase";
+import { 
+  supabase, 
+  getSession, 
+  createColumnInDB, 
+  getColumnsFromDB, 
+  deleteColumnFromDB,
+  createTaskInDB,
+  getTasksFromDB,
+  updateTaskInDB,
+  updateTaskColumnInDB,
+  deleteTaskFromDB
+} from "@/lib/supabase";
 import { ProjectContextType } from "./types";
 import { 
   fetchProjects, 
@@ -43,12 +56,18 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const getUser = async () => {
       const { session } = await getSession();
       setUser(session?.user || null);
       setLoading(false);
+      
+      // Redirect to sign-in if not authenticated
+      if (!session?.user) {
+        navigate("/sign-in");
+      }
     };
     
     getUser();
@@ -63,16 +82,19 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setBacklogItems([]);
         setCollaborators([]);
         setSelectedProject(null);
+        navigate("/sign-in");
       } else {
         fetchProjectsData();
         fetchSprintsData();
+        fetchColumnsData();
+        fetchTasksData();
       }
     });
 
     return () => {
       authListener.data.subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate]);
 
   const fetchProjectsData = async () => {
     if (!user) return;
@@ -112,28 +134,87 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  const fetchColumnsData = async () => {
+    if (!user) return;
+    
+    const { data, error } = await getColumnsFromDB();
+    
+    if (error) {
+      console.error("Error fetching columns:", error);
+      return;
+    }
+    
+    if (data) {
+      // Convert database fields to match our Column type
+      const formattedColumns = data.map(column => ({
+        id: column.id,
+        title: column.title,
+        tasks: []
+      }));
+      
+      setColumns(formattedColumns);
+    }
+  };
+
+  const fetchTasksData = async () => {
+    if (!user) return;
+    
+    const { data, error } = await getTasksFromDB();
+    
+    if (error) {
+      console.error("Error fetching tasks:", error);
+      return;
+    }
+    
+    if (data) {
+      // We need to update the columns with tasks
+      const updatedColumns = [...columns];
+      
+      data.forEach(task => {
+        const columnIndex = updatedColumns.findIndex(col => col.id === task.column_id);
+        
+        if (columnIndex !== -1) {
+          const formattedTask = {
+            id: task.id,
+            title: task.title,
+            description: task.description || "",
+            priority: task.priority || "medium",
+            assignee: task.assignee || "",
+            storyPoints: task.story_points || 1,
+            columnId: task.column_id,
+            sprintId: task.sprint_id,
+            createdAt: new Date(task.created_at),
+            updatedAt: new Date(task.updated_at)
+          };
+          
+          if (!updatedColumns[columnIndex].tasks) {
+            updatedColumns[columnIndex].tasks = [];
+          }
+          
+          updatedColumns[columnIndex].tasks.push(formattedTask);
+        }
+      });
+      
+      setColumns(updatedColumns);
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchProjectsData();
       fetchSprintsData();
+      fetchColumnsData();
+      fetchTasksData();
       
+      // Load backlog items and collaborators from localStorage for now
       const userIdPrefix = `user_${user.id}_`;
-      const storedColumns = localStorage.getItem(`${userIdPrefix}columns`);
       const storedBacklogItems = localStorage.getItem(`${userIdPrefix}backlogItems`);
       const storedCollaborators = localStorage.getItem(`${userIdPrefix}collaborators`);
 
-      if (storedColumns) setColumns(JSON.parse(storedColumns));
       if (storedBacklogItems) setBacklogItems(JSON.parse(storedBacklogItems));
       if (storedCollaborators) setCollaborators(JSON.parse(storedCollaborators));
     }
   }, [user]);
-
-  useEffect(() => {
-    if (!user) return;
-    
-    const userIdPrefix = `user_${user.id}_`;
-    localStorage.setItem(`${userIdPrefix}columns`, JSON.stringify(columns));
-  }, [columns, user]);
 
   useEffect(() => {
     if (!user) return;
@@ -283,44 +364,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (newSprint) {
       setSprints([...sprints, newSprint]);
       
-      let todoColumnExists = false;
-      let inProgressColumnExists = false;
-      let doneColumnExists = false;
+      // Create default columns for the new sprint
+      const defaultColumns = ["TO DO", "IN PROGRESS", "DONE"];
       
-      columns.forEach(column => {
-        if (column.title === "TO DO") todoColumnExists = true;
-        if (column.title === "IN PROGRESS") inProgressColumnExists = true;
-        if (column.title === "DONE") doneColumnExists = true;
-      });
-      
-      const newColumns: Column[] = [];
-      
-      if (!todoColumnExists) {
-        newColumns.push({
-          id: uuidv4(),
-          title: "TO DO",
-          tasks: []
-        });
-      }
-      
-      if (!inProgressColumnExists) {
-        newColumns.push({
-          id: uuidv4(),
-          title: "IN PROGRESS",
-          tasks: []
-        });
-      }
-      
-      if (!doneColumnExists) {
-        newColumns.push({
-          id: uuidv4(),
-          title: "DONE",
-          tasks: []
-        });
-      }
-      
-      if (newColumns.length > 0) {
-        setColumns([...columns, ...newColumns]);
+      for (const title of defaultColumns) {
+        await createColumn(newSprint.id, title);
       }
       
       toast({
@@ -382,33 +430,46 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const createColumn = (sprintId: string, title: string) => {
-    const columnExists = columns.some(col => col.title === title);
+  const createColumn = async (sprintId: string, title: string) => {
+    const columnExists = columns.some(col => col.title === title && col.tasks.some(task => task.sprintId === sprintId));
     
     if (columnExists) {
       toast({
         title: "Column already exists",
-        description: `A column named "${title}" already exists.`,
+        description: `A column named "${title}" already exists for this sprint.`,
         variant: "destructive"
       });
       return;
     }
     
-    const newColumn: Column = {
-      id: uuidv4(),
-      title,
-      tasks: []
-    };
+    const { data, error } = await createColumnInDB(title, sprintId);
     
-    setColumns([...columns, newColumn]);
+    if (error) {
+      toast({
+        title: "Error",
+        description: `Failed to create column: ${error.message}`,
+        variant: "destructive"
+      });
+      return;
+    }
     
-    toast({
-      title: "Column created",
-      description: `${title} column has been created successfully.`,
-    });
+    if (data) {
+      const newColumn: Column = {
+        id: data.id,
+        title: data.title,
+        tasks: []
+      };
+      
+      setColumns([...columns, newColumn]);
+      
+      toast({
+        title: "Column created",
+        description: `${title} column has been created successfully.`,
+      });
+    }
   };
 
-  const deleteColumn = (id: string) => {
+  const deleteColumn = async (id: string) => {
     const columnToDelete = columns.find(column => column.id === id);
     if (!columnToDelete) return;
     
@@ -430,6 +491,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
     
+    const { error } = await deleteColumnFromDB(id);
+    
+    if (error) {
+      toast({
+        title: "Error",
+        description: `Failed to delete column: ${error.message}`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setColumns(columns.filter(column => column.id !== id));
     
     toast({
@@ -438,7 +510,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
-  const createTask = (sprintId: string, columnId: string, data: TaskFormData) => {
+  const createTask = async (sprintId: string, columnId: string, data: TaskFormData) => {
     const column = columns.find(col => col.id === columnId);
     if (!column) {
       toast({
@@ -449,57 +521,102 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
     
-    const newTask: Task = {
-      id: uuidv4(),
-      ...data,
-      columnId,
-      sprintId,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+    const { data: newTask, error } = await createTaskInDB(data, columnId, sprintId);
     
-    const updatedColumns = columns.map(col => 
-      col.id === columnId 
-        ? { ...col, tasks: [...col.tasks, newTask] } 
-        : col
-    );
+    if (error) {
+      toast({
+        title: "Error",
+        description: `Failed to create task: ${error.message}`,
+        variant: "destructive"
+      });
+      return;
+    }
     
-    setColumns(updatedColumns);
-    
-    toast({
-      title: "Task created",
-      description: `${data.title} has been created successfully.`,
-    });
+    if (newTask) {
+      const formattedTask: Task = {
+        id: newTask.id,
+        title: newTask.title,
+        description: newTask.description || "",
+        priority: newTask.priority || "medium",
+        assignee: newTask.assignee || "",
+        storyPoints: newTask.story_points || 1,
+        columnId,
+        sprintId,
+        createdAt: new Date(newTask.created_at),
+        updatedAt: new Date(newTask.updated_at)
+      };
+      
+      const updatedColumns = columns.map(col => 
+        col.id === columnId 
+          ? { ...col, tasks: [...col.tasks, formattedTask] } 
+          : col
+      );
+      
+      setColumns(updatedColumns);
+      
+      toast({
+        title: "Task created",
+        description: `${data.title} has been created successfully.`,
+      });
+    }
   };
 
-  const updateTask = (id: string, data: TaskFormData) => {
-    const updatedColumns = columns.map(column => {
-      const taskIndex = column.tasks.findIndex(task => task.id === id);
-      
-      if (taskIndex !== -1) {
-        const updatedTasks = [...column.tasks];
-        updatedTasks[taskIndex] = { 
-          ...updatedTasks[taskIndex], 
-          ...data, 
-          updatedAt: new Date() 
-        };
+  const updateTask = async (id: string, data: TaskFormData) => {
+    const { data: updatedTask, error } = await updateTaskInDB(id, data);
+    
+    if (error) {
+      toast({
+        title: "Error",
+        description: `Failed to update task: ${error.message}`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (updatedTask) {
+      const updatedColumns = columns.map(column => {
+        const taskIndex = column.tasks.findIndex(task => task.id === id);
         
-        return { ...column, tasks: updatedTasks };
-      }
+        if (taskIndex !== -1) {
+          const updatedTasks = [...column.tasks];
+          updatedTasks[taskIndex] = { 
+            ...updatedTasks[taskIndex], 
+            title: updatedTask.title,
+            description: updatedTask.description || "",
+            priority: updatedTask.priority || "medium",
+            assignee: updatedTask.assignee || "",
+            storyPoints: updatedTask.story_points || 1,
+            updatedAt: new Date(updatedTask.updated_at)
+          };
+          
+          return { ...column, tasks: updatedTasks };
+        }
+        
+        return column;
+      });
       
-      return column;
-    });
-    
-    setColumns(updatedColumns);
-    
-    toast({
-      title: "Task updated",
-      description: `${data.title} has been updated successfully.`,
-    });
+      setColumns(updatedColumns);
+      
+      toast({
+        title: "Task updated",
+        description: `${data.title} has been updated successfully.`,
+      });
+    }
   };
 
-  const deleteTask = (id: string) => {
+  const deleteTask = async (id: string) => {
     let taskTitle = "";
+    
+    const { error } = await deleteTaskFromDB(id);
+    
+    if (error) {
+      toast({
+        title: "Error",
+        description: `Failed to delete task: ${error.message}`,
+        variant: "destructive"
+      });
+      return;
+    }
     
     const updatedColumns = columns.map(column => {
       const taskToDelete = column.tasks.find(task => task.id === id);
@@ -521,7 +638,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const moveTask = (taskId: string, sourceColumnId: string, destinationColumnId: string) => {
+  const moveTask = async (taskId: string, sourceColumnId: string, destinationColumnId: string) => {
     const sourceColumn = columns.find(col => col.id === sourceColumnId);
     if (!sourceColumn) return;
     
@@ -529,6 +646,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (taskIndex === -1) return;
     
     const task = { ...sourceColumn.tasks[taskIndex], columnId: destinationColumnId };
+    
+    const { data, error } = await updateTaskColumnInDB(taskId, destinationColumnId);
+    
+    if (error) {
+      toast({
+        title: "Error",
+        description: `Failed to move task: ${error.message}`,
+        variant: "destructive"
+      });
+      return;
+    }
     
     const updatedColumns = columns.map(col => {
       if (col.id === sourceColumnId) {
