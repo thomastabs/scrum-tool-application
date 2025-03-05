@@ -7,6 +7,7 @@ import AppSettings from "./settings/AppSettings";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { User } from "lucide-react";
+import NotificationsMenu from "./NotificationsMenu";
 
 interface ProfileDashboardProps {
   user: any;
@@ -21,7 +22,9 @@ const ProfileDashboard: React.FC<ProfileDashboardProps> = ({ user }) => {
   };
 
   return (
-    <>
+    <div className="flex items-center gap-2">
+      <NotificationsMenu />
+      
       <Button 
         variant="ghost" 
         size="sm" 
@@ -58,7 +61,7 @@ const ProfileDashboard: React.FC<ProfileDashboardProps> = ({ user }) => {
           </Tabs>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 };
 

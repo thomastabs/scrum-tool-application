@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { Project } from "@/types";
 import { toast } from "@/components/ui/use-toast";
@@ -71,9 +70,7 @@ export async function getPendingInvitations() {
         inviter_id,
         role,
         created_at,
-        projects:project_id (
-          title
-        )
+        projects:projects(title)
       `)
       .eq('invited_email', user.email)
       .eq('status', 'pending');

@@ -15,7 +15,6 @@ import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import { useState, useEffect } from "react";
 import { getSession, supabase } from "./lib/supabase";
-import NotificationsMenu from "./components/NotificationsMenu";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -49,17 +48,6 @@ const App = () => {
     };
   }, []);
 
-  // Add the NotificationsMenu component to the header
-  const AppHeader = () => {
-    if (!session) return null;
-    
-    return (
-      <div className="fixed top-4 right-4 z-50">
-        <NotificationsMenu />
-      </div>
-    );
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -76,7 +64,6 @@ const App = () => {
             <Toaster />
             <Sonner />
             <BrowserRouter>
-              <AppHeader />
               <Routes>
                 {/* Dashboard/Home page */}
                 <Route
