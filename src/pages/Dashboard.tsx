@@ -9,7 +9,8 @@ import { toast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import ProfileDashboard from "@/components/ProfileDashboard";
-import { ExternalLinkIcon } from "lucide-react";
+import { ExternalLinkIcon, FolderIcon, UsersIcon } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Dashboard = () => {
   const { projects } = useProject();
@@ -63,45 +64,68 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 gap-6">
-          {/* Recent Projects Card */}
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle>Recent Projects</CardTitle>
-                <Button size="sm" asChild>
-                  <Link to="/my-projects">
-                    View All Projects
-                  </Link>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {recentProjects.length > 0 ? (
-                <div className="space-y-4">
-                  {recentProjects.map((project) => (
-                    <div key={project.id} className="flex justify-between items-center p-3 border rounded-md hover:bg-accent/50 transition-colors">
-                      <div>
-                        <h3 className="font-medium">{project.title}</h3>
-                        <p className="text-sm text-muted-foreground line-clamp-1">{project.description}</p>
-                      </div>
-                      <Button size="sm" variant="ghost" asChild>
-                        <Link to={`/my-projects/${project.id}`}>
-                          <ExternalLinkIcon className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                    </div>
+          <Tabs defaultValue="projects" className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="projects" className="flex items-center gap-2">
+                <FolderIcon className="h-4 w-4" />
+                My Projects
+              </TabsTrigger>
+              <TabsTrigger value="collaborations" className="flex items-center gap-2">
+                <UsersIcon className="h-4 w-4" />
+                My Collaborations
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="projects">
+              {projects.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {projects.map((project) => (
+                    <Card key={project.id} className="hover:shadow-md transition-shadow">
+                      <CardHeader className="pb-2">
+                        <div className="flex justify-between">
+                          <CardTitle className="text-xl">{project.title}</CardTitle>
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-2">{project.description}</p>
+                      </CardHeader>
+                      <CardContent>
+                        <Button size="sm" variant="default" asChild className="w-full">
+                          <Link to={`/my-projects/${project.id}`}>
+                            Open Project
+                          </Link>
+                        </Button>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-6">
-                  <p className="text-muted-foreground mb-4">No projects yet.</p>
+                <div className="text-center py-12 bg-accent/30 rounded-lg border border-border">
+                  <FolderIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No projects yet</h3>
+                  <p className="text-muted-foreground mb-4">Start by creating your first agile project</p>
                   <Button asChild>
                     <Link to="/my-projects">Create a Project</Link>
                   </Button>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </TabsContent>
+            
+            <TabsContent value="collaborations">
+              <Card>
+                <CardHeader>
+                  <CardTitle>My Collaborations</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8">
+                    <UsersIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium mb-2">Coming Soon</h3>
+                    <p className="text-muted-foreground">
+                      Collaboration features will be implemented in the future.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </div>
