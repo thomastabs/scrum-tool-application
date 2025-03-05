@@ -1,12 +1,20 @@
 
 import React from "react";
 import { Badge } from "@/components/ui/badge";
+import { AlertCircle, AlertTriangle, AlertOctagon } from "lucide-react";
 
 interface TaskPriorityBadgeProps {
   priority: "low" | "medium" | "high";
 }
 
+/**
+ * TaskPriorityBadge - Displays a badge indicating task priority with appropriate colors and icons
+ * 
+ * @param {string} priority - The priority level: "low", "medium", or "high"
+ * @returns A badge component with color and icon that visually represents the priority level
+ */
 const TaskPriorityBadge: React.FC<TaskPriorityBadgeProps> = ({ priority }) => {
+  // Get the appropriate styling based on the priority level
   const getPriorityClass = () => {
     switch (priority) {
       case "high":
@@ -20,8 +28,23 @@ const TaskPriorityBadge: React.FC<TaskPriorityBadgeProps> = ({ priority }) => {
     }
   };
 
+  // Get the appropriate icon for the priority level
+  const getPriorityIcon = () => {
+    switch (priority) {
+      case "high":
+        return <AlertOctagon className="h-3 w-3 mr-1" />;
+      case "medium":
+        return <AlertTriangle className="h-3 w-3 mr-1" />;
+      case "low":
+        return <AlertCircle className="h-3 w-3 mr-1" />;
+      default:
+        return null;
+    }
+  };
+
   return (
-    <Badge variant="outline" className={getPriorityClass()}>
+    <Badge variant="outline" className={`flex items-center ${getPriorityClass()}`}>
+      {getPriorityIcon()}
       {priority}
     </Badge>
   );
