@@ -18,6 +18,7 @@ export const createProject = (projectData: ProjectFormData) => {
   const newProject: Project = {
     ...projectData,
     id: uuidv4(),
+    user_id: (window as any).supabase?.auth?.currentUser?.id || "unknown-user", // Get current user ID
     createdAt: new Date(),
     updatedAt: new Date(),
   };
