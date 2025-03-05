@@ -6,7 +6,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ProjectProvider } from "./context/ProjectContext";
 import { ThemeProvider } from "./context/ThemeContext";
-import Index from "./pages/Index";
+import Dashboard from "./pages/Dashboard";
+import ProjectsPage from "./pages/ProjectsPage";
+import ProjectDetailPage from "./pages/ProjectDetailPage";
+import SprintPage from "./pages/SprintPage";
 import NotFound from "./pages/NotFound";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
@@ -62,16 +65,55 @@ const App = () => {
             <Sonner />
             <BrowserRouter>
               <Routes>
+                {/* Dashboard/Home page */}
                 <Route
                   path="/"
                   element={
                     session ? (
-                      <Index />
+                      <Dashboard />
                     ) : (
                       <Navigate to="/sign-in" replace />
                     )
                   }
                 />
+                
+                {/* Projects routes */}
+                <Route
+                  path="/my-projects"
+                  element={
+                    session ? (
+                      <ProjectsPage />
+                    ) : (
+                      <Navigate to="/sign-in" replace />
+                    )
+                  }
+                />
+                
+                {/* Project detail page */}
+                <Route
+                  path="/my-projects/:projectId"
+                  element={
+                    session ? (
+                      <ProjectDetailPage />
+                    ) : (
+                      <Navigate to="/sign-in" replace />
+                    )
+                  }
+                />
+                
+                {/* Sprint page */}
+                <Route
+                  path="/my-projects/:projectId/sprint/:sprintId"
+                  element={
+                    session ? (
+                      <SprintPage />
+                    ) : (
+                      <Navigate to="/sign-in" replace />
+                    )
+                  }
+                />
+                
+                {/* Auth routes */}
                 <Route 
                   path="/sign-in" 
                   element={
