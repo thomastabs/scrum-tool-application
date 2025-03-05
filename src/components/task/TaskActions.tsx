@@ -27,7 +27,7 @@ const TaskActions: React.FC<TaskActionsProps> = ({ task, onEdit }) => {
         variant="ghost" 
         size="icon" 
         className="h-7 w-7 text-destructive"
-        onClick={() => deleteTask(task.id)}
+        onClick={() => deleteTask(task.id, task.columnId)}
       >
         <TrashIcon className="h-3 w-3" />
       </Button>

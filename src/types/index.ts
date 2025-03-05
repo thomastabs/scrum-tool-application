@@ -64,6 +64,7 @@ export interface SprintFormData {
   startDate: Date;
   endDate: Date;
   justification?: string;
+  projectId?: string;
 }
 
 export interface TaskFormData {
@@ -79,6 +80,7 @@ export interface BacklogItemFormData {
   description: string;
   priority: "low" | "medium" | "high";
   storyPoints: number;
+  projectId?: string;
 }
 
 // Add the missing Collaborator types
