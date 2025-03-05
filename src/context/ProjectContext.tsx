@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Project, Sprint, Column, Task, BacklogItem, ProjectFormData, SprintFormData, TaskFormData, BacklogItemFormData, Collaborator, CollaboratorFormData } from "@/types";
@@ -1119,4 +1120,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }}
     >
       {children}
-    </
+    </ProjectContext.Provider>
+  );
+};
+
+export const useProject = () => {
+  const context = useContext(ProjectContext);
+  if (context === undefined) {
+    throw new Error("useProject must be used within a ProjectProvider");
+  }
+  return context;
+};
+
