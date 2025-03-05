@@ -31,9 +31,14 @@ const NotificationsMenu: React.FC = () => {
 
   const fetchInvitations = async () => {
     setLoading(true);
-    const data = await getPendingInvitations();
-    setInvitations(data as Invitation[]);
-    setLoading(false);
+    try {
+      const data = await getPendingInvitations();
+      setInvitations(data as Invitation[]);
+    } catch (error) {
+      console.error("Error fetching invitations:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {

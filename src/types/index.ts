@@ -1,4 +1,3 @@
-
 export interface Project {
   id: string;
   title: string;
@@ -6,6 +5,7 @@ export interface Project {
   endGoal: string;
   createdAt: Date;
   updatedAt: Date;
+  user_id: string;
 }
 
 export interface Sprint {
