@@ -9,6 +9,7 @@ import { createSprint, updateSprint, deleteSprint, completeSprint } from "./acti
 import { createColumn, deleteColumn } from "./actions/columnActions";
 import { createTask, updateTask, deleteTask, moveTask } from "./actions/taskActions";
 import { createBacklogItem, updateBacklogItem, deleteBacklogItem, moveToSprint } from "./actions/backlogActions";
+import { supabase } from "@/lib/supabase";
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
@@ -98,6 +99,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
     
+    // Function to create column in DB
+    const createColumnInDB = async (title: string, sprintId: string) => {
+      const { data, error } = await supabase
+        .from('board_columns')
+        .insert([{ title, sprint_id: sprintId, user_id: (await supabase.auth.getUser()).data.user?.id }])
+        .select();
+      return { data: data?.[0], error };
+    };
+    
     const { data, error } = await createColumnInDB(title, sprintId);
     
     if (error) {
@@ -114,7 +124,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const newColumn: Column = {
         id: data.id,
         title: data.title,
-        tasks: []
+        tasks: [],
+        createdAt: new Date(),
+        updatedAt: new Date()
       };
       
       setColumns([...columns, newColumn]);
@@ -141,6 +153,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const deleteTask = async (id: string) => {
     let taskTitle = "";
+    
+    // Function to delete task from DB
+    const deleteTaskFromDB = async (id: string) => {
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', id);
+      return { error };
+    };
     
     const { error } = await deleteTaskFromDB(id);
     

@@ -1,9 +1,9 @@
-
 import React, { useState } from "react";
 import { useProject } from "@/context/ProjectContext";
 import SprintBoard from "./SprintBoard";
 import SprintForm from "./SprintForm";
 import Backlog from "./Backlog";
+import Timeline from "./Timeline";
 import { Project as ProjectType, Sprint } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -191,12 +191,7 @@ const Project: React.FC<ProjectViewProps> = ({ project }) => {
         </TabsContent>
 
         <TabsContent value="timeline" className="animate-fade-in">
-          <div className="text-center py-12">
-            <h3 className="text-xl font-medium mb-2">Timeline Coming Soon</h3>
-            <p className="text-muted-foreground">
-              This feature will be implemented in a future update.
-            </p>
-          </div>
+          <Timeline projectId={project.id} />
         </TabsContent>
       </Tabs>
 
