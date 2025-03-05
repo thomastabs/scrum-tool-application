@@ -5,7 +5,6 @@ export interface Project {
   endGoal: string;
   createdAt: Date;
   updatedAt: Date;
-  user_id: string;
 }
 
 export interface Sprint {

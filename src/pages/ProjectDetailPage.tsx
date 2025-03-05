@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useProject } from "@/context/ProjectContext";
 import SprintForm from "@/components/SprintForm";
@@ -28,12 +28,8 @@ import {
   LayoutDashboardIcon,
   ListChecksIcon,
   CalendarIcon,
-  UsersIcon,
 } from "lucide-react";
 import ProjectForm from "@/components/ProjectForm";
-import CollaboratorForm from "@/components/CollaboratorForm";
-import CollaboratorsList from "@/components/CollaboratorsList";
-import { supabase } from "@/lib/supabase";
 
 const ProjectDetailPage = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -41,29 +37,10 @@ const ProjectDetailPage = () => {
   const { projects, sprints, deleteProject } = useProject();
   const [showSprintForm, setShowSprintForm] = useState(false);
   const [showEditProject, setShowEditProject] = useState(false);
-  const [showCollaboratorForm, setShowCollaboratorForm] = useState(false);
   const [sprintToEdit, setSprintToEdit] = useState<Sprint | null>(null);
-  const [isProjectOwner, setIsProjectOwner] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
 
   // Find the project by ID
   const project = projects.find(p => p.id === projectId);
-  
-  useEffect(() => {
-    const checkUserStatus = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (data?.user) {
-        setUserId(data.user.id);
-        
-        if (project) {
-          // Check if the user is the project owner
-          setIsProjectOwner(project.user_id === data.user.id);
-        }
-      }
-    };
-    
-    checkUserStatus();
-  }, [project]);
   
   if (!project) {
     return (
@@ -111,40 +88,29 @@ const ProjectDetailPage = () => {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-3xl font-bold">{project.title}</h1>
-            {isProjectOwner && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowEditProject(true)}
-                >
-                  <PencilIcon className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-destructive"
-                  onClick={handleDeleteProject}
-                >
-                  <TrashIcon className="h-4 w-4" />
-                </Button>
-              </>
-            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowEditProject(true)}
+            >
+              <PencilIcon className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-destructive"
+              onClick={handleDeleteProject}
+            >
+              <TrashIcon className="h-4 w-4" />
+            </Button>
           </div>
           <p className="text-muted-foreground mt-2 max-w-2xl">
             {project.description}
           </p>
         </div>
-        <div className="flex gap-2">
-          {isProjectOwner && (
-            <Button onClick={() => setShowCollaboratorForm(true)}>
-              <UsersIcon className="h-4 w-4 mr-1" /> Invite
-            </Button>
-          )}
-          <Button onClick={() => setShowSprintForm(true)}>
-            <PlusIcon className="h-4 w-4 mr-1" /> New Sprint
-          </Button>
-        </div>
+        <Button onClick={() => setShowSprintForm(true)}>
+          <PlusIcon className="h-4 w-4 mr-1" /> New Sprint
+        </Button>
       </div>
 
       <Tabs defaultValue="board">
@@ -157,9 +123,6 @@ const ProjectDetailPage = () => {
           </TabsTrigger>
           <TabsTrigger value="timeline">
             <CalendarIcon className="h-4 w-4 mr-2" /> Timeline
-          </TabsTrigger>
-          <TabsTrigger value="collaborators">
-            <UsersIcon className="h-4 w-4 mr-2" /> Collaborators
           </TabsTrigger>
         </TabsList>
 
@@ -239,20 +202,6 @@ const ProjectDetailPage = () => {
             onCreateSprint={() => setShowSprintForm(true)} 
           />
         </TabsContent>
-
-        <TabsContent value="collaborators" className="animate-fade-in">
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h3 className="text-xl font-medium">Project Collaborators</h3>
-              {isProjectOwner && (
-                <Button onClick={() => setShowCollaboratorForm(true)}>
-                  <PlusIcon className="h-4 w-4 mr-1" /> Invite Collaborator
-                </Button>
-              )}
-            </div>
-            <CollaboratorsList projectId={project.id} isOwner={isProjectOwner} />
-          </div>
-        </TabsContent>
       </Tabs>
 
       {showSprintForm && (
@@ -274,13 +223,6 @@ const ProjectDetailPage = () => {
             description: project.description,
             endGoal: project.endGoal,
           }}
-        />
-      )}
-
-      {showCollaboratorForm && (
-        <CollaboratorForm
-          projectId={project.id}
-          onClose={() => setShowCollaboratorForm(false)}
         />
       )}
     </div>

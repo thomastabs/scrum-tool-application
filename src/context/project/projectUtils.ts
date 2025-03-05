@@ -20,7 +20,6 @@ async function createProject(
     title: data.title,
     description: data.description,
     endGoal: data.endGoal,
-    user_id: userId,
     createdAt: new Date(),
     updatedAt: new Date()
   };

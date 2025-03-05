@@ -13,7 +13,6 @@ export const createProject = (
     title: projectData.title,
     description: projectData.description,
     endGoal: projectData.endGoal,
-    user_id: (window as any).supabase?.auth?.currentUser?.id || "unknown-user", // Get current user ID
     createdAt: new Date(),
     updatedAt: new Date()
   };
