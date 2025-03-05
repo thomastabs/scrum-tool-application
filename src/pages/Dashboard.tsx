@@ -9,12 +9,14 @@ import { toast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import ProfileDashboard from "@/components/ProfileDashboard";
-import { ExternalLinkIcon, FolderIcon, UsersIcon } from "lucide-react";
+import { ExternalLinkIcon, FolderIcon, UsersIcon, PlusIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 const Dashboard = () => {
   const { projects } = useProject();
   const [user, setUser] = useState<any>(null);
+  const [showProjectForm, setShowProjectForm] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -64,8 +66,12 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 gap-6">
-          <Tabs defaultValue="projects" className="w-full">
+          <Tabs defaultValue="overview" className="w-full">
             <TabsList className="mb-4">
+              <TabsTrigger value="overview" className="flex items-center gap-2">
+                <FolderIcon className="h-4 w-4" />
+                Overview
+              </TabsTrigger>
               <TabsTrigger value="projects" className="flex items-center gap-2">
                 <FolderIcon className="h-4 w-4" />
                 My Projects
@@ -76,10 +82,10 @@ const Dashboard = () => {
               </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="projects">
+            <TabsContent value="overview">
               {projects.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {projects.map((project) => (
+                  {recentProjects.map((project) => (
                     <Card key={project.id} className="hover:shadow-md transition-shadow">
                       <CardHeader className="pb-2">
                         <div className="flex justify-between">
@@ -96,6 +102,17 @@ const Dashboard = () => {
                       </CardContent>
                     </Card>
                   ))}
+                  {projects.length > 3 && (
+                    <Card className="hover:shadow-md transition-shadow flex items-center justify-center">
+                      <CardContent className="py-6">
+                        <Button variant="outline" asChild>
+                          <Link to="/my-projects">
+                            View All Projects
+                          </Link>
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-12 bg-accent/30 rounded-lg border border-border">
@@ -105,6 +122,59 @@ const Dashboard = () => {
                   <Button asChild>
                     <Link to="/my-projects">Create a Project</Link>
                   </Button>
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="projects">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium">My Projects</h3>
+                <Button onClick={() => navigate("/my-projects")}>
+                  <PlusIcon className="h-4 w-4 mr-1" /> New Project
+                </Button>
+              </div>
+            
+              {projects.length === 0 ? (
+                <div className="text-center py-12 bg-accent/30 rounded-lg border border-border animate-fade-in">
+                  <div className="text-center max-w-md mx-auto">
+                    <h2 className="text-xl font-bold mb-2">Welcome to Scrumify Hub</h2>
+                    <p className="text-muted-foreground mb-6">
+                      Get started by creating your first project.
+                    </p>
+                    <Button onClick={() => navigate("/my-projects")}>
+                      <PlusIcon className="h-4 w-4 mr-1" /> Create Project
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {projects.map((project) => (
+                    <Card key={project.id} className="hover:shadow-md transition-shadow">
+                      <CardHeader className="pb-2">
+                        <div className="flex justify-between">
+                          <CardTitle className="text-xl">{project.title}</CardTitle>
+                          <Badge variant="outline">
+                            {new Date(project.createdAt).toLocaleDateString()}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-2">{project.description}</p>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="mb-2">
+                          <span className="text-xs text-muted-foreground">End goal:</span>
+                          <p className="text-sm line-clamp-3">{project.endGoal}</p>
+                        </div>
+                        <Button
+                          className="w-full mt-2"
+                          asChild
+                        >
+                          <Link to={`/my-projects/${project.id}`}>
+                            Open Project
+                          </Link>
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
               )}
             </TabsContent>
