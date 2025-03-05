@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { useProject } from "@/context/ProjectContext";
-import { Sprint, Task } from "@/types";
+import { Sprint, Task, Column } from "@/types";
 import TaskForm from "./TaskForm";
 import SprintHeader from "./sprint/SprintHeader";
 import SprintColumn from "./sprint/SprintColumn";
