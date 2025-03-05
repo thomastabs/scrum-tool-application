@@ -1,138 +1,75 @@
 
-import { Project, ProjectFormData } from "@/types";
-import { toast } from "@/components/ui/use-toast";
-import { 
-  createProjectInDB, 
-  getProjectsFromDB, 
-  updateProjectInDB, 
-  deleteProjectFromDB,
-} from "@/lib/supabase";
+import { Project, Sprint, Column } from "@/types";
+import { v4 as uuidv4 } from "uuid";
 
-export const fetchProjects = async (user: any) => {
-  if (!user) return { data: null, error: "No user is logged in" };
-  
-  try {
-    const { data, error } = await getProjectsFromDB();
-    
-    if (error) {
-      console.error("Error fetching projects:", error);
-      return { data: null, error: error.message };
-    }
-    
-    if (data) {
-      // Convert database date strings to Date objects
-      const formattedProjects = data.map(project => ({
-        ...project,
-        createdAt: new Date(project.created_at),
-        updatedAt: new Date(project.updated_at),
-        ownerId: project.owner_id
-      }));
-      
-      return { data: formattedProjects, error: null };
-    }
-    
-    return { data: [], error: null };
-  } catch (error) {
-    console.error("Error in fetchProjects:", error);
-    return { data: null, error: "Failed to fetch projects" };
-  }
+// Importing supabase functionality
+// import { 
+//   createProjectInDB,
+//   getProjectsFromDB,
+//   updateProjectInDB,
+//   deleteProjectFromDB
+// } from "@/lib/supabase";
+
+// Create a new project
+export const createProjectLocal = (
+  projects: Project[],
+  data: { title: string; description: string; endGoal: string },
+  userId: string
+): Project => {
+  const newProject: Project = {
+    id: uuidv4(),
+    title: data.title,
+    description: data.description,
+    endGoal: data.endGoal,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
+
+  return newProject;
 };
 
-export const createProject = async (data: ProjectFormData, user: any) => {
-  if (!user) {
-    return { 
-      data: null, 
-      error: "Authentication required. You need to sign in to create a project" 
-    };
-  }
-  
-  try {
-    const { data: newProject, error } = await createProjectInDB(data, user.id);
-    
-    if (error) {
-      console.error("Error creating project:", error);
-      return { data: null, error: "Failed to create project. Please try again." };
-    }
-    
-    if (newProject) {
-      // Convert database fields to match our Project type
-      const formattedProject = {
-        id: newProject.id,
-        title: newProject.title,
-        description: newProject.description,
-        endGoal: newProject.end_goal,
-        ownerId: newProject.owner_id,
-        createdAt: new Date(newProject.created_at),
-        updatedAt: new Date(newProject.updated_at)
-      };
-      
-      return { data: formattedProject, error: null };
-    }
-    
-    return { data: null, error: "No project data returned" };
-  } catch (error) {
-    console.error("Error in createProject:", error);
-    return { data: null, error: "An unexpected error occurred. Please try again." };
-  }
+// Update a project
+export const updateProjectLocal = (
+  projects: Project[],
+  id: string,
+  data: { title: string; description: string; endGoal: string }
+): Project[] => {
+  return projects.map(project =>
+    project.id === id
+      ? {
+          ...project,
+          title: data.title,
+          description: data.description,
+          endGoal: data.endGoal,
+          updatedAt: new Date()
+        }
+      : project
+  );
 };
 
-export const updateProject = async (id: string, data: ProjectFormData, user: any) => {
-  if (!user) {
-    return { 
-      data: null, 
-      error: "Authentication required. You need to sign in to update a project" 
-    };
-  }
+// Delete a project and related resources
+export const deleteProjectLocal = (
+  projects: Project[],
+  sprints: Sprint[],
+  columns: Column[],
+  id: string
+): { updatedProjects: Project[], updatedSprints: Sprint[], updatedColumns: Column[] } => {
+  // Remove the project
+  const updatedProjects = projects.filter(project => project.id !== id);
   
-  try {
-    const { data: updatedProject, error } = await updateProjectInDB(id, data);
-    
-    if (error) {
-      console.error("Error updating project:", error);
-      return { data: null, error: "Failed to update project. Please try again." };
-    }
-    
-    if (updatedProject) {
-      // Convert database fields to match our Project type
-      const formattedProject = {
-        id: updatedProject.id,
-        title: updatedProject.title,
-        description: updatedProject.description,
-        endGoal: updatedProject.end_goal,
-        ownerId: updatedProject.owner_id,
-        createdAt: new Date(updatedProject.created_at),
-        updatedAt: new Date(updatedProject.updated_at)
-      };
-      
-      return { data: formattedProject, error: null };
-    }
-    
-    return { data: null, error: "No project data returned" };
-  } catch (error) {
-    console.error("Error in updateProject:", error);
-    return { data: null, error: "An unexpected error occurred. Please try again." };
-  }
-};
-
-export const deleteProject = async (id: string, user: any) => {
-  if (!user) {
-    return { 
-      success: false, 
-      error: "Authentication required. You need to sign in to delete a project" 
-    };
-  }
+  // Get IDs of sprints related to this project
+  const relatedSprintIds = sprints
+    .filter(sprint => sprint.projectId === id)
+    .map(sprint => sprint.id);
   
-  try {
-    const { error } = await deleteProjectFromDB(id);
-    
-    if (error) {
-      console.error("Error deleting project:", error);
-      return { success: false, error: "Failed to delete project. Please try again." };
-    }
-    
-    return { success: true, error: null };
-  } catch (error) {
-    console.error("Error in deleteProject:", error);
-    return { success: false, error: "An unexpected error occurred. Please try again." };
-  }
+  // Remove related sprints
+  const updatedSprints = sprints.filter(sprint => sprint.projectId !== id);
+  
+  // Remove columns with tasks related to these sprints
+  const updatedColumns = columns.map(column => ({
+    ...column,
+    tasks: column.tasks.filter(task => !relatedSprintIds.includes(task.sprintId))
+  }));
+  
+  return { updatedProjects, updatedSprints, updatedColumns };
 };

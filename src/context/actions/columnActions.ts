@@ -1,69 +1,77 @@
-// Fix the column creation in this file to include createdAt and updatedAt properties
-// Adding the necessary properties to fix TypeScript errors
 
+import { Column } from "@/types";
 import { v4 as uuidv4 } from "uuid";
-import { Column, Task } from "@/types";
 
-export const ADD_COLUMN = "ADD_COLUMN";
-export const REMOVE_COLUMN = "REMOVE_COLUMN";
-export const UPDATE_COLUMN = "UPDATE_COLUMN";
+// Create a new column
+export const createColumn = (
+  columns: Column[],
+  title: string,
+  toast: any
+): Column[] => {
+  // Check if column with same title exists
+  const columnExists = columns.some(col => col.title === title);
+  if (columnExists) {
+    toast({
+      title: "Column already exists",
+      description: `A column named "${title}" already exists.`,
+      variant: "destructive"
+    });
+    return columns;
+  }
 
-interface AddColumnAction {
-  type: typeof ADD_COLUMN;
-  payload: Column;
-}
-
-interface RemoveColumnAction {
-  type: typeof REMOVE_COLUMN;
-  payload: string; // Column ID
-}
-
-interface UpdateColumnAction {
-  type: typeof UPDATE_COLUMN;
-  payload: {
-    id: string;
-    updates: Partial<Column>;
-  };
-}
-
-export type ColumnActionTypes =
-  | AddColumnAction
-  | RemoveColumnAction
-  | UpdateColumnAction;
-
-// Fix the column creation to include createdAt and updatedAt
-export const createColumn = (title: string): Column => {
-  const now = new Date();
-  return {
+  // Create new column
+  const newColumn: Column = {
     id: uuidv4(),
     title,
     tasks: [],
-    createdAt: now,
-    updatedAt: now
+    createdAt: new Date(),
+    updatedAt: new Date()
   };
+
+  toast({
+    title: "Column created",
+    description: `${title} column has been created successfully.`,
+  });
+
+  return [...columns, newColumn];
 };
 
-export const addColumn = (title: string): ColumnActionTypes => {
-  const newColumn = createColumn(title);
-  return {
-    type: ADD_COLUMN,
-    payload: newColumn,
-  };
-};
-
-export const removeColumn = (id: string): ColumnActionTypes => {
-  return {
-    type: REMOVE_COLUMN,
-    payload: id,
-  };
-};
-
-export const updateColumn = (
+// Delete a column
+export const deleteColumn = (
+  columns: Column[],
   id: string,
-  updates: Partial<Column>
-): ColumnActionTypes => {
-  return {
-    type: UPDATE_COLUMN,
-    payload: { id, updates },
-  };
+  toast: any
+): Column[] => {
+  const columnToDelete = columns.find(col => col.id === id);
+  if (!columnToDelete) return columns;
+
+  // Check if column has tasks
+  if (columnToDelete.tasks.length > 0) {
+    toast({
+      title: "Cannot delete column",
+      description: "This column still has tasks. Move or delete them first.",
+      variant: "destructive"
+    });
+    return columns;
+  }
+
+  // Check if column is a default column
+  if (["TO DO", "IN PROGRESS", "DONE"].includes(columnToDelete.title)) {
+    toast({
+      title: "Cannot delete default column",
+      description: "The default columns (TO DO, IN PROGRESS, DONE) cannot be deleted.",
+      variant: "destructive"
+    });
+    return columns;
+  }
+
+  // Delete the column
+  const updatedColumns = columns.filter(col => col.id !== id);
+
+  toast({
+    title: "Column deleted",
+    description: `${columnToDelete.title} column has been deleted successfully.`,
+  });
+
+  return updatedColumns;
 };

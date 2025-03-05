@@ -1,94 +1,69 @@
-// Fix the column creation in this file to include createdAt and updatedAt properties
-// Adding the necessary properties to fix TypeScript errors
 
+import { BacklogItem, Column, Task } from "@/types";
 import { v4 as uuidv4 } from "uuid";
-import { BacklogItem, BacklogItemFormData, Task, Column } from "@/types";
 
-export const createBacklogItem = (
-  items: BacklogItem[],
-  projectId: string,
-  data: BacklogItemFormData
-): BacklogItem[] => {
-  const newItem: BacklogItem = {
-    id: uuidv4(),
-    projectId,
-    title: data.title,
-    description: data.description,
-    priority: data.priority,
-    storyPoints: data.storyPoints,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-
-  return [...items, newItem];
-};
-
-export const updateBacklogItem = (
-  items: BacklogItem[],
-  itemId: string,
-  data: BacklogItemFormData
-): BacklogItem[] => {
-  return items.map((item) => {
-    if (item.id === itemId) {
-      return {
-        ...item,
-        ...data,
-        updatedAt: new Date(),
-      };
-    }
-    return item;
-  });
-};
-
-export const deleteBacklogItem = (
-  items: BacklogItem[],
-  itemId: string
-): BacklogItem[] => {
-  return items.filter((item) => item.id !== itemId);
-};
-
+// Move a backlog item to a sprint
 export const moveToSprint = (
-  items: BacklogItem[],
-  itemId: string,
-  sprintId: string
-): { updatedItems: BacklogItem[]; task: Task } => {
-  // Find the item to move
-  const itemIndex = items.findIndex((item) => item.id === itemId);
-  if (itemIndex === -1) throw new Error("Backlog item not found");
+  backlogItems: BacklogItem[],
+  columns: Column[],
+  backlogItemId: string,
+  sprintId: string,
+  toast: any
+): { updatedBacklogItems: BacklogItem[], updatedColumns: Column[] } => {
+  // Find the backlog item
+  const backlogItem = backlogItems.find(item => item.id === backlogItemId);
+  if (!backlogItem) {
+    toast({
+      title: "Error",
+      description: "Backlog item not found",
+      variant: "destructive"
+    });
+    return { updatedBacklogItems: backlogItems, updatedColumns: columns };
+  }
 
-  const item = items[itemIndex];
+  // Find the TO DO column
+  const todoColumn = columns.find(col => col.title === "TO DO");
+  if (!todoColumn) {
+    toast({
+      title: "Error",
+      description: "TO DO column not found. Please create default columns first.",
+      variant: "destructive"
+    });
+    return { updatedBacklogItems: backlogItems, updatedColumns: columns };
+  }
 
   // Create a new task from the backlog item
-  const task: Task = {
+  const newTask: Task = {
     id: uuidv4(),
-    title: item.title,
-    description: item.description,
-    priority: item.priority,
+    title: backlogItem.title,
+    description: backlogItem.description,
+    priority: backlogItem.priority,
     assignee: "",
-    storyPoints: item.storyPoints,
-    columnId: "", // This will be set by the caller
+    storyPoints: backlogItem.storyPoints,
+    columnId: todoColumn.id,
     sprintId: sprintId,
     createdAt: new Date(),
-    updatedAt: new Date(),
+    updatedAt: new Date()
   };
 
-  // Remove the item from the backlog
-  const updatedItems = [
-    ...items.slice(0, itemIndex),
-    ...items.slice(itemIndex + 1),
-  ];
+  // Add the task to the TO DO column
+  const updatedColumns = columns.map(col => {
+    if (col.id === todoColumn.id) {
+      return {
+        ...col,
+        tasks: [...col.tasks, newTask]
+      };
+    }
+    return col;
+  });
 
-  return { updatedItems, task };
-};
+  // Remove the item from backlog
+  const updatedBacklogItems = backlogItems.filter(item => item.id !== backlogItemId);
 
-// Fix the column creation to include createdAt and updatedAt
-export const createColumn = (title: string): Column => {
-  const now = new Date();
-  return {
-    id: uuidv4(),
-    title,
-    tasks: [],
-    createdAt: now,
-    updatedAt: now
-  };
+  toast({
+    title: "Item moved to sprint",
+    description: `${backlogItem.title} has been moved to the selected sprint.`,
+  });
+
+  return { updatedBacklogItems, updatedColumns };
 };

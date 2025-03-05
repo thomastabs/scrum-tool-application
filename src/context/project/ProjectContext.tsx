@@ -1,6 +1,7 @@
+
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { Project, Sprint, Column, BacklogItem } from "@/types";
+import { Project, Sprint, Column, BacklogItem, Collaborator, CollaboratorFormData } from "@/types";
 import { ProjectContextType } from "./ProjectContextTypes";
 
 // Import action creators
@@ -19,6 +20,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [sprints, setSprints] = useState<Sprint[]>([]);
   const [columns, setColumns] = useState<Column[]>([]);
   const [backlogItems, setBacklogItems] = useState<BacklogItem[]>([]);
+  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
 
   // Load data from localStorage on component mount
   useEffect(() => {
@@ -60,7 +62,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const handleDeleteProject = (id: string) => {
-    const { updatedProjects, updatedSprints, updatedColumns } = deleteProject(projects, sprints, columns, id, toast);
+    const { updatedProjects, updatedSprints, updatedColumns } = deleteProject(projects, sprints, columns, id);
     setProjects(updatedProjects);
     setSprints(updatedSprints);
     setColumns(updatedColumns);
@@ -77,7 +79,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const handleDeleteSprint = (id: string) => {
-    const { updatedSprints, updatedColumns } = deleteSprint(sprints, columns, id, toast);
+    const { updatedSprints, updatedColumns } = deleteSprint(sprints, columns, id);
     setSprints(updatedSprints);
     setColumns(updatedColumns);
   };
@@ -196,7 +198,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const handleMoveTask = (taskId: string, sourceColumnId: string, destinationColumnId: string) => {
-    setColumns(prevColumns => moveTask(prevColumns, taskId, sourceColumnId, destinationColumnId));
+    setColumns(prevColumns => moveTask(prevColumns, taskId, sourceColumnId, destinationColumnId, toast));
   };
 
   // Backlog item handlers
@@ -213,35 +215,90 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const handleMoveToSprint = (itemId: string, sprintId: string) => {
-    const { updatedBacklogItems, updatedColumns } = moveToSprint(backlogItems, columns, itemId, sprintId, toast);
-    setBacklogItems(updatedBacklogItems);
+    const result = moveToSprint(backlogItems, columns, itemId, sprintId, toast);
+    setBacklogItems(result.updatedItems);
+    
+    // Find the correct column and add the task
+    const updatedColumns = columns.map(column => {
+      if (column.id === result.task.columnId) {
+        return {
+          ...column,
+          tasks: [...column.tasks, result.task]
+        };
+      }
+      return column;
+    });
+    
     setColumns(updatedColumns);
+  };
+
+  // Collaborator functions
+  const inviteCollaborator = async (projectId: string, projectTitle: string, data: CollaboratorFormData) => {
+    try {
+      // In a real implementation, this would send an email invitation
+      const newCollaborator: Collaborator = {
+        id: Math.random().toString(36).substring(2, 11),
+        projectId,
+        email: data.email,
+        role: data.role,
+        status: 'pending',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      setCollaborators(prev => [...prev, newCollaborator]);
+      
+      return { success: true, error: null };
+    } catch (error) {
+      console.error("Error inviting collaborator:", error);
+      return { 
+        success: false, 
+        error: "An unexpected error occurred. Please try again." 
+      };
+    }
+  };
+
+  const removeCollaborator = async (id: string) => {
+    setCollaborators(prev => prev.filter(c => c.id !== id));
+    
+    toast({
+      title: "Collaborator removed",
+      description: "The collaborator has been removed from the project.",
+    });
+  };
+
+  const getProjectCollaborators = (projectId: string) => {
+    return collaborators.filter(c => c.projectId === projectId);
   };
 
   // Create context value object with all handlers
   const contextValue: ProjectContextType = {
     projects,
+    selectedProject: null,
     sprints,
     columns,
     backlogItems,
+    isLoading: false,
     createProject: handleCreateProject,
     updateProject: handleUpdateProject,
     deleteProject: handleDeleteProject,
+    selectProject: () => {},
     createSprint: handleCreateSprint,
     updateSprint: handleUpdateSprint,
-    deleteSprint: handleDeleteSprint,
     completeSprint: handleCompleteSprint,
     createColumn: handleCreateColumn,
     deleteColumn: handleDeleteColumn,
     createTask: handleCreateTask,
     updateTask: handleUpdateTask,
-    deleteTask: deleteTask,
+    deleteTask,
     moveTask: handleMoveTask,
     createBacklogItem: handleCreateBacklogItem,
     updateBacklogItem: handleUpdateBacklogItem,
     deleteBacklogItem: handleDeleteBacklogItem,
-    moveToSprint: handleMoveToSprint,
-    moveBacklogItemToSprint: handleMoveToSprint // Alias for compatibility
+    moveBacklogItemToSprint: handleMoveToSprint,
+    inviteCollaborator,
+    removeCollaborator,
+    getProjectCollaborators
   };
 
   return (
