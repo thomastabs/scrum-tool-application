@@ -21,7 +21,7 @@ const ProjectOverview = ({ projects }: ProjectOverviewProps) => {
         <h3 className="text-lg font-medium mb-2">No projects yet</h3>
         <p className="text-muted-foreground mb-4">Start by creating your first agile project</p>
         <Button asChild>
-          <Link to="/my-projects">Create a Project</Link>
+          <Link to="/?tab=projects">Create a Project</Link>
         </Button>
       </div>
     );
@@ -50,7 +50,7 @@ const ProjectOverview = ({ projects }: ProjectOverviewProps) => {
         <Card className="hover:shadow-md transition-shadow flex items-center justify-center">
           <CardContent className="py-6">
             <Button variant="outline" asChild>
-              <Link to="/my-projects">
+              <Link to="/?tab=projects">
                 View All Projects
               </Link>
             </Button>

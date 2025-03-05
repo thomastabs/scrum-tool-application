@@ -7,7 +7,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ProjectProvider } from "./context/ProjectContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import Dashboard from "./pages/Dashboard";
-import ProjectsPage from "./pages/ProjectsPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
 import SprintPage from "./pages/SprintPage";
 import NotFound from "./pages/NotFound";
@@ -71,18 +70,6 @@ const App = () => {
                   element={
                     session ? (
                       <Dashboard />
-                    ) : (
-                      <Navigate to="/sign-in" replace />
-                    )
-                  }
-                />
-                
-                {/* Projects routes */}
-                <Route
-                  path="/my-projects"
-                  element={
-                    session ? (
-                      <ProjectsPage />
                     ) : (
                       <Navigate to="/sign-in" replace />
                     )

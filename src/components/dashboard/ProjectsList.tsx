@@ -1,18 +1,19 @@
 
-import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PlusIcon } from "lucide-react";
 import { Project } from "@/types";
+import ProjectForm from "@/components/ProjectForm";
 
 interface ProjectsListProps {
   projects: Project[];
 }
 
 const ProjectsList = ({ projects }: ProjectsListProps) => {
-  const navigate = useNavigate();
+  const [showProjectForm, setShowProjectForm] = useState(false);
 
   if (projects.length === 0) {
     return (
@@ -22,10 +23,14 @@ const ProjectsList = ({ projects }: ProjectsListProps) => {
           <p className="text-muted-foreground mb-6">
             Get started by creating your first project.
           </p>
-          <Button onClick={() => navigate("/my-projects")}>
+          <Button onClick={() => setShowProjectForm(true)}>
             <PlusIcon className="h-4 w-4 mr-1" /> Create Project
           </Button>
         </div>
+
+        {showProjectForm && (
+          <ProjectForm onClose={() => setShowProjectForm(false)} />
+        )}
       </div>
     );
   }
@@ -34,7 +39,7 @@ const ProjectsList = ({ projects }: ProjectsListProps) => {
     <>
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-medium">My Projects</h3>
-        <Button onClick={() => navigate("/my-projects")}>
+        <Button onClick={() => setShowProjectForm(true)}>
           <PlusIcon className="h-4 w-4 mr-1" /> New Project
         </Button>
       </div>
@@ -68,6 +73,10 @@ const ProjectsList = ({ projects }: ProjectsListProps) => {
           </Card>
         ))}
       </div>
+
+      {showProjectForm && (
+        <ProjectForm onClose={() => setShowProjectForm(false)} />
+      )}
     </>
   );
 };
