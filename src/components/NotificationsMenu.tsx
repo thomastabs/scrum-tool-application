@@ -33,7 +33,7 @@ const NotificationsMenu: React.FC = () => {
     setLoading(true);
     try {
       const data = await getPendingInvitations();
-      setInvitations(data as Invitation[]);
+      setInvitations(data as unknown as Invitation[]);
     } catch (error) {
       console.error("Error fetching invitations:", error);
     } finally {
