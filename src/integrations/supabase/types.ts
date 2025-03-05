@@ -80,7 +80,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          invited_email: string
+          invited_user_id: string | null
           inviter_id: string
           project_id: string
           role: string
@@ -90,7 +90,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
-          invited_email: string
+          invited_user_id?: string | null
           inviter_id: string
           project_id: string
           role?: string
@@ -100,7 +100,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
-          invited_email?: string
+          invited_user_id?: string | null
           inviter_id?: string
           project_id?: string
           role?: string
@@ -119,6 +119,7 @@ export type Database = {
       }
       projects: {
         Row: {
+          collaborators: string[] | null
           created_at: string
           description: string | null
           id: string
@@ -126,6 +127,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          collaborators?: string[] | null
           created_at?: string
           description?: string | null
           id?: string
@@ -133,6 +135,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          collaborators?: string[] | null
           created_at?: string
           description?: string | null
           id?: string

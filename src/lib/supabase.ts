@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { ProjectFormData, SprintFormData } from '@/types';
 
@@ -7,6 +6,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIU
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// Auth functions
 export async function signUp(email: string, password: string) {
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -38,7 +38,7 @@ export async function getSession() {
   return { session: data.session, error };
 }
 
-// Add functions for project management
+// Project management functions
 export async function createProjectInDB(data: ProjectFormData, userId: string) {
   const { data: newProject, error } = await supabase
     .from('projects')
@@ -46,7 +46,8 @@ export async function createProjectInDB(data: ProjectFormData, userId: string) {
       user_id: userId,
       title: data.title,
       description: data.description,
-      end_goal: data.endGoal
+      end_goal: data.endGoal,
+      collaborators: []
     })
     .select()
     .single();
@@ -55,6 +56,15 @@ export async function createProjectInDB(data: ProjectFormData, userId: string) {
 }
 
 export async function getProjectsFromDB() {
+  const { data, error } = await supabase
+    .from('projects')
+    .select('*')
+    .order('created_at', { ascending: false });
+  
+  return { data, error };
+}
+
+export async function getCollaboratedProjectsFromDB() {
   const { data, error } = await supabase
     .from('projects')
     .select('*')
@@ -88,7 +98,62 @@ export async function deleteProjectFromDB(id: string) {
   return { error };
 }
 
-// Add functions for sprint management
+// Collaboration management functions
+export async function inviteUserToProject(projectId: string, userId: string, role: string = 'collaborator') {
+  const { data, error } = await supabase
+    .from('invitations')
+    .insert({
+      project_id: projectId,
+      invited_user_id: userId,
+      inviter_id: (await supabase.auth.getUser()).data.user?.id,
+      role: role,
+      status: 'pending'
+    })
+    .select()
+    .single();
+  
+  return { data, error };
+}
+
+export async function getPendingInvitations() {
+  const { data, error } = await supabase
+    .from('invitations')
+    .select(`
+      *,
+      projects:project_id (title, description),
+      inviters:inviter_id (email)
+    `)
+    .eq('status', 'pending');
+  
+  return { data, error };
+}
+
+export async function respondToInvitation(invitationId: string, status: 'accepted' | 'declined') {
+  const { data, error } = await supabase
+    .from('invitations')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', invitationId)
+    .select()
+    .single();
+  
+  return { data, error };
+}
+
+export async function searchUsers(query: string) {
+  if (!query || query.length < 3) {
+    return { data: [], error: null };
+  }
+  
+  const { data, error } = await supabase
+    .from('user_profiles') // Assumes there's a user_profiles view or table
+    .select('id, email, display_name')
+    .ilike('email', `%${query}%`)
+    .limit(10);
+  
+  return { data, error };
+}
+
+// Sprint management functions
 export async function createSprintInDB(projectId: string, data: SprintFormData) {
   const { data: newSprint, error } = await supabase
     .from('sprints')
