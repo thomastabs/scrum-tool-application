@@ -5,12 +5,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ProjectProvider } from "./context/ProjectContext";
-import { ThemeProvider } from "./context/ThemeContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
-import ProfileDashboard from "./pages/ProfileDashboard";
 import { useState, useEffect } from "react";
 import { getSession, supabase } from "./lib/supabase";
 
@@ -56,59 +54,47 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <TooltipProvider>
-          <ProjectProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route
-                  path="/"
-                  element={
-                    session ? (
-                      <Index />
-                    ) : (
-                      <Navigate to="/sign-in" replace />
-                    )
-                  }
-                />
-                <Route 
-                  path="/sign-in" 
-                  element={
-                    session ? (
-                      <Navigate to="/" replace />
-                    ) : (
-                      <SignIn />
-                    )
-                  } 
-                />
-                <Route 
-                  path="/sign-up" 
-                  element={
-                    session ? (
-                      <Navigate to="/" replace />
-                    ) : (
-                      <SignUp />
-                    )
-                  } 
-                />
-                <Route
-                  path="/profile"
-                  element={
-                    session ? (
-                      <ProfileDashboard />
-                    ) : (
-                      <Navigate to="/sign-in" replace />
-                    )
-                  }
-                />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </ProjectProvider>
-        </TooltipProvider>
-      </ThemeProvider>
+      <TooltipProvider>
+        <ProjectProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  session ? (
+                    <Index />
+                  ) : (
+                    <Navigate to="/sign-in" replace />
+                  )
+                }
+              />
+              <Route 
+                path="/sign-in" 
+                element={
+                  session ? (
+                    <Navigate to="/" replace />
+                  ) : (
+                    <SignIn />
+                  )
+                } 
+              />
+              <Route 
+                path="/sign-up" 
+                element={
+                  session ? (
+                    <Navigate to="/" replace />
+                  ) : (
+                    <SignUp />
+                  )
+                } 
+              />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </ProjectProvider>
+      </TooltipProvider>
     </QueryClientProvider>
   );
 };
