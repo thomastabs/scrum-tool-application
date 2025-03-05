@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useProject } from "@/context/ProjectContext";
 import { Sprint, Column, Task } from "@/types";
@@ -74,13 +73,13 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
 
   const handleAddColumn = () => {
     if (newColumnName.trim()) {
-      createColumn(sprint.id, newColumnName.trim());
+      createColumn(newColumnName.trim());
       setNewColumnName("");
       setShowAddColumn(false);
     }
   };
 
-  // Check if all tasks are in DONE column
+  // Check if all tasks are completed
   const allTasksCompleted = () => {
     if (!doneColumn) return false;
     
