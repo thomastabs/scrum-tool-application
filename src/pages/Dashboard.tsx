@@ -1,12 +1,11 @@
 
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useProject } from "@/context/ProjectContext";
 import { signOut, supabase } from "@/lib/supabase";
 import { toast } from "@/components/ui/use-toast";
-import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import ProfileDashboard from "@/components/ProfileDashboard";
 import { ExternalLinkIcon, FolderIcon, UsersIcon, PlusIcon } from "lucide-react";
@@ -18,6 +17,11 @@ const Dashboard = () => {
   const [user, setUser] = useState<any>(null);
   const [showProjectForm, setShowProjectForm] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Get the 'tab' query parameter from the URL
+  const queryParams = new URLSearchParams(location.search);
+  const activeTab = queryParams.get('tab') || 'overview';
 
   useEffect(() => {
     const getUser = async () => {
@@ -66,7 +70,7 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 gap-6">
-          <Tabs defaultValue="overview" className="w-full">
+          <Tabs defaultValue={activeTab} className="w-full">
             <TabsList className="mb-4">
               <TabsTrigger value="overview" className="flex items-center gap-2">
                 <FolderIcon className="h-4 w-4" />

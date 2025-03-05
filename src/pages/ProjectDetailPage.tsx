@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useProject } from "@/context/ProjectContext";
@@ -49,7 +48,7 @@ const ProjectDetailPage = () => {
           <h2 className="text-2xl font-bold mb-4">Project Not Found</h2>
           <p className="mb-6">The project you're looking for does not exist.</p>
           <Button asChild>
-            <Link to="/my-projects">Go Back to Projects</Link>
+            <Link to="/?tab=projects">Go Back to Projects</Link>
           </Button>
         </div>
       </div>
@@ -63,7 +62,7 @@ const ProjectDetailPage = () => {
   const handleDeleteProject = () => {
     if (window.confirm("Are you sure you want to delete this project?")) {
       deleteProject(project.id);
-      navigate("/my-projects");
+      navigate("/?tab=projects");
     }
   };
 
@@ -76,12 +75,10 @@ const ProjectDetailPage = () => {
     <div className="container mx-auto py-8 animate-fade-in">
       <Button
         variant="ghost"
-        asChild
+        onClick={() => navigate("/?tab=projects")}
         className="mb-6"
       >
-        <Link to="/my-projects">
-          ← Back to Projects
-        </Link>
+        ← Back to Projects
       </Button>
       
       <div className="flex justify-between items-start mb-8">

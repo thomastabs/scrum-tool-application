@@ -1,6 +1,5 @@
-
 import React, { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useProject } from "@/context/ProjectContext";
 import { Task } from "@/types";
 import TaskForm from "@/components/TaskForm";
@@ -11,6 +10,7 @@ import { Button } from "@/components/ui/button";
 
 const SprintPage = () => {
   const { projectId, sprintId } = useParams<{ projectId: string, sprintId: string }>();
+  const navigate = useNavigate();
   const { projects, sprints, columns, createColumn, deleteColumn, moveTask, completeSprint } = useProject();
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
@@ -27,7 +27,7 @@ const SprintPage = () => {
           <h2 className="text-2xl font-bold mb-4">Sprint Not Found</h2>
           <p className="mb-6">The sprint you're looking for does not exist.</p>
           <Button asChild>
-            <Link to={projectId ? `/my-projects/${projectId}` : "/my-projects"}>Go Back</Link>
+            <Link to={projectId ? `/my-projects/${projectId}` : "/?tab=projects"}>Go Back</Link>
           </Button>
         </div>
       </div>
@@ -113,12 +113,10 @@ const SprintPage = () => {
     <div className="container mx-auto px-4 py-8">
       <Button
         variant="ghost"
-        asChild
+        onClick={() => navigate(`/my-projects/${projectId}`)}
         className="mb-6"
       >
-        <Link to={`/my-projects/${projectId}`}>
-          ← Back to Project
-        </Link>
+        ← Back to Project
       </Button>
 
       <SprintHeader 
