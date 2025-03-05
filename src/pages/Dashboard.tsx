@@ -1,13 +1,18 @@
 
 import React from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useProject } from "@/context/ProjectContext";
 import { signOut, supabase } from "@/lib/supabase";
 import { toast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import ProfileDashboard from "@/components/ProfileDashboard";
+import { ExternalLinkIcon } from "lucide-react";
 
 const Dashboard = () => {
+  const { projects } = useProject();
   const [user, setUser] = useState<any>(null);
   const navigate = useNavigate();
 
@@ -33,6 +38,9 @@ const Dashboard = () => {
     }
   };
 
+  // Display recent projects (limited to 3)
+  const recentProjects = projects.slice(0, 3);
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 animate-fade-in">
@@ -54,11 +62,63 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6">
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-semibold mb-4">Welcome to Scrumify Hub</h2>
-            <p className="text-muted-foreground mb-6">Your personal project management dashboard</p>
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Recent Projects Card */}
+          <Card className="col-span-2">
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle>Recent Projects</CardTitle>
+                <Button size="sm" asChild>
+                  <Link to="/my-projects">
+                    View All Projects
+                  </Link>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {recentProjects.length > 0 ? (
+                <div className="space-y-4">
+                  {recentProjects.map((project) => (
+                    <div key={project.id} className="flex justify-between items-center p-3 border rounded-md hover:bg-accent/50 transition-colors">
+                      <div>
+                        <h3 className="font-medium">{project.title}</h3>
+                        <p className="text-sm text-muted-foreground line-clamp-1">{project.description}</p>
+                      </div>
+                      <Button size="sm" variant="ghost" asChild>
+                        <Link to={`/my-projects/${project.id}`}>
+                          <ExternalLinkIcon className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <p className="text-muted-foreground mb-4">No projects yet.</p>
+                  <Button asChild>
+                    <Link to="/my-projects">Create a Project</Link>
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Quick Actions Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <Button className="w-full justify-start" asChild>
+                  <Link to="/my-projects">
+                    Manage Projects
+                  </Link>
+                </Button>
+                {/* Add more quick actions as needed */}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
