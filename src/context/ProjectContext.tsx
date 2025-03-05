@@ -3,13 +3,12 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/components/ui/use-toast";
-import { Project, Sprint, Column, Task, BacklogItem, ProjectFormData, SprintFormData, TaskFormData, BacklogItemFormData, Collaborator, CollaboratorFormData } from "@/types";
+import { Project, Sprint, Column, Task, BacklogItem, ProjectFormData, SprintFormData, TaskFormData, BacklogItemFormData } from "@/types";
 import { useProjects } from "@/hooks/useProjects";
 import { useSprints } from "@/hooks/useSprints";
 import { useColumns } from "@/hooks/useColumns";
 import { useTasks } from "@/hooks/useTasks";
 import { useBacklog } from "@/hooks/useBacklog";
-import { useCollaborators } from "@/hooks/useCollaborators";
 
 interface ProjectContextType {
   projects: Project[];
@@ -35,9 +34,6 @@ interface ProjectContextType {
   updateBacklogItem: (id: string, data: BacklogItemFormData) => Promise<void>;
   deleteBacklogItem: (id: string) => Promise<void>;
   moveBacklogItemToSprint: (backlogItemId: string, sprintId: string) => Promise<void>;
-  inviteCollaborator: (projectId: string, projectTitle: string, data: CollaboratorFormData) => Promise<{ success: boolean, error: string | null }>;
-  removeCollaborator: (id: string) => Promise<void>;
-  getProjectCollaborators: (projectId: string) => Collaborator[];
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -77,16 +73,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     deleteBacklogItem: deleteBacklogItemFn,
     moveBacklogItemToSprint: moveBacklogItemToSprintFn
   } = useBacklog();
-  
-  const {
-    collaborators,
-    setCollaborators,
-    inviteCollaborator: inviteCollaboratorFn,
-    removeCollaborator: removeCollaboratorFn,
-    getProjectCollaborators: getProjectCollaboratorsFn
-  } = useCollaborators();
 
-  // Set up auth listener
   useEffect(() => {
     const getUser = async () => {
       const { data } = await supabase.auth.getUser();
@@ -100,7 +87,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setUser(session.user);
       } else {
         setUser(null);
-        // If we're using the project selector function
         selectProjectFn("", []);
       }
     });
@@ -110,7 +96,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
   }, []);
 
-  // Query functions
   const fetchProjects = async () => {
     if (!user) return [];
     
@@ -241,35 +226,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }));
   };
 
-  const fetchCollaborators = async () => {
-    if (!user) return [];
-    
-    const { data, error } = await supabase
-      .from('collaborators')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (error) {
-      toast({
-        title: "Error fetching collaborators",
-        description: error.message,
-        variant: "destructive"
-      });
-      return [];
-    }
-    
-    const collaboratorsData = data.map(item => ({
-      ...item,
-      projectId: item.project_id,
-      createdAt: new Date(item.created_at),
-      updatedAt: new Date(item.updated_at)
-    }));
-    
-    setCollaborators(collaboratorsData);
-    return collaboratorsData;
-  };
-
-  // Queries
   const {
     data: projects = [],
     isLoading: isProjectsLoading
@@ -315,13 +271,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     enabled: !!user
   });
 
-  useQuery({
-    queryKey: ['collaborators'],
-    queryFn: fetchCollaborators,
-    enabled: !!user
-  });
-
-  // Combine tasks with columns
   const columns = columnsData.map(column => ({
     ...column,
     tasks: tasks.filter(task => task.columnId === column.id)
@@ -329,7 +278,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const isLoading = isProjectsLoading || isSprintsLoading || isColumnsLoading || isTasksLoading || isBacklogItemsLoading;
 
-  // Function to create default columns if they don't exist
   useEffect(() => {
     const createDefaultColumns = async () => {
       if (!user || isLoading) return;
@@ -347,7 +295,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     createDefaultColumns();
   }, [user, isLoading, columns]);
 
-  // Wrap the hook functions to provide correct arguments
   const createProject = async (data: ProjectFormData) => {
     await createProjectFn(data);
   };
@@ -444,18 +391,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     await moveBacklogItemToSprintFn(backlogItemId, sprintId, backlogItems, columns, createTaskFn);
   };
 
-  const inviteCollaborator = async (projectId: string, projectTitle: string, data: CollaboratorFormData) => {
-    return await inviteCollaboratorFn(projectId, projectTitle, data);
-  };
-
-  const removeCollaborator = async (id: string) => {
-    await removeCollaboratorFn(id);
-  };
-
-  const getProjectCollaborators = (projectId: string) => {
-    return getProjectCollaboratorsFn(projectId);
-  };
-
   return (
     <ProjectContext.Provider
       value={{
@@ -481,10 +416,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         createBacklogItem,
         updateBacklogItem,
         deleteBacklogItem,
-        moveBacklogItemToSprint,
-        inviteCollaborator,
-        removeCollaborator,
-        getProjectCollaborators
+        moveBacklogItemToSprint
       }}
     >
       {children}

@@ -1,6 +1,5 @@
 
 import { createClient } from '@supabase/supabase-js';
-import { CollaboratorFormData } from '@/types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://btutiksghrrxrxqxwlnk.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ0dXRpa3NnaHJyeHJ4cXh3bG5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA3NDk2ODUsImV4cCI6MjA1NjMyNTY4NX0.SSAGtVl0jMLM9v6isoC4oZOZ-Q92nLNZO2RMOUZeyaE';
@@ -126,38 +125,4 @@ export async function deleteSprintFromDB(id: string) {
     .eq('id', id);
   
   return { error };
-}
-
-export async function sendCollaboratorInvitation(
-  projectId: string,
-  projectTitle: string,
-  data: CollaboratorFormData
-) {
-  try {
-    // Create the collaborator record
-    const { data: collaborator, error } = await supabase
-      .from('collaborators')
-      .insert({
-        project_id: projectId,
-        email: data.email,
-        role: data.role,
-        status: 'pending'
-      })
-      .select()
-      .single();
-    
-    if (error) {
-      return { success: false, error: error.message };
-    }
-    
-    // In a real implementation, this would call a Supabase Edge Function to send an email
-    // For now, just return a success message
-    return { 
-      success: true, 
-      error: null,
-      collaborator
-    };
-  } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to send invitation' };
-  }
 }
