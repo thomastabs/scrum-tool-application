@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { ProjectFormData, SprintFormData } from '@/types';
 
@@ -154,5 +153,140 @@ export async function deleteSprintFromDB(id: string) {
     .delete()
     .eq('id', id);
   
+  return { error };
+}
+
+// New collaboration functions
+export async function inviteCollaborator(projectId: string, invitedEmail: string, role: string = 'viewer') {
+  const { data: project } = await supabase
+    .from('projects')
+    .select('title')
+    .eq('id', projectId)
+    .single();
+
+  const { data: user } = await supabase.auth.getUser();
+  
+  if (!user.user || !project) {
+    return { error: new Error('Not authorized or project not found') };
+  }
+
+  // Create the invitation in the database
+  const { data: invitation, error: invitationError } = await supabase
+    .from('invitations')
+    .insert({
+      project_id: projectId,
+      inviter_id: user.user.id,
+      invited_email: invitedEmail,
+      role
+    })
+    .select()
+    .single();
+
+  if (invitationError) {
+    return { error: invitationError };
+  }
+
+  // Send invitation email
+  const { error: emailError } = await supabase.functions.invoke('send-invitation-email', {
+    body: {
+      to: invitedEmail,
+      projectTitle: project.title,
+      inviterEmail: user.user.email,
+      projectId: projectId,
+      role: role,
+      collaboratorId: invitation.id
+    }
+  });
+
+  if (emailError) {
+    console.error('Error sending invitation email:', emailError);
+  }
+
+  return { data: invitation, error: emailError };
+}
+
+export async function getInvitationsForUser() {
+  const { data: user } = await supabase.auth.getUser();
+  
+  if (!user.user) {
+    return { data: null, error: new Error('Not authenticated') };
+  }
+
+  const { data, error } = await supabase
+    .from('invitations')
+    .select(`
+      id,
+      project_id,
+      inviter_id,
+      invited_email,
+      role,
+      status,
+      created_at,
+      projects:project_id (
+        title
+      )
+    `)
+    .eq('invited_email', user.user.email)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false });
+
+  return { data, error };
+}
+
+export async function respondToInvitation(invitationId: string, status: 'accepted' | 'declined') {
+  const { data, error } = await supabase
+    .from('invitations')
+    .update({ status })
+    .eq('id', invitationId)
+    .select()
+    .single();
+
+  return { data, error };
+}
+
+export async function getCollaborativeProjects() {
+  const { data: user } = await supabase.auth.getUser();
+  
+  if (!user.user) {
+    return { data: null, error: new Error('Not authenticated') };
+  }
+
+  const { data, error } = await supabase
+    .from('collaborators')
+    .select(`
+      project_id,
+      role,
+      projects:project_id (*)
+    `)
+    .eq('user_id', user.user.id)
+    .order('created_at', { ascending: false });
+
+  return { data, error };
+}
+
+export async function getProjectCollaborators(projectId: string) {
+  const { data, error } = await supabase
+    .from('collaborators')
+    .select(`
+      id,
+      user_id,
+      role,
+      created_at,
+      users:user_id (
+        email
+      )
+    `)
+    .eq('project_id', projectId)
+    .order('created_at', { ascending: false });
+
+  return { data, error };
+}
+
+export async function removeCollaborator(collaboratorId: string) {
+  const { error } = await supabase
+    .from('collaborators')
+    .delete()
+    .eq('id', collaboratorId);
+
   return { error };
 }
