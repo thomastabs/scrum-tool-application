@@ -1,50 +1,53 @@
-import { v4 as uuidv4 } from "uuid";
-import { store } from "@/store";
-import { addTask } from "@/store/slices/taskSlice";
-import { removeBacklogItem } from "@/store/slices/backlogSlice";
-import { toast } from "@/components/ui/use-toast";
 
-export const moveBacklogItemToSprint = async (backlogItemId: string, sprintId: string) => {
+import { v4 as uuidv4 } from "uuid";
+import { toast } from "@/components/ui/use-toast";
+import { BacklogItem, Task } from "@/types";
+
+// Helper function to move a backlog item to a sprint
+export const moveBacklogItemToSprint = (
+  backlogItem: BacklogItem,
+  sprintId: string,
+  todoColumnId: string
+): Task | null => {
   try {
-    // Find the backlog item
-    const backlogItem = store.getState().backlogItems.find(item => item.id === backlogItemId);
-    if (!backlogItem) return;
+    if (!backlogItem) {
+      toast({
+        title: "Error",
+        description: "Backlog item not found.",
+        variant: "destructive"
+      });
+      return null;
+    }
     
-    // Find the TO DO column
-    const todoColumn = store.getState().columns.find(col => col.title === "TO DO");
-    if (!todoColumn) {
+    if (!todoColumnId) {
       toast({
         title: "Error",
         description: "TO DO column not found. Please create a sprint first.",
         variant: "destructive"
       });
-      return;
+      return null;
     }
     
     // Create a task from the backlog item
-    const task = {
+    const task: Task = {
       id: uuidv4(),
       title: backlogItem.title,
       description: backlogItem.description,
       priority: backlogItem.priority,
       assignee: "",
       storyPoints: backlogItem.storyPoints,
-      columnId: todoColumn.id,
+      columnId: todoColumnId,
       sprintId,
       createdAt: new Date(),
       updatedAt: new Date()
     };
     
-    // Add the task to the column
-    store.dispatch(addTask(task));
-    
-    // Delete the backlog item
-    store.dispatch(removeBacklogItem(backlogItemId));
-    
     toast({
       title: "Item moved to sprint",
       description: `${backlogItem.title} has been moved to the selected sprint.`,
     });
+    
+    return task;
   } catch (error) {
     console.error("Error moving backlog item to sprint:", error);
     toast({
@@ -52,5 +55,6 @@ export const moveBacklogItemToSprint = async (backlogItemId: string, sprintId: s
       description: "Failed to move item to sprint. Please try again.",
       variant: "destructive"
     });
+    return null;
   }
 };
