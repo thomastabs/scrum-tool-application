@@ -6,7 +6,7 @@ import TaskForm from "./TaskForm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, X } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; 
 
 interface SprintBoardProps {
   sprint: Sprint;
