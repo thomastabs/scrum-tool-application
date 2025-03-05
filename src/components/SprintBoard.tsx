@@ -1,12 +1,11 @@
+
 import React, { useState } from "react";
 import { useProject } from "@/context/ProjectContext";
-import { Sprint, Column, Task } from "@/types";
-import TaskCard from "./TaskCard";
+import { Sprint, Task } from "@/types";
 import TaskForm from "./TaskForm";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Plus, X } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; 
+import SprintHeader from "./sprint/SprintHeader";
+import SprintColumn from "./sprint/SprintColumn";
+import AddColumn from "./sprint/AddColumn";
 
 interface SprintBoardProps {
   sprint: Sprint;
@@ -15,9 +14,7 @@ interface SprintBoardProps {
 const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
   const { columns, createColumn, deleteColumn, moveTask, completeSprint } = useProject();
   const [showTaskForm, setShowTaskForm] = useState(false);
-  const [showAddColumn, setShowAddColumn] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
-  const [newColumnName, setNewColumnName] = useState("");
   const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
 
   // Only get the ONE instance of each standard column that we need
@@ -71,12 +68,8 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
     }
   };
 
-  const handleAddColumn = () => {
-    if (newColumnName.trim()) {
-      createColumn(newColumnName.trim());
-      setNewColumnName("");
-      setShowAddColumn(false);
-    }
+  const handleAddColumn = (name: string) => {
+    createColumn(name);
   };
 
   // Check if all tasks are completed
@@ -101,123 +94,32 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
 
   return (
     <div className="p-4">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-2xl font-bold">{sprint.title}</h2>
-          <p className="text-muted-foreground">
-            {sprint.description}
-          </p>
-          <div className="flex gap-4 mt-2 text-sm">
-            <span>Start: {new Date(sprint.startDate).toLocaleDateString()}</span>
-            <span>End: {new Date(sprint.endDate).toLocaleDateString()}</span>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          {!sprint.isCompleted && (
-            <Button
-              variant="outline" 
-              onClick={() => completeSprint(sprint.id)}
-              disabled={!allTasksCompleted()}
-            >
-              Complete Sprint
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {sprint.isCompleted && (
-        <Alert className="mb-6 bg-green-50 border-green-200">
-          <AlertTitle>Sprint Completed</AlertTitle>
-          <AlertDescription>
-            This sprint has been marked as completed.
-          </AlertDescription>
-        </Alert>
-      )}
+      <SprintHeader 
+        sprint={sprint} 
+        canComplete={allTasksCompleted()} 
+        onCompleteSprint={completeSprint} 
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
         {sprintColumns.map((column) => (
-          <div
+          <SprintColumn 
             key={column.id}
-            className="board-column border rounded-lg p-4 bg-background"
-            onDragOver={handleDragOver}
-            onDrop={(e) => handleDrop(e, column.id)}
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-medium">{column.title}</h3>
-              <div className="flex gap-1">
-                {column.title !== "TO DO" && 
-                 column.title !== "IN PROGRESS" && 
-                 column.title !== "DONE" && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => deleteColumn(column.id)}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => handleAddTask(column.id)}
-                >
-                  <Plus className="h-3 w-3" />
-                </Button>
-              </div>
-            </div>
-            <div className="space-y-2 min-h-[200px]">
-              {column.tasks
-                .filter(task => task.sprintId === sprint.id)
-                .map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    onEdit={handleEditTask}
-                  />
-                ))}
-            </div>
-          </div>
+            column={column}
+            sprintId={sprint.id}
+            onAddTask={handleAddTask}
+            onEditTask={handleEditTask}
+            onDeleteColumn={deleteColumn}
+            handleDragOver={handleDragOver}
+            handleDrop={handleDrop}
+            isDefaultColumn={
+              column.title === "TO DO" || 
+              column.title === "IN PROGRESS" || 
+              column.title === "DONE"
+            }
+          />
         ))}
 
-        {!showAddColumn ? (
-          <div 
-            className="flex items-center justify-center h-24 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-accent/50 transition-colors"
-            onClick={() => setShowAddColumn(true)}
-          >
-            <div className="flex flex-col items-center">
-              <Plus className="h-5 w-5 mb-1 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Add Column</span>
-            </div>
-          </div>
-        ) : (
-          <div className="board-column border rounded-lg p-4 bg-background">
-            <div className="flex flex-col gap-2">
-              <Input
-                placeholder="Column name"
-                value={newColumnName}
-                onChange={(e) => setNewColumnName(e.target.value)}
-                autoFocus
-              />
-              <div className="flex gap-2">
-                <Button size="sm" onClick={handleAddColumn}>
-                  Add
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={() => {
-                    setShowAddColumn(false);
-                    setNewColumnName("");
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+        <AddColumn onAddColumn={handleAddColumn} />
       </div>
 
       {showTaskForm && activeColumnId && (
