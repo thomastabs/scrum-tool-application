@@ -10,37 +10,15 @@ import {
   SprintFormData,
   TaskFormData,
   BacklogItemFormData,
+  ProjectContextType
 } from "@/types";
 import { toast } from "@/components/ui/use-toast";
-
-type ProjectContextType = {
-  projects: Project[];
-  sprints: Sprint[];
-  columns: Column[];
-  backlogItems: BacklogItem[];
-  createProject: (project: ProjectFormData) => void;
-  updateProject: (id: string, project: ProjectFormData) => void;
-  deleteProject: (id: string) => void;
-  createSprint: (sprint: SprintFormData) => void;
-  updateSprint: (id: string, sprint: SprintFormData) => void;
-  deleteSprint: (id: string) => void;
-  completeSprint: (id: string) => void;
-  createTask: (sprintId: string, columnId: string, task: TaskFormData) => void;
-  updateTask: (id: string, task: TaskFormData) => void;
-  deleteTask: (id: string, columnId: string) => void;
-  moveTask: (taskId: string, sourceColumnId: string, targetColumnId: string) => void;
-  createColumn: (title: string) => void;
-  deleteColumn: (id: string) => void;
-  createBacklogItem: (backlogItem: BacklogItemFormData) => void;
-  updateBacklogItem: (id: string, backlogItem: BacklogItemFormData) => void;
-  deleteBacklogItem: (id: string) => void;
-  moveBacklogItemToSprint: (backlogItemId: string, sprintId: string) => void;
-};
 
 type Action =
   | { type: "ADD_PROJECT"; payload: Project }
   | { type: "UPDATE_PROJECT"; payload: Project }
   | { type: "REMOVE_PROJECT"; payload: string }
+  | { type: "SELECT_PROJECT"; payload: string }
   | { type: "ADD_SPRINT"; payload: Sprint }
   | { type: "UPDATE_SPRINT"; payload: Sprint }
   | { type: "REMOVE_SPRINT"; payload: string }
@@ -61,6 +39,7 @@ type State = {
   sprints: Sprint[];
   columns: Column[];
   backlogItems: BacklogItem[];
+  selectedProject: Project | null;
 };
 
 const initialState: State = {
@@ -90,6 +69,7 @@ const initialState: State = {
     },
   ],
   backlogItems: [],
+  selectedProject: null,
 };
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -104,11 +84,20 @@ const reducer = (state: State, action: Action): State => {
         projects: state.projects.map((project) =>
           project.id === action.payload.id ? action.payload : project
         ),
+        selectedProject: state.selectedProject?.id === action.payload.id ? action.payload : state.selectedProject,
       };
     case "REMOVE_PROJECT":
       return {
         ...state,
         projects: state.projects.filter((project) => project.id !== action.payload),
+        selectedProject: state.selectedProject?.id === action.payload ? null : state.selectedProject,
+      };
+    case "SELECT_PROJECT":
+      return {
+        ...state,
+        selectedProject: action.payload 
+          ? state.projects.find(p => p.id === action.payload) || null 
+          : null,
       };
     case "ADD_SPRINT":
       return { ...state, sprints: [...state.sprints, action.payload] };
@@ -238,11 +227,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     localStorage.setItem("projectState", JSON.stringify(state));
   }, [state]);
 
-  const contextValue = {
+  const contextValue: ProjectContextType = {
     projects: state.projects,
     sprints: state.sprints,
     columns: state.columns,
     backlogItems: state.backlogItems,
+    selectedProject: state.selectedProject,
+    selectProject: (id: string) => {
+      dispatch({ type: "SELECT_PROJECT", payload: id });
+    },
     createProject: (projectData: ProjectFormData) => {
       const newProject: Project = {
         ...projectData,

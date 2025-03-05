@@ -16,7 +16,6 @@ const CollaboratorsList = () => {
   const [showCollaboratorForm, setShowCollaboratorForm] = React.useState(false);
   const { selectedProject } = useProject();
 
-  // This component is not yet implemented, just a stub
   return (
     <div className="mt-6">
       <div className="flex justify-between items-center mb-4">
