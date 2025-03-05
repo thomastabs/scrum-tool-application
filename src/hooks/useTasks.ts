@@ -1,15 +1,18 @@
 
-import { TaskFormData } from "@/types";
-import { toast } from "@/components/ui/use-toast";
-import { supabase } from "@/lib/supabase";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { toast } from "@/components/ui/use-toast";
+import { TaskFormData } from "@/types";
 
 export function useTasks() {
   const queryClient = useQueryClient();
 
   const createTaskMutation = useMutation({
     mutationFn: async ({ sprintId, columnId, data }: { sprintId: string, columnId: string, data: TaskFormData }) => {
-      const { error } = await supabase
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("You must be signed in to create a task");
+
+      const { data: newTask, error } = await supabase
         .from('tasks')
         .insert({
           sprint_id: sprintId,
@@ -18,10 +21,14 @@ export function useTasks() {
           description: data.description,
           priority: data.priority,
           assignee: data.assignee,
-          story_points: data.storyPoints
-        });
-      
+          story_points: data.storyPoints,
+          user_id: userData.user.id
+        })
+        .select()
+        .single();
+
       if (error) throw error;
+      return newTask;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -44,11 +51,10 @@ export function useTasks() {
           description: data.description,
           priority: data.priority,
           assignee: data.assignee,
-          story_points: data.storyPoints,
-          updated_at: new Date().toISOString()
+          story_points: data.storyPoints
         })
         .eq('id', id);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -69,7 +75,7 @@ export function useTasks() {
         .from('tasks')
         .delete()
         .eq('id', id);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -89,11 +95,10 @@ export function useTasks() {
       const { error } = await supabase
         .from('tasks')
         .update({
-          column_id: destinationColumnId,
-          updated_at: new Date().toISOString()
+          column_id: destinationColumnId
         })
         .eq('id', taskId);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -110,15 +115,11 @@ export function useTasks() {
 
   const createTask = async (sprintId: string, columnId: string, data: TaskFormData) => {
     try {
-      await createTaskMutation.mutateAsync({
-        sprintId,
-        columnId,
-        data
-      });
+      await createTaskMutation.mutateAsync({ sprintId, columnId, data });
       
       toast({
         title: "Task created",
-        description: `${data.title} has been created successfully.`,
+        description: `"${data.title}" has been created successfully.`,
       });
     } catch (error) {
       console.error(error);
@@ -131,51 +132,33 @@ export function useTasks() {
       
       toast({
         title: "Task updated",
-        description: `${data.title} has been updated successfully.`,
+        description: `"${data.title}" has been updated successfully.`,
       });
     } catch (error) {
       console.error(error);
     }
   };
 
-  const deleteTask = async (id: string, columns: any[]) => {
-    let taskTitle = "";
-    
-    for (const column of columns) {
-      const taskToDelete = column.tasks.find((task: any) => task.id === id);
-      if (taskToDelete) {
-        taskTitle = taskToDelete.title;
-        break;
-      }
-    }
-    
+  const deleteTask = async (id: string) => {
     try {
       await deleteTaskMutation.mutateAsync(id);
       
-      if (taskTitle) {
-        toast({
-          title: "Task deleted",
-          description: `${taskTitle} has been deleted successfully.`,
-        });
-      }
+      toast({
+        title: "Task deleted",
+        description: "Task has been deleted successfully.",
+      });
     } catch (error) {
       console.error(error);
     }
   };
 
-  const moveTask = async (taskId: string, sourceColumnId: string, destinationColumnId: string, columns: any[]) => {
-    // Find the source column
-    const sourceColumn = columns.find((col: any) => col.id === sourceColumnId);
-    if (!sourceColumn) return;
-    
-    // Find the task
-    const taskIndex = sourceColumn.tasks.findIndex((task: any) => task.id === taskId);
-    if (taskIndex === -1) return;
-    
+  const moveTask = async (taskId: string, sourceColumnId: string, destinationColumnId: string) => {
     try {
-      await moveTaskMutation.mutateAsync({
-        taskId,
-        destinationColumnId
+      await moveTaskMutation.mutateAsync({ taskId, destinationColumnId });
+      
+      toast({
+        title: "Task moved",
+        description: "Task has been moved successfully.",
       });
     } catch (error) {
       console.error(error);

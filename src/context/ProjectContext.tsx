@@ -1,9 +1,8 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/components/ui/use-toast";
-import { Project, Sprint, Column, Task, BacklogItem, ProjectFormData, SprintFormData, TaskFormData, BacklogItemFormData } from "@/types";
+import { Project, Sprint, Column, Task, BacklogItem, ProjectFormData, SprintFormData, TaskFormData, BacklogItemFormData, Collaborator, CollaboratorFormData } from "@/types";
 import { useProjects } from "@/hooks/useProjects";
 import { useSprints } from "@/hooks/useSprints";
 import { useColumns } from "@/hooks/useColumns";
@@ -34,12 +33,16 @@ interface ProjectContextType {
   updateBacklogItem: (id: string, data: BacklogItemFormData) => Promise<void>;
   deleteBacklogItem: (id: string) => Promise<void>;
   moveBacklogItemToSprint: (backlogItemId: string, sprintId: string) => Promise<void>;
+  inviteCollaborator: (projectId: string, projectTitle: string, data: CollaboratorFormData) => Promise<{success: boolean, error: string | null}>;
+  removeCollaborator: (id: string) => Promise<void>;
+  getProjectCollaborators: (projectId: string) => Collaborator[];
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<any>(null);
+  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   
   const {
     selectedProject,
@@ -287,7 +290,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       
       for (const title of defaultColumns) {
         if (!existingColumnTitles.includes(title)) {
-          await createColumnFn("", title, columns);
+          await createColumnFn("", title);
         }
       }
     };
@@ -304,7 +307,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const deleteProject = async (id: string) => {
-    await deleteProjectFn(id, projects);
+    await deleteProjectFn(id);
   };
 
   const selectProject = (id: string) => {
@@ -329,28 +332,18 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const completeSprint = async (id: string) => {
-    await completeSprintFn(id, sprints);
+    await completeSprintFn(id);
   };
 
   const createColumn = async (sprintId: string, title: string) => {
-    await createColumnFn(sprintId, title, columns);
+    await createColumnFn(sprintId, title);
   };
 
   const deleteColumn = async (id: string) => {
-    await deleteColumnFn(id, columns);
+    await deleteColumnFn(id);
   };
 
   const createTask = async (sprintId: string, columnId: string, data: TaskFormData) => {
-    const column = columns.find(col => col.id === columnId);
-    if (!column) {
-      toast({
-        title: "Error",
-        description: "Column not found.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
     await createTaskFn(sprintId, columnId, data);
   };
 
@@ -359,11 +352,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const deleteTask = async (id: string) => {
-    await deleteTaskFn(id, columns);
+    await deleteTaskFn(id);
   };
 
   const moveTask = async (taskId: string, sourceColumnId: string, destinationColumnId: string) => {
-    await moveTaskFn(taskId, sourceColumnId, destinationColumnId, columns);
+    await moveTaskFn(taskId, sourceColumnId, destinationColumnId);
   };
 
   const createBacklogItem = async (data: BacklogItemFormData) => {
@@ -384,11 +377,28 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const deleteBacklogItem = async (id: string) => {
-    await deleteBacklogItemFn(id, backlogItems);
+    await deleteBacklogItemFn(id);
   };
 
   const moveBacklogItemToSprint = async (backlogItemId: string, sprintId: string) => {
-    await moveBacklogItemToSprintFn(backlogItemId, sprintId, backlogItems, columns, createTaskFn);
+    await moveBacklogItemToSprintFn(backlogItemId, sprintId);
+  };
+
+  // Collaborator implementation stubs
+  const inviteCollaborator = async (projectId: string, projectTitle: string, data: CollaboratorFormData) => {
+    console.log(`Inviting ${data.email} as ${data.role} to project ${projectTitle}`);
+    // Placeholder implementation
+    return { success: true, error: null };
+  };
+
+  const removeCollaborator = async (id: string) => {
+    console.log(`Removing collaborator ${id}`);
+    // Placeholder implementation
+  };
+
+  const getProjectCollaborators = (projectId: string) => {
+    // Placeholder implementation
+    return [];
   };
 
   return (
@@ -416,7 +426,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         createBacklogItem,
         updateBacklogItem,
         deleteBacklogItem,
-        moveBacklogItemToSprint
+        moveBacklogItemToSprint,
+        inviteCollaborator,
+        removeCollaborator,
+        getProjectCollaborators
       }}
     >
       {children}

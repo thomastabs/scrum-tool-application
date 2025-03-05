@@ -1,21 +1,26 @@
 
-import { toast } from "@/components/ui/use-toast";
-import { supabase } from "@/lib/supabase";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase"; 
+import { toast } from "@/components/ui/use-toast";
 
 export function useColumns() {
   const queryClient = useQueryClient();
 
   const createColumnMutation = useMutation({
-    mutationFn: async (title: string) => {
+    mutationFn: async ({ sprintId, title }: { sprintId: string, title: string }) => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("You must be signed in to create a column");
+
       const { data, error } = await supabase
-        .from('columns')
+        .from('board_columns')
         .insert({
-          title
+          sprint_id: sprintId,
+          title,
+          user_id: userData.user.id
         })
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -34,10 +39,10 @@ export function useColumns() {
   const deleteColumnMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('columns')
+        .from('board_columns')
         .delete()
         .eq('id', id);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -52,20 +57,9 @@ export function useColumns() {
     }
   });
 
-  const createColumn = async (sprintId: string, title: string, columns: any[]) => {
-    const columnExists = columns.some(col => col.title === title);
-    
-    if (columnExists) {
-      toast({
-        title: "Column already exists",
-        description: `A column named "${title}" already exists.`,
-        variant: "destructive"
-      });
-      return;
-    }
-    
+  const createColumn = async (sprintId: string, title: string) => {
     try {
-      await createColumnMutation.mutateAsync(title);
+      await createColumnMutation.mutateAsync({ sprintId, title });
       
       toast({
         title: "Column created",
@@ -76,34 +70,13 @@ export function useColumns() {
     }
   };
 
-  const deleteColumn = async (id: string, columns: any[]) => {
-    const columnToDelete = columns.find(column => column.id === id);
-    if (!columnToDelete) return;
-    
-    if (columnToDelete.tasks.length > 0) {
-      toast({
-        title: "Cannot delete column",
-        description: "This column still has tasks. Move or delete them first.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (["TO DO", "IN PROGRESS", "DONE"].includes(columnToDelete.title)) {
-      toast({
-        title: "Cannot delete default column",
-        description: "The default columns (TO DO, IN PROGRESS, DONE) cannot be deleted.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
+  const deleteColumn = async (id: string) => {
     try {
       await deleteColumnMutation.mutateAsync(id);
       
       toast({
         title: "Column deleted",
-        description: `${columnToDelete.title} column has been deleted successfully.`,
+        description: "Column has been deleted successfully.",
       });
     } catch (error) {
       console.error(error);
@@ -112,6 +85,6 @@ export function useColumns() {
 
   return {
     createColumn,
-    deleteColumn
+    deleteColumn,
   };
 }
