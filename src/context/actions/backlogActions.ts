@@ -1,68 +1,134 @@
 
-import { BacklogItem, Column, Task } from "@/types";
 import { v4 as uuidv4 } from "uuid";
+import { BacklogItem, Column } from "@/types";
+import { Toast } from "@/types/toast";
 
-// Move a backlog item to a sprint
-export const moveToSprint = (
+export const createBacklogItem = (
   backlogItems: BacklogItem[],
-  columns: Column[],
-  backlogItemId: string,
-  sprintId: string,
-  toast: any
-): { updatedBacklogItems: BacklogItem[], updatedColumns: Column[] } => {
-  // Find the backlog item
-  const backlogItem = backlogItems.find(item => item.id === backlogItemId);
-  if (!backlogItem) {
-    toast({
-      title: "Error",
-      description: "Backlog item not found",
-      variant: "destructive"
-    });
-    return { updatedBacklogItems: backlogItems, updatedColumns: columns };
-  }
-
-  // Find the TO DO column
-  const todoColumn = columns.find(col => col.title === "TO DO");
-  if (!todoColumn) {
-    toast({
-      title: "Error",
-      description: "TO DO column not found. Please create default columns first.",
-      variant: "destructive"
-    });
-    return { updatedBacklogItems: backlogItems, updatedColumns: columns };
-  }
-
-  // Create a new task from the backlog item
-  const newTask: Task = {
+  itemData: { title: string; description: string; priority: "low" | "medium" | "high"; storyPoints: number; projectId: string },
+  toast: (props: Toast) => void
+): BacklogItem[] => {
+  const newItem: BacklogItem = {
     id: uuidv4(),
-    title: backlogItem.title,
-    description: backlogItem.description,
-    priority: backlogItem.priority,
-    assignee: "",
-    storyPoints: backlogItem.storyPoints,
-    columnId: todoColumn.id,
-    sprintId: sprintId,
+    title: itemData.title,
+    description: itemData.description,
+    priority: itemData.priority,
+    storyPoints: itemData.storyPoints,
+    projectId: itemData.projectId,
     createdAt: new Date(),
     updatedAt: new Date()
   };
-
-  // Add the task to the TO DO column
-  const updatedColumns = columns.map(col => {
-    if (col.id === todoColumn.id) {
-      return {
-        ...col,
-        tasks: [...col.tasks, newTask]
-      };
-    }
-    return col;
+  
+  toast({
+    title: "Backlog item created",
+    description: `${itemData.title} has been added to the backlog.`
   });
 
-  // Remove the item from backlog
-  const updatedBacklogItems = backlogItems.filter(item => item.id !== backlogItemId);
+  return [...backlogItems, newItem];
+};
 
+export const updateBacklogItem = (
+  backlogItems: BacklogItem[],
+  id: string,
+  itemData: { title: string; description: string; priority: "low" | "medium" | "high"; storyPoints: number },
+  toast: (props: Toast) => void
+): BacklogItem[] => {
+  const updatedBacklogItems = backlogItems.map(item => 
+    item.id === id
+      ? { 
+          ...item, 
+          ...itemData,
+          updatedAt: new Date()
+        }
+      : item
+  );
+  
+  toast({
+    title: "Backlog item updated",
+    description: `${itemData.title} has been updated successfully.`
+  });
+
+  return updatedBacklogItems;
+};
+
+export const deleteBacklogItem = (
+  backlogItems: BacklogItem[],
+  id: string,
+  toast: (props: Toast) => void
+): BacklogItem[] => {
+  const itemToDelete = backlogItems.find(item => item.id === id);
+  
+  if (!itemToDelete) return backlogItems;
+  
+  const updatedBacklogItems = backlogItems.filter(item => item.id !== id);
+  
+  toast({
+    title: "Backlog item deleted",
+    description: `${itemToDelete.title} has been removed from the backlog.`
+  });
+
+  return updatedBacklogItems;
+};
+
+export const moveToSprint = (
+  backlogItems: BacklogItem[],
+  columns: Column[],
+  itemId: string,
+  sprintId: string,
+  toast: (props: Toast) => void
+): { updatedBacklogItems: BacklogItem[], updatedColumns: Column[] } => {
+  const item = backlogItems.find(item => item.id === itemId);
+  if (!item) {
+    return { updatedBacklogItems: backlogItems, updatedColumns: columns };
+  }
+  
+  // Find the TO DO column for this sprint
+  let todoColumn = columns.find(column => 
+    column.title === "TO DO"
+  );
+  
+  // If TO DO column doesn't exist, create one
+  if (!todoColumn) {
+    const newTodoColumn: Column = {
+      id: `todo-${sprintId}`,
+      title: "TO DO",
+      tasks: []
+    };
+    
+    columns = [...columns, newTodoColumn];
+    todoColumn = newTodoColumn;
+  }
+  
+  // Create a new task from the backlog item
+  const newTask = {
+    id: uuidv4(),
+    title: item.title,
+    description: item.description,
+    priority: item.priority,
+    assignee: "",
+    storyPoints: item.storyPoints,
+    sprintId,
+    columnId: todoColumn.id,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
+  
+  // Add the task to the TO DO column
+  const updatedColumns = columns.map(column => 
+    column.id === todoColumn!.id
+      ? { 
+          ...column, 
+          tasks: [...column.tasks, newTask]
+        }
+      : column
+  );
+  
+  // Remove the item from the backlog
+  const updatedBacklogItems = backlogItems.filter(item => item.id !== itemId);
+  
   toast({
     title: "Item moved to sprint",
-    description: `${backlogItem.title} has been moved to the selected sprint.`,
+    description: `${item.title} has been moved to the sprint.`
   });
 
   return { updatedBacklogItems, updatedColumns };

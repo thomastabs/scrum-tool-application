@@ -1,98 +1,164 @@
 
-import { Sprint, Column } from "@/types";
-import { v4 as uuidv4 } from "uuid";
+import { SprintFormData } from "@/types";
+import {
+  createSprintInDB,
+  getSprintsFromDB,
+  updateSprintInDB,
+  completeSprintInDB,
+  deleteSprintFromDB
+} from "@/lib/supabase";
 
-// Import supabase functionality
-// import {
-//   createSprintInDB,
-//   getSprintsFromDB,
-//   updateSprintInDB,
-//   completeSprintInDB,
-//   deleteSprintFromDB
-// } from "@/lib/supabase";
-
-// Create a new sprint
-export const createSprintLocal = (
-  sprints: Sprint[],
-  data: {
-    title: string;
-    description: string;
-    startDate: Date;
-    endDate: Date;
-    projectId: string;
-  },
-  toastFn: any
-): Sprint => {
-  const newSprint: Sprint = {
-    id: uuidv4(),
-    projectId: data.projectId,
-    title: data.title,
-    description: data.description,
-    startDate: data.startDate,
-    endDate: data.endDate,
-    isCompleted: false,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  };
-
-  return newSprint;
-};
-
-// Update a sprint
-export const updateSprintLocal = (
-  sprints: Sprint[],
-  id: string,
-  data: {
-    title: string;
-    description: string;
-    startDate: Date;
-    endDate: Date;
+export const fetchSprints = async (user: any) => {
+  if (!user) return { data: null, error: "No user is logged in" };
+  
+  try {
+    const { data, error } = await getSprintsFromDB();
+    
+    if (error) {
+      console.error("Error fetching sprints:", error);
+      return { data: null, error: error.message };
+    }
+    
+    if (data) {
+      // Convert database fields to match our Sprint type
+      const formattedSprints = data.map(sprint => ({
+        id: sprint.id,
+        projectId: sprint.project_id,
+        title: sprint.title,
+        description: sprint.description,
+        startDate: new Date(sprint.start_date),
+        endDate: new Date(sprint.end_date),
+        isCompleted: sprint.is_completed,
+        createdAt: new Date(sprint.created_at),
+        updatedAt: new Date(sprint.updated_at)
+      }));
+      
+      return { data: formattedSprints, error: null };
+    }
+    
+    return { data: [], error: null };
+  } catch (error) {
+    console.error("Error in fetchSprints:", error);
+    return { data: null, error: "Failed to fetch sprints" };
   }
-): Sprint[] => {
-  return sprints.map(sprint =>
-    sprint.id === id
-      ? {
-          ...sprint,
-          title: data.title,
-          description: data.description,
-          startDate: data.startDate,
-          endDate: data.endDate,
-          updatedAt: new Date()
-        }
-      : sprint
-  );
 };
 
-// Mark a sprint as completed
-export const completeSprintLocal = (
-  sprints: Sprint[],
-  id: string
-): Sprint[] => {
-  return sprints.map(sprint =>
-    sprint.id === id
-      ? {
-          ...sprint,
-          isCompleted: true,
-          updatedAt: new Date()
-        }
-      : sprint
-  );
+export const createSprint = async (data: SprintFormData, projectId: string, user: any) => {
+  if (!user) {
+    return { 
+      data: null, 
+      error: "Authentication required. You need to sign in to create a sprint" 
+    };
+  }
+  
+  try {
+    const { data: newSprint, error } = await createSprintInDB(data, projectId);
+    
+    if (error) {
+      console.error("Error creating sprint:", error);
+      return { data: null, error: "Failed to create sprint. Please try again." };
+    }
+    
+    if (newSprint) {
+      // Convert database fields to match our Sprint type
+      const formattedSprint = {
+        id: newSprint.id,
+        projectId: newSprint.project_id,
+        title: newSprint.title,
+        description: newSprint.description,
+        startDate: new Date(newSprint.start_date),
+        endDate: new Date(newSprint.end_date),
+        isCompleted: newSprint.is_completed,
+        createdAt: new Date(newSprint.created_at),
+        updatedAt: new Date(newSprint.updated_at)
+      };
+      
+      return { data: formattedSprint, error: null };
+    }
+    
+    return { data: null, error: "No sprint data returned" };
+  } catch (error) {
+    console.error("Error in createSprint:", error);
+    return { data: null, error: "An unexpected error occurred. Please try again." };
+  }
 };
 
-// Delete a sprint and related tasks
-export const deleteSprintLocal = (
-  sprints: Sprint[],
-  columns: Column[],
-  id: string
-): { updatedSprints: Sprint[], updatedColumns: Column[] } => {
-  // Remove the sprint
-  const updatedSprints = sprints.filter(sprint => sprint.id !== id);
+export const updateSprint = async (id: string, data: SprintFormData, user: any) => {
+  if (!user) {
+    return { 
+      data: null, 
+      error: "Authentication required. You need to sign in to update a sprint" 
+    };
+  }
   
-  // Remove tasks related to this sprint from all columns
-  const updatedColumns = columns.map(column => ({
-    ...column,
-    tasks: column.tasks.filter(task => task.sprintId !== id)
-  }));
+  try {
+    const { data: updatedSprint, error } = await updateSprintInDB(id, data);
+    
+    if (error) {
+      console.error("Error updating sprint:", error);
+      return { data: null, error: "Failed to update sprint. Please try again." };
+    }
+    
+    if (updatedSprint) {
+      // Convert database fields to match our Sprint type
+      const formattedSprint = {
+        id: updatedSprint.id,
+        projectId: updatedSprint.project_id,
+        title: updatedSprint.title,
+        description: updatedSprint.description,
+        startDate: new Date(updatedSprint.start_date),
+        endDate: new Date(updatedSprint.end_date),
+        isCompleted: updatedSprint.is_completed,
+        createdAt: new Date(updatedSprint.created_at),
+        updatedAt: new Date(updatedSprint.updated_at)
+      };
+      
+      return { data: formattedSprint, error: null };
+    }
+    
+    return { data: null, error: "No sprint data returned" };
+  } catch (error) {
+    console.error("Error in updateSprint:", error);
+    return { data: null, error: "An unexpected error occurred. Please try again." };
+  }
+};
+
+export const completeSprint = async (id: string, user: any) => {
+  if (!user) {
+    return { 
+      data: null, 
+      error: "Authentication required. You need to sign in to complete a sprint" 
+    };
+  }
   
-  return { updatedSprints, updatedColumns };
+  try {
+    const { data: updatedSprint, error } = await completeSprintInDB(id);
+    
+    if (error) {
+      console.error("Error completing sprint:", error);
+      return { data: null, error: "Failed to complete sprint. Please try again." };
+    }
+    
+    if (updatedSprint) {
+      // Convert database fields to match our Sprint type
+      const formattedSprint = {
+        id: updatedSprint.id,
+        projectId: updatedSprint.project_id,
+        title: updatedSprint.title,
+        description: updatedSprint.description,
+        startDate: new Date(updatedSprint.start_date),
+        endDate: new Date(updatedSprint.end_date),
+        isCompleted: updatedSprint.is_completed,
+        createdAt: new Date(updatedSprint.created_at),
+        updatedAt: new Date(updatedSprint.updated_at)
+      };
+      
+      return { data: formattedSprint, error: null };
+    }
+    
+    return { data: null, error: "No sprint data returned" };
+  } catch (error) {
+    console.error("Error in completeSprint:", error);
+    return { data: null, error: "An unexpected error occurred. Please try again." };
+  }
 };

@@ -1,73 +1,145 @@
 
 import React, { useState } from "react";
-import { useProject } from "@/context/ProjectContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useProject } from "@/context/project";
 import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Trash } from "lucide-react";
-import { CollaboratorForm } from "@/components/CollaboratorForm";
+import { UserPlus, Trash2 } from "lucide-react";
+import CollaboratorForm from "./CollaboratorForm";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface CollaboratorsListProps {
   projectId: string;
 }
 
 const CollaboratorsList: React.FC<CollaboratorsListProps> = ({ projectId }) => {
+  const { getProjectCollaborators, removeCollaborator, projects } = useProject();
   const [showInviteForm, setShowInviteForm] = useState(false);
-  const { getProjectCollaborators, removeCollaborator } = useProject();
+  const [collaboratorToRemove, setCollaboratorToRemove] = useState<string | null>(null);
 
   const collaborators = getProjectCollaborators(projectId);
+  const project = projects.find(p => p.id === projectId);
+
+  const handleRemoveCollaborator = () => {
+    if (collaboratorToRemove) {
+      removeCollaborator(collaboratorToRemove);
+      setCollaboratorToRemove(null);
+    }
+  };
+
+  const getRoleBadgeColor = (role: string) => {
+    switch (role) {
+      case "admin":
+        return "bg-purple-100 text-purple-800 border-purple-200";
+      case "editor":
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      case "viewer":
+        return "bg-green-100 text-green-800 border-green-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
+
+  const getStatusBadgeColor = (status: string) => {
+    switch (status) {
+      case "accepted":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "rejected":
+        return "bg-red-100 text-red-800 border-red-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Collaborators</CardTitle>
-        <Button size="sm" onClick={() => setShowInviteForm(true)}>
-          Invite
+    <Card className="w-full shadow-sm">
+      <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+        <CardTitle className="text-xl font-bold">Collaborators</CardTitle>
+        <Button 
+          size="sm" 
+          onClick={() => setShowInviteForm(true)}
+          className="flex items-center gap-1"
+        >
+          <UserPlus className="h-4 w-4" />
+          <span>Invite</span>
         </Button>
       </CardHeader>
       <CardContent>
         {collaborators.length === 0 ? (
-          <p className="text-center text-gray-500 py-4">No collaborators yet</p>
+          <div className="text-center py-8 text-muted-foreground">
+            <p>No collaborators yet</p>
+            <p className="text-sm mt-2">
+              Invite team members to collaborate on this project
+            </p>
+          </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {collaborators.map((collaborator) => (
-              <div key={collaborator.id} className="flex items-center justify-between">
+              <div
+                key={collaborator.id}
+                className="flex items-center justify-between p-3 bg-accent/30 rounded-md"
+              >
                 <div>
                   <div className="font-medium">{collaborator.email}</div>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant={
-                      collaborator.role === "admin" 
-                        ? "default" 
-                        : collaborator.role === "editor" 
-                          ? "outline" 
-                          : "secondary"
-                    }>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <Badge variant="outline" className={getRoleBadgeColor(collaborator.role)}>
                       {collaborator.role}
                     </Badge>
-                    <Badge variant={collaborator.status === "active" ? "default" : "outline"}>
+                    <Badge variant="outline" className={getStatusBadgeColor(collaborator.status)}>
                       {collaborator.status}
                     </Badge>
                   </div>
                 </div>
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   size="icon"
-                  onClick={() => removeCollaborator(collaborator.id)}
+                  onClick={() => setCollaboratorToRemove(collaborator.id)}
                 >
-                  <Trash className="h-4 w-4" />
+                  <Trash2 className="h-4 w-4 text-muted-foreground" />
                 </Button>
-                <Separator className="my-2" />
               </div>
             ))}
           </div>
         )}
+
         {showInviteForm && (
-          <CollaboratorForm 
+          <CollaboratorForm
             projectId={projectId}
             onClose={() => setShowInviteForm(false)}
           />
         )}
+
+        <AlertDialog
+          open={collaboratorToRemove !== null}
+          onOpenChange={(open) => !open && setCollaboratorToRemove(null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove Collaborator</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to remove this collaborator from the project?
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleRemoveCollaborator}>
+                Remove
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );

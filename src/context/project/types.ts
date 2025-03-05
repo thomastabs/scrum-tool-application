@@ -1,5 +1,5 @@
 
-import { Project, Sprint, Column, Task, BacklogItem, ProjectFormData, SprintFormData, TaskFormData, BacklogItemFormData } from "@/types";
+import { Project, Sprint, Column, Task, BacklogItem, ProjectFormData, SprintFormData, TaskFormData, BacklogItemFormData, Collaborator, CollaboratorFormData } from "@/types";
 
 export interface ProjectContextType {
   projects: Project[];
@@ -7,6 +7,7 @@ export interface ProjectContextType {
   sprints: Sprint[];
   columns: Column[];
   backlogItems: BacklogItem[];
+  collaborators: Collaborator[];
   user: any | null;
   createProject: (data: ProjectFormData) => void;
   updateProject: (id: string, data: ProjectFormData) => void;
@@ -25,4 +26,7 @@ export interface ProjectContextType {
   updateBacklogItem: (id: string, data: BacklogItemFormData) => void;
   deleteBacklogItem: (id: string) => void;
   moveBacklogItemToSprint: (backlogItemId: string, sprintId: string) => void;
+  inviteCollaborator: (projectId: string, projectTitle: string, data: CollaboratorFormData) => Promise<{success: boolean, error: string | null}>;
+  removeCollaborator: (id: string) => void;
+  getProjectCollaborators: (projectId: string) => Collaborator[];
 }

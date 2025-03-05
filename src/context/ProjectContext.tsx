@@ -1,13 +1,10 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { v4 as uuidv4 } from "uuid";
+import { Project, Sprint, Column, Task, BacklogItem, ProjectFormData, SprintFormData, TaskFormData, BacklogItemFormData } from "@/types";
 import { toast } from "@/components/ui/use-toast";
-import { Project, Sprint, Column, Task, BacklogItem, ProjectFormData, SprintFormData, TaskFormData, BacklogItemFormData, Collaborator, CollaboratorFormData } from "@/types";
-import { useProjects } from "@/hooks/useProjects";
-import { useSprints } from "@/hooks/useSprints";
-import { useColumns } from "@/hooks/useColumns";
-import { useTasks } from "@/hooks/useTasks";
-import { useBacklog } from "@/hooks/useBacklog";
+import { supabase } from "@/lib/supabase";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface ProjectContextType {
   projects: Project[];
@@ -33,50 +30,16 @@ interface ProjectContextType {
   updateBacklogItem: (id: string, data: BacklogItemFormData) => Promise<void>;
   deleteBacklogItem: (id: string) => Promise<void>;
   moveBacklogItemToSprint: (backlogItemId: string, sprintId: string) => Promise<void>;
-  inviteCollaborator: (projectId: string, projectTitle: string, data: CollaboratorFormData) => Promise<{success: boolean, error: string | null}>;
-  removeCollaborator: (id: string) => Promise<void>;
-  getProjectCollaborators: (projectId: string) => Collaborator[];
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [user, setUser] = useState<any>(null);
-  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
-  
-  const {
-    selectedProject,
-    createProject: createProjectFn,
-    updateProject: updateProjectFn,
-    deleteProject: deleteProjectFn,
-    selectProject: selectProjectFn
-  } = useProjects();
-  
-  const {
-    createSprint: createSprintFn,
-    updateSprint: updateSprintFn,
-    completeSprint: completeSprintFn
-  } = useSprints();
-  
-  const {
-    createColumn: createColumnFn,
-    deleteColumn: deleteColumnFn
-  } = useColumns();
-  
-  const {
-    createTask: createTaskFn,
-    updateTask: updateTaskFn,
-    deleteTask: deleteTaskFn,
-    moveTask: moveTaskFn
-  } = useTasks();
-  
-  const {
-    createBacklogItem: createBacklogItemFn,
-    updateBacklogItem: updateBacklogItemFn,
-    deleteBacklogItem: deleteBacklogItemFn,
-    moveBacklogItemToSprint: moveBacklogItemToSprintFn
-  } = useBacklog();
+  const queryClient = useQueryClient();
 
+  // Set up auth listener
   useEffect(() => {
     const getUser = async () => {
       const { data } = await supabase.auth.getUser();
@@ -85,20 +48,21 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     
     getUser();
 
-    const { data: authData } = supabase.auth.onAuthStateChange((event, session) => {
+    const authListener = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         setUser(session.user);
       } else {
         setUser(null);
-        selectProjectFn("", []);
+        setSelectedProject(null);
       }
     });
 
     return () => {
-      authData.subscription.unsubscribe();
+      authListener.data.subscription.unsubscribe();
     };
   }, []);
 
+  // Query functions
   const fetchProjects = async () => {
     if (!user) return [];
     
@@ -229,6 +193,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }));
   };
 
+  // Queries
   const {
     data: projects = [],
     isLoading: isProjectsLoading
@@ -274,6 +239,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     enabled: !!user
   });
 
+  // Combine tasks with columns
   const columns = columnsData.map(column => ({
     ...column,
     tasks: tasks.filter(task => task.columnId === column.id)
@@ -281,6 +247,386 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const isLoading = isProjectsLoading || isSprintsLoading || isColumnsLoading || isTasksLoading || isBacklogItemsLoading;
 
+  // Mutations
+  const createProjectMutation = useMutation({
+    mutationFn: async (data: ProjectFormData) => {
+      if (!user) throw new Error("You must be signed in to create a project");
+      
+      const { data: newProject, error } = await supabase
+        .from('projects')
+        .insert({
+          owner_id: user.id,
+          title: data.title,
+          description: data.description,
+          end_goal: data.endGoal
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return newProject;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error creating project",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const updateProjectMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string, data: ProjectFormData }) => {
+      const { error } = await supabase
+        .from('projects')
+        .update({
+          title: data.title,
+          description: data.description,
+          end_goal: data.endGoal,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error updating project",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const deleteProjectMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['sprints'] });
+      queryClient.invalidateQueries({ queryKey: ['backlogItems'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error deleting project",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const createSprintMutation = useMutation({
+    mutationFn: async ({ projectId, data }: { projectId: string, data: SprintFormData }) => {
+      const { error } = await supabase
+        .from('sprints')
+        .insert({
+          project_id: projectId,
+          title: data.title,
+          description: data.description,
+          start_date: data.startDate.toISOString(),
+          end_date: data.endDate.toISOString(),
+          is_completed: false
+        });
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sprints'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error creating sprint",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const updateSprintMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string, data: SprintFormData }) => {
+      const { error } = await supabase
+        .from('sprints')
+        .update({
+          title: data.title,
+          description: data.description,
+          start_date: data.startDate.toISOString(),
+          end_date: data.endDate.toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sprints'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error updating sprint",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const completeSprintMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('sprints')
+        .update({
+          is_completed: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sprints'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error completing sprint",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const createColumnMutation = useMutation({
+    mutationFn: async (title: string) => {
+      const { data, error } = await supabase
+        .from('columns')
+        .insert({
+          title
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['columns'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error creating column",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const deleteColumnMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('columns')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['columns'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error deleting column",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const createTaskMutation = useMutation({
+    mutationFn: async ({ sprintId, columnId, data }: { sprintId: string, columnId: string, data: TaskFormData }) => {
+      const { error } = await supabase
+        .from('tasks')
+        .insert({
+          sprint_id: sprintId,
+          column_id: columnId,
+          title: data.title,
+          description: data.description,
+          priority: data.priority,
+          assignee: data.assignee,
+          story_points: data.storyPoints
+        });
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error creating task",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const updateTaskMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string, data: TaskFormData }) => {
+      const { error } = await supabase
+        .from('tasks')
+        .update({
+          title: data.title,
+          description: data.description,
+          priority: data.priority,
+          assignee: data.assignee,
+          story_points: data.storyPoints,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error updating task",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error deleting task",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const moveTaskMutation = useMutation({
+    mutationFn: async ({ taskId, destinationColumnId }: { taskId: string, destinationColumnId: string }) => {
+      const { error } = await supabase
+        .from('tasks')
+        .update({
+          column_id: destinationColumnId,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', taskId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error moving task",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const createBacklogItemMutation = useMutation({
+    mutationFn: async ({ projectId, data }: { projectId: string, data: BacklogItemFormData }) => {
+      const { error } = await supabase
+        .from('backlog_items')
+        .insert({
+          project_id: projectId,
+          title: data.title,
+          description: data.description,
+          priority: data.priority,
+          story_points: data.storyPoints
+        });
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['backlogItems'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error creating backlog item",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const updateBacklogItemMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string, data: BacklogItemFormData }) => {
+      const { error } = await supabase
+        .from('backlog_items')
+        .update({
+          title: data.title,
+          description: data.description,
+          priority: data.priority,
+          story_points: data.storyPoints,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['backlogItems'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error updating backlog item",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const deleteBacklogItemMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('backlog_items')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['backlogItems'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error deleting backlog item",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Function to create default columns if they don't exist
   useEffect(() => {
     const createDefaultColumns = async () => {
       if (!user || isLoading) return;
@@ -290,7 +636,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       
       for (const title of defaultColumns) {
         if (!existingColumnTitles.includes(title)) {
-          await createColumnFn("", title);
+          await createColumnMutation.mutateAsync(title);
         }
       }
     };
@@ -298,20 +644,72 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     createDefaultColumns();
   }, [user, isLoading, columns]);
 
+  // Context functions
   const createProject = async (data: ProjectFormData) => {
-    await createProjectFn(data);
+    try {
+      const newProject = await createProjectMutation.mutateAsync(data);
+      toast({
+        title: "Project created",
+        description: `${data.title} has been created successfully.`,
+      });
+      setSelectedProject(newProject);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const updateProject = async (id: string, data: ProjectFormData) => {
-    await updateProjectFn(id, data);
+    try {
+      await updateProjectMutation.mutateAsync({ id, data });
+      
+      if (selectedProject && selectedProject.id === id) {
+        const updatedProject = {
+          ...selectedProject,
+          ...data,
+          updatedAt: new Date()
+        };
+        setSelectedProject(updatedProject);
+      }
+      
+      toast({
+        title: "Project updated",
+        description: `${data.title} has been updated successfully.`,
+      });
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const deleteProject = async (id: string) => {
-    await deleteProjectFn(id);
+    try {
+      const projectToDelete = projects.find(project => project.id === id);
+      if (!projectToDelete) return;
+      
+      await deleteProjectMutation.mutateAsync(id);
+      
+      if (selectedProject && selectedProject.id === id) {
+        setSelectedProject(null);
+      }
+      
+      toast({
+        title: "Project deleted",
+        description: `${projectToDelete.title} has been deleted successfully.`,
+      });
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const selectProject = (id: string) => {
-    selectProjectFn(id, projects);
+    if (!id) {
+      setSelectedProject(null);
+      return;
+    }
+    
+    const project = projects.find(p => p.id === id);
+    if (project) {
+      setSelectedProject(project);
+    }
   };
 
   const createSprint = async (data: SprintFormData) => {
@@ -324,39 +722,190 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
     
-    await createSprintFn(selectedProject.id, data);
+    try {
+      await createSprintMutation.mutateAsync({ 
+        projectId: selectedProject.id, 
+        data 
+      });
+      
+      toast({
+        title: "Sprint created",
+        description: `${data.title} has been created successfully.`,
+      });
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const updateSprint = async (id: string, data: SprintFormData) => {
-    await updateSprintFn(id, data);
+    try {
+      await updateSprintMutation.mutateAsync({ id, data });
+      
+      toast({
+        title: "Sprint updated",
+        description: `${data.title} has been updated successfully.`,
+      });
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const completeSprint = async (id: string) => {
-    await completeSprintFn(id);
+    try {
+      await completeSprintMutation.mutateAsync(id);
+      
+      const sprint = sprints.find(s => s.id === id);
+      if (sprint) {
+        toast({
+          title: "Sprint completed",
+          description: `${sprint.title} has been marked as completed.`,
+        });
+      }
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const createColumn = async (sprintId: string, title: string) => {
-    await createColumnFn(sprintId, title);
+    const columnExists = columns.some(col => col.title === title);
+    
+    if (columnExists) {
+      toast({
+        title: "Column already exists",
+        description: `A column named "${title}" already exists.`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      await createColumnMutation.mutateAsync(title);
+      
+      toast({
+        title: "Column created",
+        description: `${title} column has been created successfully.`,
+      });
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const deleteColumn = async (id: string) => {
-    await deleteColumnFn(id);
+    const columnToDelete = columns.find(column => column.id === id);
+    if (!columnToDelete) return;
+    
+    if (columnToDelete.tasks.length > 0) {
+      toast({
+        title: "Cannot delete column",
+        description: "This column still has tasks. Move or delete them first.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (["TO DO", "IN PROGRESS", "DONE"].includes(columnToDelete.title)) {
+      toast({
+        title: "Cannot delete default column",
+        description: "The default columns (TO DO, IN PROGRESS, DONE) cannot be deleted.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      await deleteColumnMutation.mutateAsync(id);
+      
+      toast({
+        title: "Column deleted",
+        description: `${columnToDelete.title} column has been deleted successfully.`,
+      });
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const createTask = async (sprintId: string, columnId: string, data: TaskFormData) => {
-    await createTaskFn(sprintId, columnId, data);
+    const column = columns.find(col => col.id === columnId);
+    if (!column) {
+      toast({
+        title: "Error",
+        description: "Column not found.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      await createTaskMutation.mutateAsync({
+        sprintId,
+        columnId,
+        data
+      });
+      
+      toast({
+        title: "Task created",
+        description: `${data.title} has been created successfully.`,
+      });
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const updateTask = async (id: string, data: TaskFormData) => {
-    await updateTaskFn(id, data);
+    try {
+      await updateTaskMutation.mutateAsync({ id, data });
+      
+      toast({
+        title: "Task updated",
+        description: `${data.title} has been updated successfully.`,
+      });
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const deleteTask = async (id: string) => {
-    await deleteTaskFn(id);
+    let taskTitle = "";
+    
+    for (const column of columns) {
+      const taskToDelete = column.tasks.find(task => task.id === id);
+      if (taskToDelete) {
+        taskTitle = taskToDelete.title;
+        break;
+      }
+    }
+    
+    try {
+      await deleteTaskMutation.mutateAsync(id);
+      
+      if (taskTitle) {
+        toast({
+          title: "Task deleted",
+          description: `${taskTitle} has been deleted successfully.`,
+        });
+      }
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const moveTask = async (taskId: string, sourceColumnId: string, destinationColumnId: string) => {
-    await moveTaskFn(taskId, sourceColumnId, destinationColumnId);
+    // Find the source column
+    const sourceColumn = columns.find(col => col.id === sourceColumnId);
+    if (!sourceColumn) return;
+    
+    // Find the task
+    const taskIndex = sourceColumn.tasks.findIndex(task => task.id === taskId);
+    if (taskIndex === -1) return;
+    
+    try {
+      await moveTaskMutation.mutateAsync({
+        taskId,
+        destinationColumnId
+      });
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const createBacklogItem = async (data: BacklogItemFormData) => {
@@ -369,36 +918,90 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
     
-    await createBacklogItemFn(selectedProject.id, data);
+    try {
+      await createBacklogItemMutation.mutateAsync({
+        projectId: selectedProject.id,
+        data
+      });
+      
+      toast({
+        title: "Backlog item created",
+        description: `${data.title} has been added to the backlog.`,
+      });
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const updateBacklogItem = async (id: string, data: BacklogItemFormData) => {
-    await updateBacklogItemFn(id, data);
+    try {
+      await updateBacklogItemMutation.mutateAsync({ id, data });
+      
+      toast({
+        title: "Backlog item updated",
+        description: `${data.title} has been updated successfully.`,
+      });
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const deleteBacklogItem = async (id: string) => {
-    await deleteBacklogItemFn(id);
+    const itemToDelete = backlogItems.find(item => item.id === id);
+    if (!itemToDelete) return;
+    
+    try {
+      await deleteBacklogItemMutation.mutateAsync(id);
+      
+      toast({
+        title: "Backlog item deleted",
+        description: `${itemToDelete.title} has been deleted from the backlog.`,
+      });
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const moveBacklogItemToSprint = async (backlogItemId: string, sprintId: string) => {
-    await moveBacklogItemToSprintFn(backlogItemId, sprintId);
-  };
-
-  // Collaborator implementation stubs
-  const inviteCollaborator = async (projectId: string, projectTitle: string, data: CollaboratorFormData) => {
-    console.log(`Inviting ${data.email} as ${data.role} to project ${projectTitle}`);
-    // Placeholder implementation
-    return { success: true, error: null };
-  };
-
-  const removeCollaborator = async (id: string) => {
-    console.log(`Removing collaborator ${id}`);
-    // Placeholder implementation
-  };
-
-  const getProjectCollaborators = (projectId: string) => {
-    // Placeholder implementation
-    return [];
+    // Find the backlog item
+    const backlogItem = backlogItems.find(item => item.id === backlogItemId);
+    if (!backlogItem) return;
+    
+    // Find the TO DO column
+    const todoColumn = columns.find(col => col.title === "TO DO");
+    if (!todoColumn) {
+      toast({
+        title: "Error",
+        description: "TO DO column not found. Please create a sprint first.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      // Create a task from the backlog item
+      await createTaskMutation.mutateAsync({
+        sprintId,
+        columnId: todoColumn.id,
+        data: {
+          title: backlogItem.title,
+          description: backlogItem.description,
+          priority: backlogItem.priority,
+          assignee: "",
+          storyPoints: backlogItem.storyPoints
+        }
+      });
+      
+      // Delete the backlog item
+      await deleteBacklogItemMutation.mutateAsync(backlogItemId);
+      
+      toast({
+        title: "Item moved to sprint",
+        description: `${backlogItem.title} has been moved to the selected sprint.`,
+      });
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   return (
@@ -426,10 +1029,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         createBacklogItem,
         updateBacklogItem,
         deleteBacklogItem,
-        moveBacklogItemToSprint,
-        inviteCollaborator,
-        removeCollaborator,
-        getProjectCollaborators
+        moveBacklogItemToSprint
       }}
     >
       {children}
