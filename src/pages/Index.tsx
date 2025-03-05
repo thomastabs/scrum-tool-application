@@ -17,6 +17,7 @@ import { PlusIcon, ExternalLinkIcon, LogOut } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase, signOut } from "@/lib/supabase";
 import { toast } from "@/components/ui/use-toast";
+import ProfileDashboard from "@/components/ProfileDashboard";
 
 const Index = () => {
   const { projects, selectedProject, selectProject } = useProject();
@@ -73,6 +74,7 @@ const Index = () => {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <span className="text-sm">{user?.email}</span>
+                <ProfileDashboard user={user} />
                 <Button variant="outline" size="sm" onClick={handleSignOut}>
                   <LogOut className="h-4 w-4 mr-1" /> Sign Out
                 </Button>
