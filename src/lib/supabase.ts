@@ -56,38 +56,18 @@ export async function createProjectInDB(data: ProjectFormData, userId: string) {
 }
 
 export async function getProjectsFromDB() {
-  // Get the current user ID
-  const { data: userData } = await supabase.auth.getUser();
-  const userId = userData.user?.id;
-  
-  if (!userId) {
-    return { data: [], error: new Error('No authenticated user found') };
-  }
-
   const { data, error } = await supabase
     .from('projects')
     .select('*')
-    .eq('user_id', userId) // Filter projects by the current user ID
     .order('created_at', { ascending: false });
   
   return { data, error };
 }
 
 export async function getCollaboratedProjectsFromDB() {
-  // Get the current user ID
-  const { data: userData } = await supabase.auth.getUser();
-  const userId = userData.user?.id;
-  
-  if (!userId) {
-    return { data: [], error: new Error('No authenticated user found') };
-  }
-
-  // Query projects where current user is a collaborator
   const { data, error } = await supabase
     .from('projects')
     .select('*')
-    .contains('collaborators', [userId])
-    .not('user_id', 'eq', userId) // Exclude projects owned by the user
     .order('created_at', { ascending: false });
   
   return { data, error };
