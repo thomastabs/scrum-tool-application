@@ -80,3 +80,18 @@ export interface BacklogItemFormData {
   priority: "low" | "medium" | "high";
   storyPoints: number;
 }
+
+export interface Collaborator {
+  id: string;
+  projectId: string;
+  email: string;
+  role: "viewer" | "editor" | "admin";
+  status: "pending" | "accepted";
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CollaboratorFormData {
+  email: string;
+  role: "viewer" | "editor" | "admin";
+}

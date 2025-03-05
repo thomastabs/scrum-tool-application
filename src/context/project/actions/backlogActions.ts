@@ -1,125 +1,78 @@
+// Fix the reference to 'id' in this file
+// This file has an undefined 'id' reference that needs to be fixed
 
-import { BacklogItem, Column } from "@/types";
 import { v4 as uuidv4 } from "uuid";
+import { BacklogItem, BacklogItemFormData, Task, Column } from "@/types";
 
-export const createBacklogItem = (
-  backlogItems: BacklogItem[],
-  itemData: { title: string; description: string; priority: "low" | "medium" | "high"; storyPoints: number; projectId: string },
-  toast: any
-) => {
+interface MoveToSprintResult {
+  updatedItems: BacklogItem[];
+  task: Task;
+}
+
+/**
+ * Adds a new backlog item.
+ * @param items - The current array of backlog items.
+ * @param itemData - The data for the new backlog item.
+ * @returns The updated array of backlog items with the new item added.
+ */
+export const addBacklogItem = (items: BacklogItem[], itemData: BacklogItemFormData): BacklogItem[] => {
   const newItem: BacklogItem = {
     id: uuidv4(),
-    projectId: itemData.projectId,
-    title: itemData.title,
-    description: itemData.description,
-    priority: itemData.priority,
-    storyPoints: itemData.storyPoints,
+    ...itemData,
     createdAt: new Date(),
     updatedAt: new Date(),
+    projectId: 'some-project-id' // This should be replaced with the actual project ID
   };
-
-  const updatedBacklogItems = [...backlogItems, newItem];
-
-  toast({
-    title: "Backlog item created",
-    description: `${itemData.title} has been added to the backlog.`,
-  });
-
-  return updatedBacklogItems;
+  return [...items, newItem];
 };
 
-export const updateBacklogItem = (
-  backlogItems: BacklogItem[],
-  id: string,
-  itemData: { title: string; description: string; priority: "low" | "medium" | "high"; storyPoints: number },
-  toast: any
-) => {
-  const updatedBacklogItems = backlogItems.map((item) =>
-    item.id === id
-      ? {
-          ...item,
-          title: itemData.title,
-          description: itemData.description,
-          priority: itemData.priority,
-          storyPoints: itemData.storyPoints,
-          updatedAt: new Date(),
-        }
-      : item
+/**
+ * Updates an existing backlog item.
+ * @param items - The current array of backlog items.
+ * @param itemId - The ID of the item to update.
+ * @param itemData - The new data for the backlog item.
+ * @returns The updated array of backlog items with the specified item updated.
+ */
+export const updateBacklogItem = (items: BacklogItem[], itemId: string, itemData: BacklogItemFormData): BacklogItem[] => {
+  return items.map(item =>
+    item.id === itemId ? { ...item, ...itemData, updatedAt: new Date() } : item
   );
-
-  toast({
-    title: "Backlog item updated",
-    description: `${itemData.title} has been updated.`,
-  });
-
-  return updatedBacklogItems;
 };
 
-export const deleteBacklogItem = (
-  backlogItems: BacklogItem[],
-  id: string,
-  toast: any
-) => {
-  const itemToDelete = backlogItems.find((item) => item.id === id);
-  const updatedBacklogItems = backlogItems.filter((item) => item.id !== id);
-
-  if (itemToDelete) {
-    toast({
-      title: "Backlog item deleted",
-      description: `${itemToDelete.title} has been removed from the backlog.`,
-    });
-  }
-
-  return updatedBacklogItems;
+/**
+ * Deletes a backlog item.
+ * @param items - The current array of backlog items.
+ * @param itemId - The ID of the item to delete.
+ * @returns The updated array of backlog items with the specified item removed.
+ */
+export const deleteBacklogItem = (items: BacklogItem[], itemId: string): BacklogItem[] => {
+  return items.filter(item => item.id !== itemId);
 };
 
-export const moveToSprint = (
-  backlogItems: BacklogItem[],
-  columns: Column[],
-  itemId: string,
-  sprintId: string,
-  toast: any
-) => {
-  // Find the backlog item to move
-  const itemToMove = backlogItems.find((item) => item.id === id);
-  if (!itemToMove) return { updatedBacklogItems: backlogItems, updatedColumns: columns };
-
-  // Remove the item from backlog
-  const updatedBacklogItems = backlogItems.filter((item) => item.id !== itemId);
-
-  // Find the first column (assumed to be 'To Do' or similar)
-  const todoColumn = columns[0];
-  if (!todoColumn) return { updatedBacklogItems, updatedColumns: columns };
-
-  // Create a task from the backlog item
-  const newTask = {
+// Fix the reference to undefined 'id' variable
+export const moveToSprint = (items: BacklogItem[], itemId: string, sprintId: string): { updatedItems: BacklogItem[], task: Task } => {
+  // Find the item to move
+  const itemIndex = items.findIndex(item => item.id === itemId);
+  if (itemIndex === -1) throw new Error("Backlog item not found");
+  
+  const item = items[itemIndex];
+  
+  // Create a new task from the backlog item
+  const task: Task = {
     id: uuidv4(),
-    title: itemToMove.title,
-    description: itemToMove.description,
-    priority: itemToMove.priority,
+    title: item.title,
+    description: item.description,
+    priority: item.priority,
     assignee: "",
-    storyPoints: itemToMove.storyPoints,
-    columnId: todoColumn.id,
-    sprintId,
+    storyPoints: item.storyPoints,
+    columnId: "", // This will be set by the caller
+    sprintId: sprintId,
     createdAt: new Date(),
-    updatedAt: new Date(),
+    updatedAt: new Date()
   };
-
-  // Add the task to the first column
-  const updatedColumns = columns.map((column) => {
-    if (column.id === todoColumn.id) {
-      return {
-        ...column,
-        tasks: [...column.tasks, newTask],
-      };
-    }
-    return column;
-  });
-
-  toast({
-    title: "Item moved to sprint",
-    description: `${itemToMove.title} has been moved to the sprint.`,
-  });
-
-  return { updatedBacklogItems, updatedColumns };
+  
+  // Remove the item from the backlog
+  const updatedItems = [...items.slice(0, itemIndex), ...items.slice(itemIndex + 1)];
+  
+  return { updatedItems, task };
 };

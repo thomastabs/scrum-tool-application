@@ -1,7 +1,6 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { Project, Sprint, Column, Task, BacklogItem, ProjectFormData, SprintFormData, TaskFormData, BacklogItemFormData } from "@/types";
+import { Project, Sprint, Column, Task, BacklogItem, ProjectFormData, SprintFormData, TaskFormData, BacklogItemFormData, Collaborator, CollaboratorFormData } from "@/types";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -30,6 +29,9 @@ interface ProjectContextType {
   updateBacklogItem: (id: string, data: BacklogItemFormData) => Promise<void>;
   deleteBacklogItem: (id: string) => Promise<void>;
   moveBacklogItemToSprint: (backlogItemId: string, sprintId: string) => Promise<void>;
+  inviteCollaborator: (projectId: string, projectTitle: string, data: CollaboratorFormData) => Promise<{ success: boolean, error: string | null }>;
+  removeCollaborator: (id: string) => Promise<void>;
+  getProjectCollaborators: (projectId: string) => Collaborator[];
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -37,6 +39,7 @@ const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [user, setUser] = useState<any>(null);
+  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const queryClient = useQueryClient();
 
   // Set up auth listener
@@ -1004,6 +1007,86 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  // Error handling function
+  const handleError = (error: any, title: string) => {
+    const errorMessage = typeof error === 'string' ? error : error.message;
+    toast({
+      title,
+      description: errorMessage,
+      variant: "destructive"
+    });
+    return errorMessage;
+  };
+
+  // New collaborator functions
+  const inviteCollaborator = async (projectId: string, projectTitle: string, data: CollaboratorFormData) => {
+    if (!user) {
+      return { 
+        success: false, 
+        error: "Authentication required. You need to sign in to invite collaborators" 
+      };
+    }
+    
+    try {
+      // In a real implementation, this would send an email invitation
+      // For now, just create the collaborator record
+      const { data: newCollaborator, error } = await supabase
+        .from('collaborators')
+        .insert({
+          project_id: projectId,
+          email: data.email,
+          role: data.role,
+          status: 'pending'
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        return { 
+          success: false, 
+          error: error.message 
+        };
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ['collaborators'] });
+      
+      return { success: true, error: null };
+    } catch (error) {
+      console.error("Error inviting collaborator:", error);
+      return { 
+        success: false, 
+        error: "An unexpected error occurred. Please try again." 
+      };
+    }
+  };
+
+  const removeCollaborator = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('collaborators')
+        .delete()
+        .eq('id', id);
+      
+      if (error) {
+        handleError(error, "Error removing collaborator");
+        return;
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ['collaborators'] });
+      
+      toast({
+        title: "Collaborator removed",
+        description: "The collaborator has been removed from the project.",
+      });
+    } catch (error) {
+      handleError(error, "Error removing collaborator");
+    }
+  };
+
+  const getProjectCollaborators = (projectId: string) => {
+    return collaborators.filter(c => c.projectId === projectId);
+  };
+
   return (
     <ProjectContext.Provider
       value={{
@@ -1029,18 +1112,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         createBacklogItem,
         updateBacklogItem,
         deleteBacklogItem,
-        moveBacklogItemToSprint
+        moveBacklogItemToSprint,
+        inviteCollaborator,
+        removeCollaborator,
+        getProjectCollaborators
       }}
     >
       {children}
-    </ProjectContext.Provider>
-  );
-};
-
-export const useProject = () => {
-  const context = useContext(ProjectContext);
-  if (context === undefined) {
-    throw new Error("useProject must be used within a ProjectProvider");
-  }
-  return context;
-};
+    </
