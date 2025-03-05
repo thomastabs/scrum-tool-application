@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,18 +7,14 @@ import { useProject } from "@/context/ProjectContext";
 import { signOut, supabase } from "@/lib/supabase";
 import { toast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import ProfileDashboard from "@/components/ProfileDashboard";
-import { ExternalLinkIcon, FolderIcon, UsersIcon, BellIcon } from "lucide-react";
+import { ExternalLinkIcon, FolderIcon, UsersIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getUserCollaborations, getUserPendingInvitations } from "@/lib/collaborationService";
-import { Badge } from "@/components/ui/badge";
 
 const Dashboard = () => {
   const { projects } = useProject();
   const [user, setUser] = useState<any>(null);
-  const [collaborations, setCollaborations] = useState<any[]>([]);
-  const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,26 +24,7 @@ const Dashboard = () => {
     };
     
     getUser();
-    fetchUserData();
   }, []);
-
-  const fetchUserData = async () => {
-    try {
-      setLoading(true);
-      // Fetch collaborations and invitations in parallel
-      const [collaborationsData, invitationsData] = await Promise.all([
-        getUserCollaborations(),
-        getUserPendingInvitations()
-      ]);
-      
-      setCollaborations(collaborationsData);
-      setPendingInvitations(invitationsData);
-    } catch (error) {
-      console.error("Error fetching user data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSignOut = async () => {
     const { error } = await signOut();
@@ -62,6 +39,9 @@ const Dashboard = () => {
     }
   };
 
+  // Display recent projects (limited to 3)
+  const recentProjects = projects.slice(0, 3);
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 animate-fade-in">
@@ -73,23 +53,6 @@ const Dashboard = () => {
             </p>
           </div>
           <div className="flex items-center gap-4">
-            {pendingInvitations.length > 0 && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="relative" 
-                onClick={() => navigate("/invitations")}
-              >
-                <BellIcon className="h-4 w-4 mr-1" />
-                Invitations
-                <Badge 
-                  className="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs" 
-                  variant="destructive"
-                >
-                  {pendingInvitations.length}
-                </Badge>
-              </Button>
-            )}
             <div className="flex items-center gap-2">
               <span className="text-sm">{user?.email}</span>
               <ProfileDashboard user={user} />
@@ -147,47 +110,20 @@ const Dashboard = () => {
             </TabsContent>
             
             <TabsContent value="collaborations">
-              {loading ? (
-                <div className="flex justify-center items-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                </div>
-              ) : collaborations.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {collaborations.map((collab) => (
-                    <Card key={collab.id} className="hover:shadow-md transition-shadow">
-                      <CardHeader className="pb-2">
-                        <div className="flex justify-between">
-                          <CardTitle className="text-xl">{collab.project.title}</CardTitle>
-                          <Badge>{collab.role}</Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {collab.project.description}
-                        </p>
-                      </CardHeader>
-                      <CardContent>
-                        <Button size="sm" variant="default" asChild className="w-full">
-                          <Link to={`/my-projects/${collab.project.id}`}>
-                            Open Project
-                          </Link>
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12 bg-accent/30 rounded-lg border border-border">
-                  <UsersIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No collaborations yet</h3>
-                  <p className="text-muted-foreground mb-4">
-                    You will see projects shared with you here when you accept invitations
-                  </p>
-                  {pendingInvitations.length > 0 && (
-                    <Button asChild>
-                      <Link to="/invitations">View Invitations ({pendingInvitations.length})</Link>
-                    </Button>
-                  )}
-                </div>
-              )}
+              <Card>
+                <CardHeader>
+                  <CardTitle>My Collaborations</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8">
+                    <UsersIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium mb-2">Coming Soon</h3>
+                    <p className="text-muted-foreground">
+                      Collaboration features will be implemented in the future.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         </div>

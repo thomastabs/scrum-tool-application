@@ -15,10 +15,10 @@ serve(async (req) => {
   }
 
   try {
-    const { to, projectTitle, inviterEmail, projectId, role, invitationId } = await req.json()
+    const { to, projectTitle, inviterEmail, projectId, role, collaboratorId } = await req.json()
 
     // Validate input
-    if (!to || !projectTitle || !inviterEmail || !projectId || !invitationId) {
+    if (!to || !projectTitle || !inviterEmail) {
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
@@ -32,15 +32,13 @@ serve(async (req) => {
     // an email service like SendGrid, Mailgun, etc.
     
     // Create acceptance link - in a real app, this would go to your application
-    const acceptUrl = `${req.headers.get('origin') || 'https://example.com'}/invitations?id=${invitationId}&action=accept`
-    const declineUrl = `${req.headers.get('origin') || 'https://example.com'}/invitations?id=${invitationId}&action=decline`
+    const acceptUrl = `${req.headers.get('origin') || 'https://example.com'}/accept-invitation?id=${collaboratorId}&projectId=${projectId}`
     
     console.log(`Invitation would be sent to: ${to}`)
     console.log(`From: ${inviterEmail}`)
     console.log(`Project: ${projectTitle}`)
     console.log(`Role: ${role}`)
     console.log(`Accept URL: ${acceptUrl}`)
-    console.log(`Decline URL: ${declineUrl}`)
 
     // In production, you would send an actual email here
     // For now, we just simulate a successful email sending
