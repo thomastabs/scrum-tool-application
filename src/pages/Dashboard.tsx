@@ -2,13 +2,16 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useProject } from "@/context/ProjectContext";
-import { supabase } from "@/lib/supabase";
+import { supabase, getProjectsFromDB } from "@/lib/supabase";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardTabs from "@/components/dashboard/DashboardTabs";
+import { Project } from "@/types";
 
 const Dashboard = () => {
-  const { projects } = useProject();
+  const { projects: contextProjects, createProject } = useProject();
   const [user, setUser] = useState<any>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
   const location = useLocation();
 
   // Get the 'tab' query parameter from the URL
@@ -23,6 +26,31 @@ const Dashboard = () => {
     
     getUser();
   }, []);
+
+  useEffect(() => {
+    const loadProjects = async () => {
+      setLoading(true);
+      const { data, error } = await getProjectsFromDB();
+      
+      if (error) {
+        console.error("Error loading projects:", error);
+      } else {
+        setProjects(data || []);
+      }
+      
+      setLoading(false);
+    };
+
+    loadProjects();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

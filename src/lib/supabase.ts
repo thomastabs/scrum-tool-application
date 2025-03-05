@@ -56,9 +56,17 @@ export async function createProjectInDB(data: ProjectFormData, userId: string) {
 }
 
 export async function getProjectsFromDB() {
+  const { data: user } = await supabase.auth.getUser();
+  const userId = user.user?.id;
+  
+  if (!userId) {
+    return { data: [], error: new Error('User not authenticated') };
+  }
+  
   const { data, error } = await supabase
     .from('projects')
     .select('*')
+    .eq('user_id', userId)
     .order('created_at', { ascending: false });
   
   return { data, error };
