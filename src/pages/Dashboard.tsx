@@ -6,6 +6,7 @@ import { supabase, getProjectsFromDB } from "@/lib/supabase";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardTabs from "@/components/dashboard/DashboardTabs";
 import { Project } from "@/types";
+import { toast } from "@/components/ui/use-toast";
 
 const Dashboard = () => {
   const { projects: contextProjects, createProject } = useProject();
@@ -30,15 +31,26 @@ const Dashboard = () => {
   useEffect(() => {
     const loadProjects = async () => {
       setLoading(true);
-      const { data, error } = await getProjectsFromDB();
-      
-      if (error) {
-        console.error("Error loading projects:", error);
-      } else {
-        setProjects(data || []);
+      try {
+        const { data, error } = await getProjectsFromDB();
+        
+        if (error) {
+          console.error("Error loading projects:", error);
+          toast({
+            title: "Error loading projects",
+            description: error.message,
+            variant: "destructive"
+          });
+          setProjects([]);
+        } else {
+          setProjects(data || []);
+        }
+      } catch (err) {
+        console.error("Unexpected error loading projects:", err);
+        setProjects([]);
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
     };
 
     loadProjects();

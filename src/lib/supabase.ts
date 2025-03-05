@@ -43,7 +43,7 @@ export async function createProjectInDB(data: ProjectFormData, userId: string) {
   const { data: newProject, error } = await supabase
     .from('projects')
     .insert({
-      user_id: userId,
+      owner_id: userId, // Changed from user_id to owner_id
       title: data.title,
       description: data.description,
       end_goal: data.endGoal,
@@ -66,7 +66,7 @@ export async function getProjectsFromDB() {
   const { data, error } = await supabase
     .from('projects')
     .select('*')
-    .eq('user_id', userId)
+    .eq('owner_id', userId) // Changed from user_id to owner_id
     .order('created_at', { ascending: false });
   
   return { data, error };
