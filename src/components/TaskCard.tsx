@@ -1,10 +1,6 @@
 
 import React from "react";
 import { Task } from "@/types";
-import { PencilIcon, TrashIcon, User } from "lucide-react";
-import { useProject } from "@/context/ProjectContext";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -12,6 +8,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import TaskPriorityBadge from "./task/TaskPriorityBadge";
+import TaskAssignee from "./task/TaskAssignee";
+import TaskActions from "./task/TaskActions";
+import StoryPointsBadge from "./task/StoryPointsBadge";
 
 interface TaskCardProps {
   task: Task;
@@ -19,21 +19,6 @@ interface TaskCardProps {
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit }) => {
-  const { deleteTask } = useProject();
-  
-  const getPriorityClass = () => {
-    switch (task.priority) {
-      case "high":
-        return "bg-red-100 text-red-800 border-red-200";
-      case "medium":
-        return "bg-orange-100 text-orange-800 border-orange-200";
-      case "low":
-        return "bg-green-100 text-green-800 border-green-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
-  
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
     e.dataTransfer.setData("application/json", JSON.stringify({
       taskId: task.id,
@@ -49,10 +34,8 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit }) => {
     >
       <CardHeader className="p-3 pb-0">
         <div className="flex justify-between items-start">
-          <Badge variant="outline" className={getPriorityClass()}>
-            {task.priority}
-          </Badge>
-          <Badge variant="secondary">SP: {task.storyPoints}</Badge>
+          <TaskPriorityBadge priority={task.priority} />
+          <StoryPointsBadge points={task.storyPoints} />
         </div>
         <CardTitle className="text-base mt-2">{task.title}</CardTitle>
       </CardHeader>
@@ -60,28 +43,8 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit }) => {
         <p className="text-sm text-muted-foreground line-clamp-2">{task.description}</p>
       </CardContent>
       <CardFooter className="p-3 pt-0 flex justify-between">
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <User className="h-3 w-3" />
-          <span>{task.assignee}</span>
-        </div>
-        <div className="flex gap-1">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-7 w-7"
-            onClick={() => onEdit(task)}
-          >
-            <PencilIcon className="h-3 w-3" />
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-7 w-7 text-destructive"
-            onClick={() => deleteTask(task.id)}
-          >
-            <TrashIcon className="h-3 w-3" />
-          </Button>
-        </div>
+        <TaskAssignee name={task.assignee} />
+        <TaskActions task={task} onEdit={onEdit} />
       </CardFooter>
     </Card>
   );
