@@ -62,9 +62,9 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6">
           {/* Recent Projects Card */}
-          <Card className="col-span-2">
+          <Card>
             <CardHeader>
               <div className="flex justify-between items-center">
                 <CardTitle>Recent Projects</CardTitle>
@@ -100,23 +100,6 @@ const Dashboard = () => {
                   </Button>
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Quick Actions Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <Button className="w-full justify-start" asChild>
-                  <Link to="/my-projects">
-                    Manage Projects
-                  </Link>
-                </Button>
-                {/* Add more quick actions as needed */}
-              </div>
             </CardContent>
           </Card>
         </div>
