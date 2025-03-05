@@ -15,42 +15,24 @@ import { Project } from "@/types";
 const CollaborationsTab = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
 
-  // First get the current user's ID
-  useEffect(() => {
-    const getCurrentUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      setUserId(data.user?.id || null);
-    };
-    
-    getCurrentUser();
-  }, []);
-
-  // Then load collaborations once we have the user ID
   useEffect(() => {
     const loadCollaborations = async () => {
-      if (!userId) return;
-      
       setLoading(true);
       const { data, error } = await getCollaboratedProjectsFromDB();
       
       if (error) {
         console.error("Error loading collaborations:", error);
+        setProjects([]);
       } else {
-        // Filter to show only projects where the user is a collaborator (not the owner)
-        const collaboratedProjects = data?.filter(
-          (project: any) => project.collaborators?.includes(userId)
-        ) || [];
-        
-        setProjects(collaboratedProjects);
+        setProjects(data || []);
       }
       
       setLoading(false);
     };
 
     loadCollaborations();
-  }, [userId]);
+  }, []);
 
   if (loading) {
     return (
