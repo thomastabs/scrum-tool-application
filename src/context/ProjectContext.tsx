@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Project, Sprint, Column, Task, BacklogItem, ProjectFormData, SprintFormData, TaskFormData, BacklogItemFormData } from "@/types";
@@ -20,7 +19,7 @@ interface ProjectContextType {
   createSprint: (data: SprintFormData) => Promise<void>;
   updateSprint: (id: string, data: SprintFormData) => Promise<void>;
   completeSprint: (id: string) => Promise<void>;
-  createColumn: (sprintId: string, title: string) => Promise<void>;
+  createColumn: (title: string) => Promise<void>;
   deleteColumn: (id: string) => Promise<void>;
   createTask: (sprintId: string, columnId: string, data: TaskFormData) => Promise<void>;
   updateTask: (id: string, data: TaskFormData) => Promise<void>;
@@ -766,7 +765,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const createColumn = async (sprintId: string, title: string) => {
+  const createColumn = async (title: string) => {
     const columnExists = columns.some(col => col.title === title);
     
     if (columnExists) {

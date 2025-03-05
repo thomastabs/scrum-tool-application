@@ -9,169 +9,104 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      backlog_items: {
+      board_columns: {
         Row: {
-          created_at: string | null
-          description: string | null
+          created_at: string
           id: string
-          priority: string
-          project_id: string
-          story_points: number
+          order_index: number
+          sprint_id: string
           title: string
-          updated_at: string | null
+          user_id: string
         }
         Insert: {
-          created_at?: string | null
-          description?: string | null
+          created_at?: string
           id?: string
-          priority: string
-          project_id: string
-          story_points?: number
+          order_index: number
+          sprint_id: string
           title: string
-          updated_at?: string | null
+          user_id: string
         }
         Update: {
-          created_at?: string | null
-          description?: string | null
+          created_at?: string
           id?: string
-          priority?: string
-          project_id?: string
-          story_points?: number
+          order_index?: number
+          sprint_id?: string
           title?: string
-          updated_at?: string | null
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "backlog_items_project_id_fkey"
-            columns: ["project_id"]
+            foreignKeyName: "board_columns_sprint_id_fkey"
+            columns: ["sprint_id"]
             isOneToOne: false
-            referencedRelation: "projects"
+            referencedRelation: "sprints"
             referencedColumns: ["id"]
           },
         ]
-      }
-      collaborators: {
-        Row: {
-          created_at: string | null
-          email: string
-          id: string
-          project_id: string
-          role: string
-          status: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          email: string
-          id?: string
-          project_id: string
-          role: string
-          status?: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          email?: string
-          id?: string
-          project_id?: string
-          role?: string
-          status?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "collaborators_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      columns: {
-        Row: {
-          created_at: string | null
-          id: string
-          title: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          title: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          title?: string
-          updated_at?: string | null
-        }
-        Relationships: []
       }
       projects: {
         Row: {
-          created_at: string | null
+          created_at: string
           description: string | null
-          end_goal: string | null
           id: string
-          owner_id: string
           title: string
-          updated_at: string | null
+          user_id: string
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           description?: string | null
-          end_goal?: string | null
           id?: string
-          owner_id: string
           title: string
-          updated_at?: string | null
+          user_id: string
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           description?: string | null
-          end_goal?: string | null
           id?: string
-          owner_id?: string
           title?: string
-          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
       sprints: {
         Row: {
-          created_at: string | null
+          created_at: string
           description: string | null
+          duration: number
           end_date: string
           id: string
-          is_completed: boolean
+          justification: string | null
           project_id: string
           start_date: string
+          status: string
           title: string
-          updated_at: string | null
+          user_id: string
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           description?: string | null
+          duration: number
           end_date: string
           id?: string
-          is_completed?: boolean
+          justification?: string | null
           project_id: string
           start_date: string
+          status?: string
           title: string
-          updated_at?: string | null
+          user_id: string
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           description?: string | null
+          duration?: number
           end_date?: string
           id?: string
-          is_completed?: boolean
+          justification?: string | null
           project_id?: string
           start_date?: string
+          status?: string
           title?: string
-          updated_at?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -186,46 +121,59 @@ export type Database = {
       tasks: {
         Row: {
           assignee: string | null
-          column_id: string
-          created_at: string | null
+          column_id: string | null
+          created_at: string
           description: string | null
           id: string
-          priority: string
-          sprint_id: string
-          story_points: number
+          priority: Database["public"]["Enums"]["task_priority"]
+          project_id: string | null
+          sprint_id: string | null
+          status: Database["public"]["Enums"]["task_status"]
+          story_points: number | null
           title: string
-          updated_at: string | null
+          user_id: string
         }
         Insert: {
           assignee?: string | null
-          column_id: string
-          created_at?: string | null
+          column_id?: string | null
+          created_at?: string
           description?: string | null
           id?: string
-          priority: string
-          sprint_id: string
-          story_points?: number
+          priority?: Database["public"]["Enums"]["task_priority"]
+          project_id?: string | null
+          sprint_id?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
+          story_points?: number | null
           title: string
-          updated_at?: string | null
+          user_id: string
         }
         Update: {
           assignee?: string | null
-          column_id?: string
-          created_at?: string | null
+          column_id?: string | null
+          created_at?: string
           description?: string | null
           id?: string
-          priority?: string
-          sprint_id?: string
-          story_points?: number
+          priority?: Database["public"]["Enums"]["task_priority"]
+          project_id?: string | null
+          sprint_id?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
+          story_points?: number | null
           title?: string
-          updated_at?: string | null
+          user_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "tasks_column_id_fkey"
             columns: ["column_id"]
             isOneToOne: false
-            referencedRelation: "columns"
+            referencedRelation: "board_columns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
@@ -245,7 +193,9 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      sprint_status: "active" | "completed"
+      task_priority: "low" | "medium" | "high"
+      task_status: "todo" | "in-progress" | "done"
     }
     CompositeTypes: {
       [_ in never]: never

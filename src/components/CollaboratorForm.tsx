@@ -1,80 +1,51 @@
 
 import React from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { useProject } from "@/context/project";
-import { CollaboratorFormData } from "@/types";
-import { toast } from "@/components/ui/use-toast";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 
+// Simple form schema for now until we implement collaborator functionality
 const formSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email" }),
-  role: z.enum(["viewer", "editor", "admin"], {
-    required_error: "Please select a role",
-  }),
+  email: z.string().email("Please enter a valid email address"),
 });
 
+type FormData = z.infer<typeof formSchema>;
+
 interface CollaboratorFormProps {
-  projectId: string;
   onClose: () => void;
 }
 
-const CollaboratorForm: React.FC<CollaboratorFormProps> = ({ projectId, onClose }) => {
-  const { inviteCollaborator, projects } = useProject();
-
-  // Find the project from the projects array using projectId
-  const project = projects.find(p => p.id === projectId);
-
-  const form = useForm<z.infer<typeof formSchema>>({
+const CollaboratorForm: React.FC<CollaboratorFormProps> = ({ onClose }) => {
+  const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: "",
-      role: "editor",
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    if (!project) {
-      toast({
-        title: "Error",
-        description: "Project not found",
-        variant: "destructive"
-      });
-      return;
-    }
+  const onSubmit = async (data: FormData) => {
+    // This will be implemented in the future
+    console.log("Collaborator invite would be sent to:", data.email);
     
-    const collaboratorData: CollaboratorFormData = {
-      email: values.email,
-      role: values.role,
-    };
+    // Show a message to the user
+    alert("Collaborator functionality is not yet implemented.");
     
-    const result = await inviteCollaborator(projectId, project.title, collaboratorData);
-    if (result && result.success) {
-      toast({
-        title: "Success",
-        description: `Invitation sent to ${values.email}`,
-      });
-    }
+    // Close the form
     onClose();
   };
 
   return (
-    <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Invite Collaborator</DialogTitle>
+          <DialogDescription>
+            This feature is not yet implemented. It will be available in a future update.
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -85,43 +56,24 @@ const CollaboratorForm: React.FC<CollaboratorFormProps> = ({ projectId, onClose 
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="collaborator@example.com" {...field} />
+                    <Input 
+                      placeholder="colleague@example.com" 
+                      type="email" 
+                      {...field} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="role"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Role</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a role" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="viewer">Viewer</SelectItem>
-                      <SelectItem value="editor">Editor</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose}>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" type="button" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit">Send Invitation</Button>
-            </DialogFooter>
+              <Button type="submit">
+                Send Invitation
+              </Button>
+            </div>
           </form>
         </Form>
       </DialogContent>
