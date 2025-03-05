@@ -17,12 +17,15 @@ const AppSettings: React.FC = () => {
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              {theme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-              <Label htmlFor="dark-mode">Dark Mode</Label>
+              {theme === 'dark' ? 
+                <Moon className="h-5 w-5 text-indigo-400" /> : 
+                <Sun className="h-5 w-5 text-amber-500" />
+              }
+              <Label htmlFor="dark-mode" className="font-medium">Dark Mode</Label>
             </div>
-            <span className="text-sm text-muted-foreground">
+            <span className={`text-sm ${theme === 'dark' ? 'text-indigo-400' : 'text-muted-foreground'}`}>
               {theme === 'dark' ? 'On' : 'Off'}
             </span>
           </div>
@@ -30,6 +33,7 @@ const AppSettings: React.FC = () => {
             id="dark-mode"
             checked={theme === 'dark'}
             onCheckedChange={toggleTheme}
+            className="data-[state=checked]:bg-indigo-600"
           />
         </div>
       </CardContent>

@@ -13,6 +13,7 @@ import {
   CartesianGrid, 
   Tooltip
 } from "recharts";
+import { useTheme } from "@/context/ThemeContext";
 
 interface SprintTimelineProps {
   sprints: Sprint[];
@@ -34,6 +35,8 @@ interface TimelineData {
  * @returns Timeline view of all sprints with a Gantt-like chart
  */
 const SprintTimeline: React.FC<SprintTimelineProps> = ({ sprints, onCreateSprint }) => {
+  const { theme } = useTheme();
+  
   // Process the data for the timeline chart
   const timelineData = useMemo(() => {
     if (!sprints.length) return [];
@@ -71,7 +74,7 @@ const SprintTimeline: React.FC<SprintTimelineProps> = ({ sprints, onCreateSprint
       const endDate = new Date(sprint.endDate);
       
       return (
-        <div className="bg-white p-2 border rounded shadow-md text-sm">
+        <div className={`${theme === 'dark' ? 'bg-gray-800 text-white' : 'bg-white'} p-2 border rounded shadow-md text-sm`}>
           <p className="font-semibold">{sprint.title}</p>
           <p>{startDate.toLocaleDateString()} - {endDate.toLocaleDateString()}</p>
           <p>Duration: {formatDistance(endDate, startDate)}</p>
@@ -110,6 +113,11 @@ const SprintTimeline: React.FC<SprintTimelineProps> = ({ sprints, onCreateSprint
     );
   }
 
+  const axisTextColor = theme === 'dark' ? '#e0e0e0' : '#333333';
+  const gridColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+  const barColor = theme === 'dark' ? '#8884d8' : '#8884d8';
+  const barBackground = theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#eee';
+
   return (
     <div className="space-y-6">
       <div className="border rounded-lg p-6 bg-card">
@@ -123,24 +131,28 @@ const SprintTimeline: React.FC<SprintTimelineProps> = ({ sprints, onCreateSprint
               data={timelineData}
               margin={{ top: 20, right: 30, left: 100, bottom: 20 }}
             >
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={gridColor} />
               <XAxis 
                 type="number" 
-                label={{ value: 'Days', position: 'insideBottom', offset: -15 }} 
+                label={{ value: 'Days', position: 'insideBottom', offset: -15, fill: axisTextColor }} 
+                stroke={axisTextColor}
+                tick={{ fill: axisTextColor }}
               />
               <YAxis 
                 type="category" 
                 dataKey="name" 
                 width={100}
+                stroke={axisTextColor}
+                tick={{ fill: axisTextColor }}
               />
               <Tooltip content={<CustomTooltip />} />
               <Bar 
                 dataKey="duration" 
                 stackId="a" 
-                fill="#8884d8" 
+                fill={barColor} 
                 barSize={20}
                 radius={[4, 4, 4, 4]}
-                background={{ fill: '#eee' }}
+                background={{ fill: barBackground }}
               />
             </BarChart>
           </ResponsiveContainer>
@@ -155,8 +167,8 @@ const SprintTimeline: React.FC<SprintTimelineProps> = ({ sprints, onCreateSprint
             ? "border-l-4 border-l-green-500" 
             : "border-l-4 border-l-blue-500";
           const statusColor = sprint.isCompleted 
-            ? "text-green-600" 
-            : "text-blue-600";
+            ? "text-green-600 dark:text-green-400" 
+            : "text-blue-600 dark:text-blue-400";
 
           return (
             <Card key={sprint.id} className={`${borderColor} shadow-sm`}>
