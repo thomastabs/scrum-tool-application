@@ -95,7 +95,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     
     getUser();
 
-    const authListener = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: authData } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         setUser(session.user);
       } else {
@@ -106,7 +106,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
 
     return () => {
-      authListener.data.subscription.unsubscribe();
+      authData.subscription.unsubscribe();
     };
   }, []);
 
