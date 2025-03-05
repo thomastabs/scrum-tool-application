@@ -4,6 +4,7 @@ import { useProject } from "@/context/ProjectContext";
 import SprintBoard from "./SprintBoard";
 import SprintForm from "./SprintForm";
 import Backlog from "./Backlog";
+import SprintTimeline from "./sprint/SprintTimeline";
 import { Project as ProjectType, Sprint } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,9 +26,8 @@ import {
   PlusIcon,
   TrashIcon,
   LayoutDashboardIcon,
-  ListIcon,
-  CalendarIcon,
   ListChecksIcon,
+  CalendarIcon,
 } from "lucide-react";
 import ProjectForm from "./ProjectForm";
 
@@ -191,12 +191,10 @@ const Project: React.FC<ProjectViewProps> = ({ project }) => {
         </TabsContent>
 
         <TabsContent value="timeline" className="animate-fade-in">
-          <div className="text-center py-12">
-            <h3 className="text-xl font-medium mb-2">Timeline Coming Soon</h3>
-            <p className="text-muted-foreground">
-              This feature will be implemented in a future update.
-            </p>
-          </div>
+          <SprintTimeline 
+            sprints={projectSprints} 
+            onCreateSprint={() => setShowSprintForm(true)} 
+          />
         </TabsContent>
       </Tabs>
 
