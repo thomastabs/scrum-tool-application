@@ -3,17 +3,22 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useProject } from "@/context/ProjectContext";
 import ProjectForm from "@/components/ProjectForm";
+import InvitationForm from "@/components/InvitationForm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusIcon, LogOut } from "lucide-react";
+import { PlusIcon, LogOut, UsersIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase, signOut } from "@/lib/supabase";
 import { toast } from "@/components/ui/use-toast";
 import ProfileDashboard from "@/components/ProfileDashboard";
+import { getUserPendingInvitations } from "@/lib/collaborationService";
 
 const ProjectsPage = () => {
   const { projects } = useProject();
   const [showProjectForm, setShowProjectForm] = useState(false);
+  const [showInvitationForm, setShowInvitationForm] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [invitationCount, setInvitationCount] = useState(0);
   const [user, setUser] = useState<any>(null);
   const navigate = useNavigate();
 
@@ -24,7 +29,22 @@ const ProjectsPage = () => {
     };
     
     getUser();
+    fetchInvitationCount();
   }, []);
+
+  const fetchInvitationCount = async () => {
+    try {
+      const invitations = await getUserPendingInvitations();
+      setInvitationCount(invitations.length);
+    } catch (error) {
+      console.error("Error fetching invitations:", error);
+    }
+  };
+
+  const handleInviteClick = (projectId: string) => {
+    setSelectedProjectId(projectId);
+    setShowInvitationForm(true);
+  };
 
   const handleSignOut = async () => {
     const { error } = await signOut();
@@ -50,6 +70,22 @@ const ProjectsPage = () => {
             </p>
           </div>
           <div className="flex items-center gap-4">
+            {invitationCount > 0 && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="relative" 
+                onClick={() => navigate("/invitations")}
+              >
+                Invitations
+                <Badge 
+                  className="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs" 
+                  variant="destructive"
+                >
+                  {invitationCount}
+                </Badge>
+              </Button>
+            )}
             <div className="flex items-center gap-2">
               <span className="text-sm">{user?.email}</span>
               <ProfileDashboard user={user} />
@@ -104,7 +140,7 @@ const ProjectsPage = () => {
                     <p className="text-sm line-clamp-3">{project.endGoal}</p>
                   </div>
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="flex flex-col space-y-2">
                   <Button
                     className="w-full"
                     asChild
@@ -112,6 +148,14 @@ const ProjectsPage = () => {
                     <Link to={`/my-projects/${project.id}`}>
                       Open Project
                     </Link>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => handleInviteClick(project.id)}
+                  >
+                    <UsersIcon className="h-4 w-4 mr-1" /> Invite Collaborators
                   </Button>
                 </CardFooter>
               </Card>
@@ -122,6 +166,16 @@ const ProjectsPage = () => {
 
       {showProjectForm && (
         <ProjectForm onClose={() => setShowProjectForm(false)} />
+      )}
+
+      {showInvitationForm && selectedProjectId && (
+        <InvitationForm 
+          projectId={selectedProjectId} 
+          onClose={() => {
+            setShowInvitationForm(false);
+            setSelectedProjectId(null);
+          }} 
+        />
       )}
     </div>
   );

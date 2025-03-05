@@ -13,6 +13,7 @@ import SprintPage from "./pages/SprintPage";
 import NotFound from "./pages/NotFound";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
+import InvitationsPage from "./pages/InvitationsPage";
 import { useState, useEffect } from "react";
 import { getSession, supabase } from "./lib/supabase";
 
@@ -34,6 +35,20 @@ const App = () => {
       const { session } = await getSession();
       setSession(session);
       setLoading(false);
+      
+      // Check if there's a pending invitation response
+      const pendingAction = localStorage.getItem("pendingInvitationAction");
+      if (session && pendingAction) {
+        try {
+          const { id, action } = JSON.parse(pendingAction);
+          // Clear the pending action
+          localStorage.removeItem("pendingInvitationAction");
+          // Redirect to handle the invitation
+          window.location.href = `/invitations?id=${id}&action=${action}`;
+        } catch (error) {
+          console.error("Error processing stored invitation action:", error);
+        }
+      }
     }
 
     loadSession();
@@ -107,6 +122,18 @@ const App = () => {
                   element={
                     session ? (
                       <SprintPage />
+                    ) : (
+                      <Navigate to="/sign-in" replace />
+                    )
+                  }
+                />
+                
+                {/* Invitations page */}
+                <Route
+                  path="/invitations"
+                  element={
+                    session ? (
+                      <InvitationsPage />
                     ) : (
                       <Navigate to="/sign-in" replace />
                     )
