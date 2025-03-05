@@ -9,7 +9,7 @@ import { Project } from "@/types";
 import { toast } from "@/components/ui/use-toast";
 
 const Dashboard = () => {
-  const { projects: contextProjects, createProject } = useProject();
+  const { createProject } = useProject();
   const [user, setUser] = useState<any>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,6 +43,7 @@ const Dashboard = () => {
           });
           setProjects([]);
         } else {
+          console.log("Setting projects in Dashboard:", data);
           setProjects(data || []);
         }
       } catch (err) {
