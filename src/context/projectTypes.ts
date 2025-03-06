@@ -16,6 +16,7 @@ export type Action =
   | { type: "UPDATE_PROJECT"; payload: Project }
   | { type: "REMOVE_PROJECT"; payload: string }
   | { type: "SELECT_PROJECT"; payload: string }
+  | { type: "CLEAR_PROJECTS" }
   | { type: "ADD_SPRINT"; payload: Sprint }
   | { type: "UPDATE_SPRINT"; payload: Sprint }
   | { type: "REMOVE_SPRINT"; payload: string }

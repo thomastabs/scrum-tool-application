@@ -1,5 +1,4 @@
-
-import React, { createContext, useContext, useReducer, useEffect } from "react";
+import React, { createContext, useContext, useReducer, useEffect, useState } from "react";
 import { ProjectContextType } from "@/types";
 import { projectReducer, initialState } from "./projectReducer";
 import { 
@@ -14,18 +13,61 @@ import {
   updateBacklogItem 
 } from "./projectActions";
 import { toast } from "@/components/ui/use-toast";
+import { getProjectsFromDB, supabase } from "@/lib/supabase";
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [state, dispatch] = useReducer(projectReducer, initialState, () => {
-    const localData = localStorage.getItem("projectState");
-    return localData ? JSON.parse(localData) : initialState;
-  });
+  const [state, dispatch] = useReducer(projectReducer, initialState);
+  const [loading, setLoading] = useState(true);
 
+  // Fetch projects from Supabase when the component mounts
   useEffect(() => {
-    localStorage.setItem("projectState", JSON.stringify(state));
-  }, [state]);
+    async function fetchProjects() {
+      setLoading(true);
+      const { data, error } = await getProjectsFromDB();
+      if (error) {
+        console.error("Error fetching projects:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch projects. Please try again.",
+          variant: "destructive",
+        });
+      } else if (data) {
+        // Update projects in state with what we got from the database
+        data.forEach(project => {
+          dispatch({ 
+            type: "ADD_PROJECT", 
+            payload: {
+              ...project,
+              createdAt: new Date(project.created_at),
+              updatedAt: new Date(project.updated_at || project.created_at),
+              endGoal: project.end_goal || ""
+            } 
+          });
+        });
+      }
+      setLoading(false);
+    }
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN') {
+        // Refresh projects when user signs in
+        fetchProjects();
+      } else if (event === 'SIGNED_OUT') {
+        // Clear projects when user signs out
+        dispatch({ type: "CLEAR_PROJECTS" });
+      }
+    });
+
+    // Initial fetch if there's an active session
+    fetchProjects();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const contextValue: ProjectContextType = {
     projects: state.projects,
@@ -33,6 +75,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     columns: state.columns,
     backlogItems: state.backlogItems,
     selectedProject: state.selectedProject,
+    loading,
     
     selectProject: (id: string) => {
       dispatch({ type: "SELECT_PROJECT", payload: id });

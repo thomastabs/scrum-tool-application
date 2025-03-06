@@ -73,9 +73,17 @@ export async function createProjectInDB(data: ProjectFormData, userId: string) {
 }
 
 export async function getProjectsFromDB() {
+  // Get the current user session
+  const { data: session } = await supabase.auth.getSession();
+  if (!session.session) {
+    return { data: [], error: new Error('No active session') };
+  }
+  
+  // Fetch only projects owned by the current user
   const { data, error } = await supabase
     .from('projects')
     .select('*')
+    .eq('owner_id', session.session.user.id)
     .order('created_at', { ascending: false });
   
   return { data, error };
