@@ -181,7 +181,7 @@ export async function deleteProjectFromDB(id: string) {
   }
 }
 
-// Update sprint functions to work with the fixed foreign key
+// Update sprint functions to work with the actual database schema
 export async function createSprintInDB(projectId: string, data: SprintFormData, userId: string) {
   console.log("Creating sprint with user ID:", userId, "for project:", projectId);
   
@@ -190,29 +190,34 @@ export async function createSprintInDB(projectId: string, data: SprintFormData, 
     throw new Error("User ID is required to create a sprint");
   }
   
-  // Include the user_id in the sprint creation
-  const { data: newSprint, error } = await supabase
-    .from('sprints')
-    .insert({
-      project_id: projectId,
-      user_id: userId, // Add user_id to connect to Users table
-      title: data.title,
-      description: data.description,
-      start_date: data.startDate.toISOString(),
-      end_date: data.endDate.toISOString(),
-      status: 'active',
-      justification: data.justification
-    })
-    .select()
-    .single();
-  
-  if (error) {
-    console.error("Error creating sprint:", error);
-    throw error;
+  try {
+    // Remove 'justification' field from the insert payload since it doesn't exist in the DB
+    const { data: newSprint, error } = await supabase
+      .from('sprints')
+      .insert({
+        project_id: projectId,
+        user_id: userId,
+        title: data.title,
+        description: data.description,
+        start_date: data.startDate.toISOString(),
+        end_date: data.endDate.toISOString(),
+        status: 'active'
+        // justification field removed as it doesn't exist in the DB
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error("Error creating sprint:", error);
+      throw error;
+    }
+    
+    console.log("Sprint created successfully:", newSprint);
+    return { data: newSprint, error: null };
+  } catch (error) {
+    console.error("Exception creating sprint:", error);
+    return { data: null, error };
   }
-  
-  console.log("Sprint created successfully:", newSprint);
-  return { data: newSprint, error: null };
 }
 
 export async function getSprintsFromDB(userId: string) {
@@ -268,21 +273,31 @@ export async function getSprintFromDB(sprintId: string) {
 }
 
 export async function updateSprintInDB(id: string, data: SprintFormData) {
-  const { data: updatedSprint, error } = await supabase
-    .from('sprints')
-    .update({
-      title: data.title,
-      description: data.description,
-      start_date: data.startDate.toISOString(),
-      end_date: data.endDate.toISOString(),
-      justification: data.justification,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', id)
-    .select()
-    .single();
-  
-  return { data: updatedSprint, error };
+  try {
+    const { data: updatedSprint, error } = await supabase
+      .from('sprints')
+      .update({
+        title: data.title,
+        description: data.description,
+        start_date: data.startDate.toISOString(),
+        end_date: data.endDate.toISOString(),
+        // justification removed
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error("Error updating sprint:", error);
+      return { data: null, error };
+    }
+    
+    return { data: updatedSprint, error: null };
+  } catch (error) {
+    console.error("Exception updating sprint:", error);
+    return { data: null, error };
+  }
 }
 
 export async function completeSprintInDB(id: string) {

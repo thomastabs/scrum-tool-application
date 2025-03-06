@@ -105,11 +105,19 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           description: sprintData.description,
           start_date: sprintData.startDate.toISOString(),
           end_date: sprintData.endDate.toISOString(),
-          status: 'active',
-          justification: sprintData.justification
+          status: 'active'
+          // justification field removed as it doesn't exist in the database schema
         }).select().single();
         
-        if (error) throw error;
+        if (error) {
+          console.error("Error creating sprint in DB:", error);
+          toast({
+            title: "Error",
+            description: "Failed to create sprint. Please try again.",
+            variant: "destructive"
+          });
+          throw error;
+        }
         
         // Update with DB data
         newSprint.id = data.id;
