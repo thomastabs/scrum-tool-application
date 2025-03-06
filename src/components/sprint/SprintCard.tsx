@@ -1,74 +1,68 @@
 
 import React from "react";
+import { Link } from "react-router-dom";
 import { Sprint } from "@/types";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, CheckCircle2, Edit } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { PencilIcon } from "lucide-react";
 
 interface SprintCardProps {
   sprint: Sprint;
   projectId: string;
   onEdit: (sprint: Sprint) => void;
-  onViewSprint: (sprint: Sprint) => void;
 }
 
-const SprintCard: React.FC<SprintCardProps> = ({ 
-  sprint, 
-  projectId, 
-  onEdit,
-  onViewSprint
-}) => {
-  const startDate = new Date(sprint.startDate);
-  const endDate = new Date(sprint.endDate);
-  
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
-  
-  const isCompleted = sprint.isCompleted;
-  
+const SprintCard: React.FC<SprintCardProps> = ({ sprint, projectId, onEdit }) => {
   return (
-    <Card className={`overflow-hidden ${isCompleted ? 'border-green-200' : ''}`}>
-      <CardHeader className="pb-2 relative">
-        {isCompleted && (
-          <div className="absolute top-2 right-2">
-            <Badge className="bg-green-500">
-              <CheckCircle2 className="h-3 w-3 mr-1" /> Completed
-            </Badge>
-          </div>
-        )}
-        <h3 className="text-xl font-semibold mb-1 pr-24">{sprint.title}</h3>
-        <div className="flex items-center text-xs text-muted-foreground">
-          <Calendar className="h-3 w-3 mr-1" /> 
-          {formatDate(startDate)} - {formatDate(endDate)}
+    <Card
+      key={sprint.id}
+      className={`hover:shadow-md transition-shadow ${
+        sprint.isCompleted ? "bg-secondary/30" : "bg-background"
+      }`}
+    >
+      <CardHeader className="pb-2">
+        <div className="flex justify-between">
+          <CardTitle className="text-xl">
+            {sprint.title}
+          </CardTitle>
+          {sprint.isCompleted && (
+            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+              Completed
+            </span>
+          )}
         </div>
+        <CardDescription>
+          {new Date(sprint.startDate).toLocaleDateString()} -{" "}
+          {new Date(sprint.endDate).toLocaleDateString()}
+        </CardDescription>
       </CardHeader>
-      
-      <CardContent className="pb-4">
-        <p className="text-sm text-muted-foreground line-clamp-3">
-          {sprint.description || "No description provided."}
+      <CardContent>
+        <p className="text-sm line-clamp-2">
+          {sprint.description}
         </p>
       </CardContent>
-      
-      <CardFooter className="pt-0 justify-between">
-        <Button 
-          variant="outline" 
+      <CardFooter className="flex justify-between pt-0">
+        <Button
+          variant="outline"
           size="sm"
           onClick={() => onEdit(sprint)}
         >
-          <Edit className="h-4 w-4 mr-1" /> Edit
+          <PencilIcon className="h-3 w-3 mr-1" /> Edit
         </Button>
-        
-        <Button 
-          onClick={() => onViewSprint(sprint)}
-          disabled={isCompleted}
+        <Button
+          size="sm"
+          asChild
         >
-          View Board
+          <Link to={`/my-projects/${projectId}/sprint/${sprint.id}`}>
+            View Board
+          </Link>
         </Button>
       </CardFooter>
     </Card>

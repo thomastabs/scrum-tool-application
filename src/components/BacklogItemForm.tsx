@@ -25,7 +25,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useProject } from "@/context/ProjectContext";
 import { X } from "lucide-react";
-import { useParams } from "react-router-dom";
 
 const formSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -39,24 +38,15 @@ interface BacklogItemFormProps {
   itemToEdit?: {
     id: string;
     title: string;
-    description?: string;
-    priority?: "low" | "medium" | "high";
-    storyPoints?: number;
-  } | null;
-  projectId?: string;
+    description: string;
+    priority: "low" | "medium" | "high";
+    storyPoints: number;
+  };
 }
 
-const BacklogItemForm: React.FC<BacklogItemFormProps> = ({ 
-  onClose, 
-  itemToEdit,
-  projectId: propProjectId
-}) => {
+const BacklogItemForm: React.FC<BacklogItemFormProps> = ({ onClose, itemToEdit }) => {
   const { createBacklogItem, updateBacklogItem } = useProject();
-  const { projectId: routeProjectId } = useParams<{ projectId: string }>();
   const isEditMode = !!itemToEdit;
-  
-  // Use the projectId from props if provided, otherwise from URL params
-  const projectId = propProjectId || routeProjectId;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -72,11 +62,7 @@ const BacklogItemForm: React.FC<BacklogItemFormProps> = ({
     if (isEditMode && itemToEdit) {
       updateBacklogItem(itemToEdit.id, data);
     } else {
-      // Include the projectId when creating a new backlog item
-      createBacklogItem({
-        ...data,
-        projectId
-      });
+      createBacklogItem(data);
     }
     onClose();
   };

@@ -1,34 +1,47 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { useTheme } from "@/context/ThemeContext";
-import { useAuth } from "@/context/AuthContext";
-import { Moon, Sun } from "lucide-react";
-import ProfileButton from "@/components/auth/ProfileButton";
+import { signOut } from "@/lib/supabase";
+import { toast } from "@/components/ui/use-toast";
+import { useNavigate } from "react-router-dom";
+import ProfileDashboard from "@/components/ProfileDashboard";
 
-const DashboardHeader = () => {
-  const { theme, setTheme } = useTheme();
-  const { profile } = useAuth();
+interface DashboardHeaderProps {
+  user: any;
+}
+
+const DashboardHeader = ({ user }: DashboardHeaderProps) => {
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    const { error } = await signOut();
+    if (error) {
+      toast({
+        title: "Error signing out",
+        description: error.message,
+        variant: "destructive"
+      });
+    } else {
+      navigate("/sign-in");
+    }
+  };
 
   return (
-    <header className="mb-8 flex items-center justify-between">
+    <div className="flex justify-between items-center mb-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">
-          {profile ? `Welcome ${profile.full_name} (${profile.role.replace('_', ' ')})` : 'Welcome to your Agile Sprint Manager dashboard'}
-        </p>
+        <h1 className="text-3xl font-bold">Scrumify Hub</h1>
+        <p className="text-muted-foreground mt-2">Dashboard</p>
       </div>
-      <div className="flex items-center space-x-2">
-        <Button 
-          variant="outline" 
-          size="icon"
-          onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-        >
-          {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
-        </Button>
-        <ProfileButton />
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <span className="text-sm">{user?.email}</span>
+          <ProfileDashboard user={user} />
+          <Button variant="outline" size="sm" onClick={handleSignOut}>
+            Sign Out
+          </Button>
+        </div>
       </div>
-    </header>
+    </div>
   );
 };
 

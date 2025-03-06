@@ -1,45 +1,46 @@
 
 import React from "react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { User2 } from "lucide-react";
+import { User } from "lucide-react";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "@/components/ui/tooltip";
 
 interface TaskAssigneeProps {
-  name: string | undefined;
+  name: string;
 }
 
+/**
+ * TaskAssignee - Displays the assignee of a task with a user icon and name
+ * 
+ * @param {string} name - The name of the person assigned to the task
+ * @returns A component showing the assignee's name with a user icon and tooltip
+ */
 const TaskAssignee: React.FC<TaskAssigneeProps> = ({ name }) => {
-  const getInitials = (name: string) => {
-    if (!name) return "?";
-    return name
-      .split(' ')
-      .map(part => part.charAt(0))
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  if (!name) {
-    return (
-      <div className="flex items-center text-sm text-muted-foreground">
-        <Avatar className="h-6 w-6 mr-1">
-          <AvatarFallback className="bg-muted text-[10px]">
-            <User2 className="h-3 w-3" />
-          </AvatarFallback>
-        </Avatar>
-        <span>Unassigned</span>
-      </div>
-    );
-  }
+  // If no assignee, show 'Unassigned'
+  const displayName = name.trim() || "Unassigned";
+  
+  // Style differently if task is unassigned
+  const textStyle = name.trim() 
+    ? "text-xs text-muted-foreground" 
+    : "text-xs text-muted-foreground italic";
 
   return (
-    <div className="flex items-center text-sm text-muted-foreground">
-      <Avatar className="h-6 w-6 mr-1">
-        <AvatarFallback className="bg-muted text-[10px]">
-          {getInitials(name)}
-        </AvatarFallback>
-      </Avatar>
-      <span>{name}</span>
-    </div>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-1 cursor-help">
+            <User className="h-3 w-3" />
+            <span className={textStyle}>{displayName}</span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Assigned to: {displayName}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
 

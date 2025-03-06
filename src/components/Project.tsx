@@ -1,139 +1,222 @@
+
 import React, { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
 import { useProject } from "@/context/ProjectContext";
-import { Task } from "@/types";
-import TaskForm from "./TaskForm";
+import SprintBoard from "./SprintBoard";
+import SprintForm from "./SprintForm";
+import Backlog from "./Backlog";
+import SprintTimeline from "./sprint/SprintTimeline";
+import { Project as ProjectType, Sprint } from "@/types";
 import { Button } from "@/components/ui/button";
-import SprintColumn from "./sprint/SprintColumn";
-import AddColumn from "./sprint/AddColumn";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  PencilIcon,
+  PlusIcon,
+  TrashIcon,
+  LayoutDashboardIcon,
+  ListChecksIcon,
+  CalendarIcon,
+} from "lucide-react";
+import ProjectForm from "./ProjectForm";
 
-const Project = () => {
-  const { projectId, sprintId } = useParams<{ projectId: string, sprintId: string }>();
-  const navigate = useNavigate();
-  const { projects, sprints, columns, createColumn, deleteColumn, moveTask } = useProject();
-  const [showTaskForm, setShowTaskForm] = useState(false);
-  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
-  const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
+interface ProjectViewProps {
+  project: ProjectType;
+}
 
-  // Find the project and sprint
-  const project = projects.find(p => p.id === projectId);
-  const sprint = sprints.find(s => s.id === sprintId);
+const Project: React.FC<ProjectViewProps> = ({ project }) => {
+  const { sprints, deleteProject } = useProject();
+  const [showSprintForm, setShowSprintForm] = useState(false);
+  const [showEditProject, setShowEditProject] = useState(false);
+  const [activeSprintId, setActiveSprintId] = useState<string | null>(null);
+  const [sprintToEdit, setSprintToEdit] = useState<Sprint | null>(null);
 
-  if (!project || !sprint) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center py-12">
-          <h2 className="text-2xl font-bold mb-4">Sprint Not Found</h2>
-          <p className="mb-6">The sprint you're looking for does not exist.</p>
-          <Button onClick={() => navigate(-1)}>Go Back</Button>
-        </div>
-      </div>
-    );
-  }
-
-  // Only get the ONE instance of each standard column that we need
-  const todoColumn = columns.find(column => column.title === "TO DO");
-  const inProgressColumn = columns.find(column => column.title === "IN PROGRESS");
-  const doneColumn = columns.find(column => column.title === "DONE");
-
-  // Get custom columns that have tasks for this sprint
-  const customColumns = columns.filter(column => 
-    column.title !== "TO DO" && 
-    column.title !== "IN PROGRESS" && 
-    column.title !== "DONE" &&
-    column.tasks.some(task => task.sprintId === sprint.id)
+  const projectSprints = sprints.filter(
+    (sprint) => sprint.projectId === project.id
   );
 
-  // Combine all columns used by this sprint
-  const sprintColumns = [
-    todoColumn,
-    inProgressColumn,
-    doneColumn,
-    ...customColumns
-  ].filter(Boolean);
-
-  const handleEditTask = (task: Task) => {
-    setTaskToEdit(task);
-    setShowTaskForm(true);
-  };
-
-  const handleAddTask = (columnId: string) => {
-    setActiveColumnId(columnId);
-    setTaskToEdit(null);
-    setShowTaskForm(true);
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>, columnId: string) => {
-    e.preventDefault();
-    const data = e.dataTransfer.getData("application/json");
-    
-    if (data) {
-      try {
-        const { taskId, sourceColumnId } = JSON.parse(data);
-        moveTask(taskId, sourceColumnId, columnId);
-      } catch (error) {
-        console.error("Error parsing drag data:", error);
-      }
+  const handleDeleteProject = () => {
+    if (window.confirm("Are you sure you want to delete this project?")) {
+      deleteProject(project.id);
     }
   };
 
-  const handleAddColumn = (name: string) => {
-    createColumn(name);
-  };
-
-  const handleDeleteColumn = (columnId: string) => {
-    deleteColumn(columnId);
+  const handleEditSprint = (sprint: Sprint) => {
+    setSprintToEdit(sprint);
+    setShowSprintForm(true);
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <Button
-        variant="ghost"
-        onClick={() => navigate(`/projects/${projectId}`)}
-        className="mb-6"
-      >
-        ← Back to Project
-      </Button>
-
-      <h1 className="text-2xl font-bold mb-2">{sprint.title}</h1>
-      <p className="text-muted-foreground mb-6">{sprint.description}</p>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-        {sprintColumns.map((column) => (
-          <SprintColumn 
-            key={column.id}
-            column={column}
-            sprintId={sprint.id}
-            onAddTask={handleAddTask}
-            onEditTask={handleEditTask}
-            onDeleteColumn={handleDeleteColumn}
-            handleDragOver={handleDragOver}
-            handleDrop={handleDrop}
-            isDefaultColumn={
-              column.title === "TO DO" || 
-              column.title === "IN PROGRESS" || 
-              column.title === "DONE"
-            }
-          />
-        ))}
-
-        <AddColumn onAddColumn={handleAddColumn} />
+    <div className="container mx-auto py-8 animate-fade-in">
+      <div className="flex justify-between items-start mb-8">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold">{project.title}</h1>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowEditProject(true)}
+            >
+              <PencilIcon className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-destructive"
+              onClick={handleDeleteProject}
+            >
+              <TrashIcon className="h-4 w-4" />
+            </Button>
+          </div>
+          <p className="text-muted-foreground mt-2 max-w-2xl">
+            {project.description}
+          </p>
+        </div>
+        <Button onClick={() => setShowSprintForm(true)}>
+          <PlusIcon className="h-4 w-4 mr-1" /> New Sprint
+        </Button>
       </div>
 
-      {showTaskForm && activeColumnId && (
-        <TaskForm
+      <Tabs defaultValue="board">
+        <TabsList className="mb-8">
+          <TabsTrigger value="board">
+            <LayoutDashboardIcon className="h-4 w-4 mr-2" /> Sprint Board
+          </TabsTrigger>
+          <TabsTrigger value="backlog">
+            <ListChecksIcon className="h-4 w-4 mr-2" /> Product Backlog
+          </TabsTrigger>
+          <TabsTrigger value="timeline">
+            <CalendarIcon className="h-4 w-4 mr-2" /> Timeline
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="board" className="animate-fade-in">
+          {projectSprints.length === 0 ? (
+            <div className="text-center py-12">
+              <h3 className="text-xl font-medium mb-2">No Sprints Yet</h3>
+              <p className="text-muted-foreground mb-6">
+                Create your first sprint to start managing tasks.
+              </p>
+              <Button onClick={() => setShowSprintForm(true)}>
+                <PlusIcon className="h-4 w-4 mr-1" /> Create Sprint
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {activeSprintId ? (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => setActiveSprintId(null)}
+                    className="mb-4"
+                  >
+                    Back to Sprints
+                  </Button>
+                  <SprintBoard
+                    sprint={
+                      projectSprints.find(
+                        (sprint) => sprint.id === activeSprintId
+                      )!
+                    }
+                  />
+                </>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {projectSprints.map((sprint) => (
+                    <Card
+                      key={sprint.id}
+                      className={`hover:shadow-md transition-shadow ${
+                        sprint.isCompleted
+                          ? "bg-secondary/30"
+                          : "bg-background"
+                      }`}
+                    >
+                      <CardHeader className="pb-2">
+                        <div className="flex justify-between">
+                          <CardTitle className="text-xl">
+                            {sprint.title}
+                          </CardTitle>
+                          {sprint.isCompleted && (
+                            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                              Completed
+                            </span>
+                          )}
+                        </div>
+                        <CardDescription>
+                          {new Date(sprint.startDate).toLocaleDateString()} -{" "}
+                          {new Date(sprint.endDate).toLocaleDateString()}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm line-clamp-2">
+                          {sprint.description}
+                        </p>
+                      </CardContent>
+                      <CardFooter className="flex justify-between pt-0">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditSprint(sprint)}
+                        >
+                          <PencilIcon className="h-3 w-3 mr-1" /> Edit
+                        </Button>
+                        <Button
+                          onClick={() => setActiveSprintId(sprint.id)}
+                          size="sm"
+                        >
+                          View Board
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="backlog" className="animate-fade-in">
+          <Backlog projectId={project.id} />
+        </TabsContent>
+
+        <TabsContent value="timeline" className="animate-fade-in">
+          <SprintTimeline 
+            sprints={projectSprints} 
+            onCreateSprint={() => setShowSprintForm(true)} 
+          />
+        </TabsContent>
+      </Tabs>
+
+      {showSprintForm && (
+        <SprintForm
           onClose={() => {
-            setShowTaskForm(false);
-            setTaskToEdit(null);
+            setShowSprintForm(false);
+            setSprintToEdit(null);
           }}
-          sprintId={sprint.id}
-          columnId={activeColumnId}
-          taskToEdit={taskToEdit}
+          sprintToEdit={sprintToEdit || undefined}
+        />
+      )}
+
+      {showEditProject && (
+        <ProjectForm
+          onClose={() => setShowEditProject(false)}
+          projectToEdit={{
+            id: project.id,
+            title: project.title,
+            description: project.description,
+            endGoal: project.endGoal,
+          }}
         />
       )}
     </div>

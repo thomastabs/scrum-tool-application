@@ -41,11 +41,11 @@ interface TaskFormProps {
   taskToEdit?: {
     id: string;
     title: string;
-    description?: string;
-    priority?: "low" | "medium" | "high";
-    assignee?: string;
-    storyPoints?: number;
-  } | null;
+    description: string;
+    priority: "low" | "medium" | "high";
+    assignee: string;
+    storyPoints: number;
+  };
 }
 
 const TaskForm: React.FC<TaskFormProps> = ({ onClose, sprintId, columnId, taskToEdit }) => {

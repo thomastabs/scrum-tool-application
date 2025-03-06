@@ -15,7 +15,6 @@ export type Action =
   | { type: "ADD_PROJECT"; payload: Project }
   | { type: "UPDATE_PROJECT"; payload: Project }
   | { type: "REMOVE_PROJECT"; payload: string }
-  | { type: "CLEAR_ALL_PROJECTS" }
   | { type: "SELECT_PROJECT"; payload: string }
   | { type: "ADD_SPRINT"; payload: Sprint }
   | { type: "UPDATE_SPRINT"; payload: Sprint }
@@ -30,9 +29,7 @@ export type Action =
   | { type: "ADD_BACKLOG_ITEM"; payload: BacklogItem }
   | { type: "UPDATE_BACKLOG_ITEM"; payload: BacklogItem }
   | { type: "REMOVE_BACKLOG_ITEM"; payload: string }
-  | { type: "MOVE_BACKLOG_ITEM_TO_SPRINT"; payload: { backlogItemId: string; sprintId: string } }
-  | { type: "LOAD_PROJECTS"; payload: Project[] }
-  | { type: "LOAD_SPRINTS"; payload: Sprint[] };
+  | { type: "MOVE_BACKLOG_ITEM_TO_SPRINT"; payload: { backlogItemId: string; sprintId: string } };
 
 export type State = {
   projects: Project[];

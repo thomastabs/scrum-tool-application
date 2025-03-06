@@ -21,7 +21,7 @@ const SprintHeader: React.FC<SprintHeaderProps> = ({
         <div>
           <h2 className="text-2xl font-bold">{sprint.title}</h2>
           <p className="text-muted-foreground">
-            {sprint.description || ""}
+            {sprint.description}
           </p>
           <div className="flex gap-4 mt-2 text-sm">
             <span>Start: {new Date(sprint.startDate).toLocaleDateString()}</span>

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useProject } from "@/context/ProjectContext";
@@ -156,7 +155,7 @@ const SprintPage = () => {
           }}
           sprintId={sprint.id}
           columnId={activeColumnId}
-          taskToEdit={taskToEdit}
+          taskToEdit={taskToEdit || undefined}
         />
       )}
     </div>

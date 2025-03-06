@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useProject } from "@/context/ProjectContext";
 import { BacklogItem, Sprint } from "@/types";
@@ -53,7 +54,7 @@ const Backlog: React.FC<BacklogProps> = ({ projectId }) => {
     .filter((item) => item.projectId === projectId)
     .filter((item) => 
       item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
+      item.description.toLowerCase().includes(searchQuery.toLowerCase())
     )
     .filter((item) => 
       priorityFilter === "all" || item.priority === priorityFilter
@@ -136,14 +137,14 @@ const Backlog: React.FC<BacklogProps> = ({ projectId }) => {
               <CardHeader className="p-4 pb-2">
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg">{item.title}</CardTitle>
-                  <Badge variant="outline" className={getPriorityClass(item.priority || "")}>
-                    {item.priority || "none"}
+                  <Badge variant="outline" className={getPriorityClass(item.priority)}>
+                    {item.priority}
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent className="p-4 pt-2">
-                <p className="text-sm text-muted-foreground mb-2">{item.description || ""}</p>
-                <Badge variant="secondary">SP: {item.storyPoints || 0}</Badge>
+                <p className="text-sm text-muted-foreground mb-2">{item.description}</p>
+                <Badge variant="secondary">SP: {item.storyPoints}</Badge>
               </CardContent>
               <CardFooter className="p-4 pt-0 flex justify-between">
                 <div className="flex gap-1">
@@ -221,8 +222,7 @@ const Backlog: React.FC<BacklogProps> = ({ projectId }) => {
             setShowItemForm(false);
             setItemToEdit(null);
           }}
-          itemToEdit={itemToEdit}
-          projectId={projectId}
+          itemToEdit={itemToEdit || undefined}
         />
       )}
     </div>
