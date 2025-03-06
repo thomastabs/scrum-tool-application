@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useProject } from "@/context/ProjectContext";
-import { supabase } from "@/lib/supabase";
+import { supabase, getProjectsFromDB } from "@/lib/supabase";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardTabs from "@/components/dashboard/DashboardTabs";
 import { Project } from "@/types";
@@ -31,8 +31,7 @@ const Dashboard = () => {
           const { data: projectsData, error: projectsError } = await supabase
             .from('projects')
             .select('*')
-            .eq('owner_id', data.user.id)
-            .order('created_at', { ascending: false });
+            .eq('owner_id', data.user.id);
           
           if (projectsError) throw projectsError;
           
@@ -47,6 +46,9 @@ const Dashboard = () => {
           }));
           
           setUserProjects(convertedProjects);
+          
+          console.log("Fetched projects:", projectsData);
+          console.log("User ID:", data.user.id);
         }
       } catch (error: any) {
         console.error("Error fetching user or projects:", error.message);

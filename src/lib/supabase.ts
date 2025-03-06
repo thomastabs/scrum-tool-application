@@ -39,10 +39,12 @@ export async function getSession() {
 
 // Add functions for project management
 export async function createProjectInDB(data: ProjectFormData, userId: string) {
+  console.log("Creating project with user ID:", userId);
+  
   const { data: newProject, error } = await supabase
     .from('projects')
     .insert({
-      owner_id: userId, // This ensures the project is tied to the creating user
+      owner_id: userId,
       user_id: userId,
       title: data.title,
       description: data.description,
@@ -51,15 +53,28 @@ export async function createProjectInDB(data: ProjectFormData, userId: string) {
     .select()
     .single();
   
+  if (error) {
+    console.error("Error creating project:", error);
+  } else {
+    console.log("Project created successfully:", newProject);
+  }
+  
   return { data: newProject, error };
 }
 
 export async function getProjectsFromDB(userId: string) {
+  console.log("Fetching projects for user ID:", userId);
+  
   const { data, error } = await supabase
     .from('projects')
     .select('*')
-    .eq('owner_id', userId) // Only fetch projects owned by this user
-    .order('created_at', { ascending: false });
+    .eq('owner_id', userId);
+  
+  if (error) {
+    console.error("Error fetching projects:", error);
+  } else {
+    console.log("Fetched projects:", data);
+  }
   
   return { data, error };
 }
