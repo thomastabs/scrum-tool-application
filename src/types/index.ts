@@ -1,4 +1,3 @@
-
 export interface Project {
   id: string;
   title: string;
@@ -99,22 +98,12 @@ export interface CollaboratorFormData {
   role: "viewer" | "editor" | "admin";
 }
 
-// Add the missing ProjectState type
-export interface ProjectState {
-  projects: Project[];
-  sprints: Sprint[];
-  columns: Column[];
-  backlogItems: BacklogItem[];
-  selectedProject: Project | null;
-}
-
 export interface ProjectContextType {
   projects: Project[];
   sprints: Sprint[];
   columns: Column[];
   backlogItems: BacklogItem[];
   selectedProject: Project | null;
-  setProjects: (projects: Project[]) => void;
   selectProject: (id: string) => void;
   createProject: (project: ProjectFormData) => void;
   updateProject: (id: string, project: ProjectFormData) => void;

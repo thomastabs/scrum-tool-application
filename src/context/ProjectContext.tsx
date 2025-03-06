@@ -34,10 +34,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     backlogItems: state.backlogItems,
     selectedProject: state.selectedProject,
     
-    setProjects: (projects) => {
-      dispatch({ type: "SET_PROJECTS", payload: projects });
-    },
-    
     selectProject: (id: string) => {
       dispatch({ type: "SELECT_PROJECT", payload: id });
     },

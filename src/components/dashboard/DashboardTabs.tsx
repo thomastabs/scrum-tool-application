@@ -15,10 +15,9 @@ import { Project } from "@/types";
 interface DashboardTabsProps {
   activeTab: string;
   projects: Project[];
-  loading: boolean;
 }
 
-const DashboardTabs = ({ activeTab, projects, loading }: DashboardTabsProps) => {
+const DashboardTabs = ({ activeTab, projects }: DashboardTabsProps) => {
   return (
     <Tabs defaultValue={activeTab} className="w-full">
       <TabsList className="mb-4">
@@ -37,11 +36,11 @@ const DashboardTabs = ({ activeTab, projects, loading }: DashboardTabsProps) => 
       </TabsList>
       
       <TabsContent value="overview" className="animate-fade-in">
-        <ProjectOverview projects={projects} loading={loading} />
+        <ProjectOverview projects={projects} />
       </TabsContent>
       
       <TabsContent value="projects" className="animate-fade-in">
-        <ProjectsList projects={projects} loading={loading} />
+        <ProjectsList projects={projects} />
       </TabsContent>
       
       <TabsContent value="collaborations" className="animate-fade-in">
