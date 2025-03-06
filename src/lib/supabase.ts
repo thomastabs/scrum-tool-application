@@ -7,11 +7,48 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIU
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Add functions for project management that don't require authentication
+export async function signUp(email: string, password: string) {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: `${window.location.origin}/`,
+    }
+  });
+  
+  return { data, error };
+}
+
+export async function signIn(email: string, password: string) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+  
+  return { data, error };
+}
+
+export async function signOut() {
+  const { error } = await supabase.auth.signOut();
+  return { error };
+}
+
+export async function getSession() {
+  const { data, error } = await supabase.auth.getSession();
+  return { session: data.session, error };
+}
+
+// Add functions for project management
 export async function createProjectInDB(data: ProjectFormData) {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) {
+    return { data: null, error: new Error('User not authenticated') };
+  }
+
   const { data: newProject, error } = await supabase
     .from('projects')
     .insert({
+      owner_id: userData.user.id, // Using auth.users.id
       title: data.title,
       description: data.description,
       end_goal: data.endGoal
@@ -23,9 +60,15 @@ export async function createProjectInDB(data: ProjectFormData) {
 }
 
 export async function getProjectsFromDB() {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) {
+    return { data: null, error: new Error('User not authenticated') };
+  }
+
   const { data, error } = await supabase
     .from('projects')
     .select('*')
+    .eq('owner_id', userData.user.id) // Filter by the user's ID
     .order('created_at', { ascending: false });
   
   return { data, error };
@@ -56,27 +99,50 @@ export async function deleteProjectFromDB(id: string) {
 }
 
 export async function deleteAllProjectsFromDB() {
-  // First, delete all sprints
-  await supabase
-    .from('sprints')
-    .delete()
-    .neq('id', 'placeholder');
-    
-  // Delete all projects
-  const { error } = await supabase
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) {
+    return { error: new Error('User not authenticated') };
+  }
+
+  // First, delete all sprints associated with the user's projects
+  const { data: projects } = await supabase
     .from('projects')
-    .delete()
-    .neq('id', 'placeholder');
+    .select('id')
+    .eq('owner_id', userData.user.id);
   
-  return { error };
+  if (projects && projects.length > 0) {
+    const projectIds = projects.map(project => project.id);
+    
+    // Delete all sprints associated with these projects
+    await supabase
+      .from('sprints')
+      .delete()
+      .in('project_id', projectIds);
+    
+    // Delete all projects
+    const { error } = await supabase
+      .from('projects')
+      .delete()
+      .eq('owner_id', userData.user.id);
+    
+    return { error };
+  }
+  
+  return { error: null };
 }
 
-// Add functions for sprint management that don't require authentication
+// Add functions for sprint management
 export async function createSprintInDB(projectId: string, data: SprintFormData) {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) {
+    return { data: null, error: new Error('User not authenticated') };
+  }
+
   const { data: newSprint, error } = await supabase
     .from('sprints')
     .insert({
       project_id: projectId,
+      user_id: userData.user.id, // Using auth.users.id
       title: data.title,
       description: data.description,
       start_date: data.startDate.toISOString(),
@@ -90,9 +156,15 @@ export async function createSprintInDB(projectId: string, data: SprintFormData) 
 }
 
 export async function getSprintsFromDB() {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) {
+    return { data: null, error: new Error('User not authenticated') };
+  }
+
   const { data, error } = await supabase
     .from('sprints')
     .select('*')
+    .eq('user_id', userData.user.id) // Filter by the user's ID
     .order('created_at', { ascending: false });
   
   return { data, error };
@@ -136,3 +208,4 @@ export async function deleteSprintFromDB(id: string) {
   
   return { error };
 }
+

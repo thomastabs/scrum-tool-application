@@ -1,19 +1,43 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useProject } from "@/context/ProjectContext";
 import ProjectForm from "@/components/ProjectForm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, LogOut } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/lib/supabase";
+import { supabase, signOut } from "@/lib/supabase";
 import { toast } from "@/components/ui/use-toast";
+import ProfileDashboard from "@/components/ProfileDashboard";
 
 const ProjectsPage = () => {
   const { projects } = useProject();
   const [showProjectForm, setShowProjectForm] = useState(false);
+  const [user, setUser] = useState<any>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data.user);
+    };
+    
+    getUser();
+  }, []);
+
+  const handleSignOut = async () => {
+    const { error } = await signOut();
+    if (error) {
+      toast({
+        title: "Error signing out",
+        description: error.message,
+        variant: "destructive"
+      });
+    } else {
+      navigate("/sign-in");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -26,6 +50,13 @@ const ProjectsPage = () => {
             </p>
           </div>
           <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">{user?.email}</span>
+              <ProfileDashboard user={user} />
+              <Button variant="outline" size="sm" onClick={handleSignOut}>
+                <LogOut className="h-4 w-4 mr-1" /> Sign Out
+              </Button>
+            </div>
             <Button onClick={() => setShowProjectForm(true)}>
               <PlusIcon className="h-4 w-4 mr-1" /> New Project
             </Button>
