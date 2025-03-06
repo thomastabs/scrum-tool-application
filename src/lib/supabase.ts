@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { ProjectFormData, SprintFormData } from '@/types';
 
@@ -6,120 +7,11 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIU
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export async function signUp(email: string, password: string) {
-  console.log("Signing up with email:", email);
-  
-  try {
-    // Determine the current origin for redirect URL
-    const origin = window.location.origin;
-    const redirectTo = `${origin}/sign-in`;
-    console.log("Redirect URL set to:", redirectTo);
-    
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectTo,
-      }
-    });
-    
-    if (error) {
-      console.error("Sign up error:", error.message);
-      return { data: null, error };
-    } 
-    
-    console.log("Sign up response:", data);
-    
-    if (data?.user) {
-      console.log("Sign up initiated for:", email);
-      
-      if (!data.session) {
-        console.log("Email verification required. Confirmation email sent to:", email);
-      } else {
-        console.log("Sign up successful with immediate session:", data.user?.email);
-      }
-    }
-    
-    return { data, error: null };
-  } catch (err) {
-    console.error("Unexpected error during sign up:", err);
-    return { data: null, error: new Error(err instanceof Error ? err.message : "Unknown error during sign up") };
-  }
-}
-
-export async function signIn(email: string, password: string) {
-  console.log("Attempting to sign in with:", email);
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
-    if (error) {
-      console.error("Sign in error:", error.message);
-      
-      // Check if the error is related to email confirmation
-      if (error.message.includes("Email not confirmed")) {
-        console.log("User email not confirmed. Resending confirmation email...");
-        await resendConfirmationEmail(email);
-      }
-    } else if (data?.session) {
-      console.log("Sign in successful for:", data.user?.email);
-    } else {
-      console.log("No session returned after sign in");
-    }
-    
-    return { data, error };
-  } catch (err) {
-    console.error("Unexpected error in signIn function:", err);
-    throw err;
-  }
-}
-
-export async function resendConfirmationEmail(email: string) {
-  console.log("Resending confirmation email to:", email);
-  
-  const origin = window.location.origin;
-  const redirectTo = `${origin}/sign-in`;
-  
-  const { data, error } = await supabase.auth.resend({
-    type: 'signup',
-    email,
-    options: {
-      emailRedirectTo: redirectTo,
-    }
-  });
-  
-  if (error) {
-    console.error("Error resending confirmation email:", error.message);
-  } else {
-    console.log("Confirmation email resent successfully");
-  }
-  
-  return { data, error };
-}
-
-export async function signOut() {
-  const { error } = await supabase.auth.signOut();
-  return { error };
-}
-
-export async function getSession() {
-  const { data, error } = await supabase.auth.getSession();
-  return { session: data.session, error };
-}
-
-// Add functions for project management
+// Add functions for project management that don't require authentication
 export async function createProjectInDB(data: ProjectFormData) {
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) {
-    return { data: null, error: new Error('User not authenticated') };
-  }
-
   const { data: newProject, error } = await supabase
     .from('projects')
     .insert({
-      owner_id: userData.user.id, // Using auth.users.id
       title: data.title,
       description: data.description,
       end_goal: data.endGoal
@@ -131,15 +23,9 @@ export async function createProjectInDB(data: ProjectFormData) {
 }
 
 export async function getProjectsFromDB() {
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) {
-    return { data: null, error: new Error('User not authenticated') };
-  }
-
   const { data, error } = await supabase
     .from('projects')
     .select('*')
-    .eq('owner_id', userData.user.id) // Filter by the user's ID
     .order('created_at', { ascending: false });
   
   return { data, error };
@@ -170,50 +56,27 @@ export async function deleteProjectFromDB(id: string) {
 }
 
 export async function deleteAllProjectsFromDB() {
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) {
-    return { error: new Error('User not authenticated') };
-  }
-
-  // First, delete all sprints associated with the user's projects
-  const { data: projects } = await supabase
+  // First, delete all sprints
+  await supabase
+    .from('sprints')
+    .delete()
+    .neq('id', 'placeholder');
+    
+  // Delete all projects
+  const { error } = await supabase
     .from('projects')
-    .select('id')
-    .eq('owner_id', userData.user.id);
+    .delete()
+    .neq('id', 'placeholder');
   
-  if (projects && projects.length > 0) {
-    const projectIds = projects.map(project => project.id);
-    
-    // Delete all sprints associated with these projects
-    await supabase
-      .from('sprints')
-      .delete()
-      .in('project_id', projectIds);
-    
-    // Delete all projects
-    const { error } = await supabase
-      .from('projects')
-      .delete()
-      .eq('owner_id', userData.user.id);
-    
-    return { error };
-  }
-  
-  return { error: null };
+  return { error };
 }
 
-// Add functions for sprint management
+// Add functions for sprint management that don't require authentication
 export async function createSprintInDB(projectId: string, data: SprintFormData) {
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) {
-    return { data: null, error: new Error('User not authenticated') };
-  }
-
   const { data: newSprint, error } = await supabase
     .from('sprints')
     .insert({
       project_id: projectId,
-      user_id: userData.user.id, // Using auth.users.id
       title: data.title,
       description: data.description,
       start_date: data.startDate.toISOString(),
@@ -227,15 +90,9 @@ export async function createSprintInDB(projectId: string, data: SprintFormData) 
 }
 
 export async function getSprintsFromDB() {
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) {
-    return { data: null, error: new Error('User not authenticated') };
-  }
-
   const { data, error } = await supabase
     .from('sprints')
     .select('*')
-    .eq('user_id', userData.user.id) // Filter by the user's ID
     .order('created_at', { ascending: false });
   
   return { data, error };
