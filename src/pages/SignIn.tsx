@@ -6,14 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { signIn, getSession } from "@/lib/supabase";
+import { signIn, resendConfirmationEmail, getSession } from "@/lib/supabase";
 import { toast } from "@/components/ui/use-toast";
 
 const SignIn: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isResendingEmail, setIsResendingEmail] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [needsVerification, setNeedsVerification] = useState(false);
   const navigate = useNavigate();
 
   // Check if user is already signed in
@@ -28,9 +30,43 @@ const SignIn: React.FC = () => {
     checkSession();
   }, [navigate]);
 
+  const handleResendVerification = async () => {
+    if (!email) {
+      setErrorMessage("Please enter your email address");
+      return;
+    }
+    
+    setIsResendingEmail(true);
+    
+    try {
+      const { error } = await resendConfirmationEmail(email);
+      
+      if (error) {
+        setErrorMessage(`Failed to resend verification: ${error.message}`);
+        toast({
+          title: "Error",
+          description: `Failed to resend verification: ${error.message}`,
+          variant: "destructive"
+        });
+      } else {
+        setErrorMessage(null);
+        toast({
+          title: "Verification email sent",
+          description: "Please check your inbox for the verification link"
+        });
+      }
+    } catch (err) {
+      console.error("Error resending verification:", err);
+      setErrorMessage("An unexpected error occurred");
+    } finally {
+      setIsResendingEmail(false);
+    }
+  };
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+    setNeedsVerification(false);
     
     if (!email || !password) {
       setErrorMessage("Please enter both email and password");
@@ -49,11 +85,12 @@ const SignIn: React.FC = () => {
       if (error) {
         console.error("Sign in error:", error);
         
-        // More specific error messages
-        if (error.message.includes("Invalid login credentials")) {
-          setErrorMessage("The email or password you entered is incorrect. Please try again.");
-        } else if (error.message.includes("Email not confirmed")) {
-          setErrorMessage("Your email has not been confirmed. Please check your inbox for a confirmation email.");
+        // Handle email verification errors
+        if (error.message.includes("Email not confirmed")) {
+          setNeedsVerification(true);
+          setErrorMessage("Your email has not been verified. Please check your inbox for a verification link or request a new one.");
+        } else if (error.message.includes("Invalid login credentials")) {
+          setErrorMessage("The email or password you entered is incorrect.");
         } else {
           setErrorMessage(error.message);
         }
@@ -109,32 +146,63 @@ const SignIn: React.FC = () => {
               </Alert>
             )}
             
-            <form onSubmit={handleSignIn} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input 
-                  id="email" 
-                  type="email" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your@email.com" 
-                  required
-                />
+            {needsVerification ? (
+              <div className="space-y-4">
+                <Alert className="mb-4 border-yellow-100 bg-yellow-50 text-yellow-800">
+                  <AlertDescription>
+                    Your email address needs to be verified before you can sign in.
+                  </AlertDescription>
+                </Alert>
+                
+                <div className="space-y-4">
+                  <Button 
+                    onClick={handleResendVerification} 
+                    className="w-full"
+                    disabled={isResendingEmail}
+                  >
+                    {isResendingEmail ? 'Sending...' : 'Resend Verification Email'}
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setNeedsVerification(false);
+                      setErrorMessage(null);
+                    }}
+                    className="w-full"
+                  >
+                    Try Again
+                  </Button>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input 
-                  id="password" 
-                  type="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Signing in...' : 'Sign In'}
-              </Button>
-            </form>
+            ) : (
+              <form onSubmit={handleSignIn} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="your@email.com" 
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input 
+                    id="password" 
+                    type="password" 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? 'Signing in...' : 'Sign In'}
+                </Button>
+              </form>
+            )}
             
             <div className="mt-6 text-center">
               <p className="text-sm text-muted-foreground">

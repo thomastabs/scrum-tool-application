@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { ProjectFormData, SprintFormData } from '@/types';
 
@@ -9,25 +10,32 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 export async function signUp(email: string, password: string) {
   console.log("Signing up with email:", email);
   
+  // Determine the current origin for redirect URL
+  const origin = window.location.origin;
+  const redirectTo = `${origin}/sign-in`;
+  console.log("Redirect URL set to:", redirectTo);
+  
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      // Set emailRedirectTo to current origin
-      emailRedirectTo: `${window.location.origin}/sign-in`,
-      // Enable email confirmation
+      emailRedirectTo: redirectTo,
       data: { 
-        email_confirm: true 
+        email_confirmed: false 
       }
     }
   });
   
   if (error) {
     console.error("Sign up error:", error.message);
-  } else if (data?.user && !data.session) {
-    console.log("Email verification required. Confirmation email sent to:", email);
-  } else if (data?.session) {
-    console.log("Sign up successful with immediate session:", data.user?.email);
+  } else if (data?.user) {
+    console.log("Sign up initiated for:", email);
+    
+    if (!data.session) {
+      console.log("Email verification required. Confirmation email sent to:", email);
+    } else {
+      console.log("Sign up successful with immediate session:", data.user?.email);
+    }
   }
   
   return { data, error };
@@ -43,8 +51,14 @@ export async function signIn(email: string, password: string) {
     
     if (error) {
       console.error("Sign in error:", error.message);
+      
+      // Check if the error is related to email confirmation
+      if (error.message.includes("Email not confirmed")) {
+        console.log("User email not confirmed. Resending confirmation email...");
+        await resendConfirmationEmail(email);
+      }
     } else if (data?.session) {
-      console.log("Sign in successful:", data.user?.email);
+      console.log("Sign in successful for:", data.user?.email);
     } else {
       console.log("No session returned after sign in");
     }
@@ -54,6 +68,29 @@ export async function signIn(email: string, password: string) {
     console.error("Unexpected error in signIn function:", err);
     throw err;
   }
+}
+
+export async function resendConfirmationEmail(email: string) {
+  console.log("Resending confirmation email to:", email);
+  
+  const origin = window.location.origin;
+  const redirectTo = `${origin}/sign-in`;
+  
+  const { data, error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+    options: {
+      emailRedirectTo: redirectTo,
+    }
+  });
+  
+  if (error) {
+    console.error("Error resending confirmation email:", error.message);
+  } else {
+    console.log("Confirmation email resent successfully");
+  }
+  
+  return { data, error };
 }
 
 export async function signOut() {

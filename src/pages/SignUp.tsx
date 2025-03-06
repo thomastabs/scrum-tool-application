@@ -84,6 +84,7 @@ const SignUp: React.FC = () => {
           variant: "destructive"
         });
       } else if (data?.user && !data.session) {
+        // Email verification required
         setVerificationSent(true);
         toast({
           title: "Verification email sent",
