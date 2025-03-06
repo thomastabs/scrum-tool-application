@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { ProjectFormData, SprintFormData } from '@/types';
 
@@ -74,45 +73,20 @@ export async function createProjectInDB(data: ProjectFormData, userId: string) {
 }
 
 export async function getProjectsFromDB() {
-  try {
-    console.log('Starting getProjectsFromDB function');
-    
-    // Get the current user session with explicit auth checks
-    const { data: authData, error: authError } = await supabase.auth.getSession();
-    
-    if (authError) {
-      console.error('Auth error when fetching session:', authError);
-      return { data: [], error: authError };
-    }
-    
-    if (!authData.session) {
-      console.log('No active session found when fetching projects');
-      return { data: [], error: new Error('No active session') };
-    }
-    
-    // Log the user ID we're searching for
-    const userId = authData.session.user.id;
-    console.log('User is authenticated, fetching projects for user ID:', userId);
-    
-    // With our fixed security definer function, the RLS policy should work correctly now
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*');
-      
-    if (error) {
-      console.error('Supabase error fetching projects:', error);
-      return { data: [], error };
-    }
-    
-    // Log the results
-    console.log('Successfully fetched projects:', data ? data.length : 0, 'projects found');
-    console.log('Projects data:', data);
-    
-    return { data, error: null };
-  } catch (err) {
-    console.error('Unexpected error in getProjectsFromDB:', err);
-    return { data: [], error: err instanceof Error ? err : new Error('Unknown error') };
+  // Get the current user session
+  const { data: session } = await supabase.auth.getSession();
+  if (!session.session) {
+    return { data: [], error: new Error('No active session') };
   }
+  
+  // Fetch only projects owned by the current user
+  const { data, error } = await supabase
+    .from('projects')
+    .select('*')
+    .eq('owner_id', session.session.user.id)
+    .order('created_at', { ascending: false });
+  
+  return { data, error };
 }
 
 export async function updateProjectInDB(id: string, data: ProjectFormData) {
