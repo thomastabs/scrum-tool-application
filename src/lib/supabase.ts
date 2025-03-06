@@ -45,8 +45,7 @@ export async function createProjectInDB(data: ProjectFormData, userId: string) {
       owner_id: userId,
       title: data.title,
       description: data.description,
-      end_goal: data.endGoal,
-      collaborators: [userId] // Add the owner as a collaborator too
+      end_goal: data.endGoal
     })
     .select()
     .single();
@@ -55,11 +54,11 @@ export async function createProjectInDB(data: ProjectFormData, userId: string) {
 }
 
 export async function getProjectsFromDB(userId: string) {
-  // Get projects created by the logged-in user OR where the user is a collaborator
+  // Get projects created by the logged-in user only
   const { data, error } = await supabase
     .from('projects')
     .select('*')
-    .or(`owner_id.eq.${userId},collaborators.cs.{${userId}}`)
+    .eq('owner_id', userId)
     .order('created_at', { ascending: false });
   
   console.log("Projects fetched:", data);

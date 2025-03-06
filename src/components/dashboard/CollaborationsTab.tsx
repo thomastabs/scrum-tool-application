@@ -25,18 +25,19 @@ const CollaborationsTab = () => {
           return;
         }
         
-        // Get projects where the user is a collaborator but not the owner
+        // Get projects where the user is not the owner
+        // This is simplified to focus on projects the user doesn't own
         const { data, error } = await supabase
           .from('projects')
           .select('*')
-          .neq('owner_id', userId)
-          .contains('collaborators', [userId]);
+          .neq('owner_id', userId);
         
         if (error) {
           console.error("Collaborations fetch error:", error);
           throw error;
         }
         
+        // Later we'll implement proper collaboration filtering
         setCollaborations(data || []);
       } catch (error) {
         console.error("Error fetching collaborations:", error);
