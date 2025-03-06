@@ -37,7 +37,7 @@ const ProjectDetailPage = () => {
   const [showEditProject, setShowEditProject] = useState(false);
   const [sprintToEdit, setSprintToEdit] = useState<Sprint | null>(null);
   
-  // New state for selected sprint and task form
+  // State for selected sprint and task form
   const [selectedSprint, setSelectedSprint] = useState<Sprint | null>(null);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
@@ -56,7 +56,7 @@ const ProjectDetailPage = () => {
 
   const handleDeleteProject = () => {
     if (window.confirm("Are you sure you want to delete this project?")) {
-      deleteProject(project.id);
+      // Navigate back to projects page instead of calling deleteProject directly
       navigate("/?tab=projects");
     }
   };
