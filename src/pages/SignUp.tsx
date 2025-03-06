@@ -15,6 +15,7 @@ const SignUp: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   // Check if user is already signed in
@@ -31,8 +32,10 @@ const SignUp: React.FC = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     
     if (!email || !password) {
+      setError("Please enter both email and password");
       toast({
         title: "Error",
         description: "Please enter both email and password",
@@ -42,6 +45,7 @@ const SignUp: React.FC = () => {
     }
     
     if (password !== confirmPassword) {
+      setError("Passwords don't match");
       toast({
         title: "Error",
         description: "Passwords don't match",
@@ -51,6 +55,7 @@ const SignUp: React.FC = () => {
     }
     
     if (password.length < 6) {
+      setError("Password should be at least 6 characters");
       toast({
         title: "Error",
         description: "Password should be at least 6 characters",
@@ -60,21 +65,34 @@ const SignUp: React.FC = () => {
     }
     
     setLoading(true);
-    const { data, error } = await signUp(email, password);
-    setLoading(false);
-    
-    if (error) {
+    try {
+      const { data, error } = await signUp(email, password);
+      
+      if (error) {
+        console.error("Sign up error:", error);
+        setError(error.message);
+        toast({
+          title: "Sign up failed",
+          description: error.message,
+          variant: "destructive"
+        });
+      } else {
+        setEmailSent(true);
+        toast({
+          title: "Sign up successful",
+          description: "Please check your email to verify your account"
+        });
+      }
+    } catch (err) {
+      console.error("Unexpected error during signup:", err);
+      setError("An unexpected error occurred. Please try again.");
       toast({
         title: "Sign up failed",
-        description: error.message,
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive"
       });
-    } else {
-      setEmailSent(true);
-      toast({
-        title: "Sign up successful",
-        description: "Please check your email to verify your account"
-      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -117,6 +135,11 @@ const SignUp: React.FC = () => {
               </Alert>
             ) : (
               <form onSubmit={handleSignUp} className="space-y-4">
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input 

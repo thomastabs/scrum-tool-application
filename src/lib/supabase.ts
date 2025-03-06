@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { ProjectFormData, SprintFormData } from '@/types';
 
@@ -8,15 +7,27 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIU
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export async function signUp(email: string, password: string) {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: `${window.location.origin}/`,
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/`,
+      }
+    });
+    
+    if (error) {
+      console.error("Supabase signup error:", error);
     }
-  });
-  
-  return { data, error };
+    
+    return { data, error };
+  } catch (err) {
+    console.error("Unexpected error in signUp function:", err);
+    return { 
+      data: null, 
+      error: { message: "An unexpected error occurred during sign up." } 
+    };
+  }
 }
 
 export async function signIn(email: string, password: string) {
@@ -208,4 +219,3 @@ export async function deleteSprintFromDB(id: string) {
   
   return { error };
 }
-
