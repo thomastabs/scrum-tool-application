@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { ProjectFormData, SprintFormData } from '@/types';
 
@@ -41,20 +42,29 @@ export async function getSession() {
 export async function createProjectInDB(data: ProjectFormData, userId: string) {
   console.log("Creating project with user ID:", userId);
   
+  if (!userId) {
+    console.error("Cannot create project: User ID is null or undefined");
+    throw new Error("User ID is required to create a project");
+  }
+  
+  const projectData = {
+    owner_id: userId,
+    title: data.title,
+    description: data.description,
+    end_goal: data.endGoal
+  };
+  
+  console.log("Project data to insert:", projectData);
+  
   const { data: newProject, error } = await supabase
     .from('projects')
-    .insert({
-      owner_id: userId,
-      user_id: userId,
-      title: data.title,
-      description: data.description,
-      end_goal: data.endGoal
-    })
+    .insert(projectData)
     .select()
     .single();
   
   if (error) {
     console.error("Error creating project:", error);
+    throw error;
   } else {
     console.log("Project created successfully:", newProject);
   }
@@ -63,12 +73,18 @@ export async function createProjectInDB(data: ProjectFormData, userId: string) {
 }
 
 export async function getProjectsFromDB(userId: string) {
+  if (!userId) {
+    console.error("Cannot fetch projects: User ID is null or undefined");
+    return { data: [], error: new Error("User ID is required to fetch projects") };
+  }
+  
   console.log("Fetching projects for user ID:", userId);
   
   const { data, error } = await supabase
     .from('projects')
     .select('*')
-    .eq('owner_id', userId);
+    .eq('owner_id', userId)
+    .order('created_at', { ascending: false });
   
   if (error) {
     console.error("Error fetching projects:", error);

@@ -7,11 +7,11 @@ import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardTabs from "@/components/dashboard/DashboardTabs";
 import { Project } from "@/types";
 import { toast } from "@/components/ui/use-toast";
+import { useQuery } from "@tanstack/react-query";
 
 const Dashboard = () => {
   const { projects } = useProject();
   const [user, setUser] = useState<any>(null);
-  const [userProjects, setUserProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const location = useLocation();
 
@@ -25,36 +25,11 @@ const Dashboard = () => {
         const { data, error } = await supabase.auth.getUser();
         if (error) throw error;
         setUser(data.user);
-        
-        // Fetch projects for this user
-        if (data.user) {
-          const { data: projectsData, error: projectsError } = await supabase
-            .from('projects')
-            .select('*')
-            .eq('owner_id', data.user.id);
-          
-          if (projectsError) throw projectsError;
-          
-          // Convert database projects to app Project type
-          const convertedProjects = projectsData.map(project => ({
-            id: project.id,
-            title: project.title,
-            description: project.description || '',
-            endGoal: project.end_goal || '',
-            createdAt: new Date(project.created_at),
-            updatedAt: new Date(project.created_at) // using created_at as fallback if no updated_at
-          }));
-          
-          setUserProjects(convertedProjects);
-          
-          console.log("Fetched projects:", projectsData);
-          console.log("User ID:", data.user.id);
-        }
       } catch (error: any) {
-        console.error("Error fetching user or projects:", error.message);
+        console.error("Error fetching user:", error.message);
         toast({
           title: "Error",
-          description: "Failed to fetch your projects. Please try again.",
+          description: "Failed to fetch user information. Please try again.",
           variant: "destructive"
         });
       } finally {
@@ -65,12 +40,56 @@ const Dashboard = () => {
     getUser();
   }, []);
 
+  // Use React Query to fetch projects
+  const { 
+    data: userProjects = [],
+    isLoading: projectsLoading,
+    error: projectsError 
+  } = useQuery({
+    queryKey: ['projects', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+
+      console.log("Fetching projects for user:", user.id);
+      const { data, error } = await getProjectsFromDB(user.id);
+      
+      if (error) {
+        console.error("Error fetching projects:", error);
+        throw error;
+      }
+      
+      console.log("Raw project data:", data);
+      
+      // Convert database projects to app Project type
+      return data?.map(project => ({
+        id: project.id,
+        title: project.title,
+        description: project.description || '',
+        endGoal: project.end_goal || '',
+        createdAt: new Date(project.created_at),
+        updatedAt: new Date(project.created_at) // using created_at as fallback if no updated_at
+      })) || [];
+    },
+    enabled: !!user?.id, // Only run the query if we have a user ID
+  });
+
+  if (projectsError) {
+    console.error("Error in projects query:", projectsError);
+    toast({
+      title: "Error",
+      description: "Failed to fetch your projects. Please try again.",
+      variant: "destructive"
+    });
+  }
+
+  const isLoadingData = isLoading || (user && projectsLoading);
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 animate-fade-in">
         <DashboardHeader user={user} />
         <div className="grid grid-cols-1 gap-6">
-          {isLoading ? (
+          {isLoadingData ? (
             <div className="flex justify-center p-8">
               <div className="animate-pulse">Loading your projects...</div>
             </div>
