@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useReducer, useEffect } from "react";
 import { ProjectContextType } from "@/types";
 import { projectReducer, initialState } from "./projectReducer";
@@ -55,10 +56,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         title: "Project deleted",
         description: "Project has been deleted successfully."
       });
-    },
-    
-    deleteAllProjects: () => {
-      dispatch({ type: "REMOVE_ALL_PROJECTS" });
     },
     
     createSprint: (sprintData) => {

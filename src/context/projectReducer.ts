@@ -1,3 +1,4 @@
+
 import { State, Action } from "./projectTypes";
 
 export const initialState: State = {
@@ -47,14 +48,6 @@ export const projectReducer = (state: State, action: Action): State => {
         ...state,
         projects: state.projects.filter((project) => project.id !== action.payload),
         selectedProject: state.selectedProject?.id === action.payload ? null : state.selectedProject,
-      };
-    case "REMOVE_ALL_PROJECTS":
-      return {
-        ...state,
-        projects: [],
-        sprints: [],
-        backlogItems: [],
-        selectedProject: null,
       };
     case "SELECT_PROJECT":
       return {
