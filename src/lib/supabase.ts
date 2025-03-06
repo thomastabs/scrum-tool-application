@@ -38,7 +38,7 @@ export async function getSession() {
   return { session: data.session, error };
 }
 
-// Add functions for project management
+// Updated for user_id instead of owner_id
 export async function createProjectInDB(data: ProjectFormData, userId: string) {
   const { data: newProject, error } = await supabase
     .from('projects')

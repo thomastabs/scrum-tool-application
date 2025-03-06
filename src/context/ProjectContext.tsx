@@ -14,6 +14,7 @@ import {
   updateBacklogItem 
 } from "./projectActions";
 import { toast } from "@/components/ui/use-toast";
+import { supabase } from "@/lib/supabase";
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
@@ -22,6 +23,31 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const localData = localStorage.getItem("projectState");
     return localData ? JSON.parse(localData) : initialState;
   });
+
+  // Listen for authentication changes
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        dispatch({ type: "SET_USER_ID", payload: session.user.id });
+      } else {
+        dispatch({ type: "SET_USER_ID", payload: null });
+      }
+    });
+
+    // Get current session on mount
+    const getInitialSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        dispatch({ type: "SET_USER_ID", payload: data.session.user.id });
+      }
+    };
+    
+    getInitialSession();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     localStorage.setItem("projectState", JSON.stringify(state));
@@ -39,6 +65,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     },
     
     createProject: (projectData) => {
+      if (!state.userId) {
+        toast({
+          title: "Authentication required",
+          description: "Please sign in to create a project",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       const newProject = createProject(projectData);
       dispatch({ type: "ADD_PROJECT", payload: newProject });
     },

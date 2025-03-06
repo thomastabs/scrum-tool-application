@@ -3,6 +3,7 @@ export interface Project {
   title: string;
   description: string;
   endGoal: string;
+  user_id: string;
   createdAt: Date;
   updatedAt: Date;
 }
