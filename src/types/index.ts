@@ -57,6 +57,15 @@ export interface BoardColumn {
   isDefault?: boolean;
 }
 
+// Define Column interface that was missing
+export interface Column {
+  id: string;
+  title: string;
+  tasks: Task[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface BacklogItemFormData {
   title: string;
   description?: string;

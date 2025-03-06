@@ -195,6 +195,7 @@ export const projectReducer = (state: State, action: Action): State => {
         priority: backlogItem.priority || "medium",
         storyPoints: backlogItem.storyPoints || 1,
         sprintId,
+        projectId: backlogItem.projectId, // Use the projectId from the backlog item
         columnId: state.columns[0]?.id || "", // Add to first column
         createdAt: new Date(),
         updatedAt: new Date(),

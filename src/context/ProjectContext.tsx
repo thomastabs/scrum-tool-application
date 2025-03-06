@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useReducer, useEffect } from "react";
 import { ProjectContextType } from "@/types";
 import { projectReducer, initialState } from "./projectReducer";
@@ -135,6 +134,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     
     createTask: (sprintId, columnId, taskData) => {
       const newTask = createTask(sprintId, columnId, taskData);
+      
+      // Set the projectId based on the selected project
+      if (state.selectedProject) {
+        newTask.projectId = state.selectedProject.id;
+      }
+      
       dispatch({ type: "ADD_TASK", payload: newTask });
     },
     

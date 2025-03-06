@@ -1,4 +1,3 @@
-
 import { v4 as uuidv4 } from "uuid";
 import { 
   Project, 
@@ -92,6 +91,7 @@ export const createTask = (sprintId: string, columnId: string, taskData: TaskFor
     id: uuidv4(),
     columnId,
     sprintId,
+    projectId: "", // This will be set correctly in the context before saving
     createdAt: new Date(),
     updatedAt: new Date(),
   };
