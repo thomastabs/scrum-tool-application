@@ -55,7 +55,6 @@ export const createSprint = (sprintData: SprintFormData) => {
     id: uuidv4(),
     isCompleted: false,
     projectId: sprintData.projectId || "",
-    justification: sprintData.justification || "",
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -93,7 +92,6 @@ export const createTask = (sprintId: string, columnId: string, taskData: TaskFor
     id: uuidv4(),
     columnId,
     sprintId,
-    storyPoints: taskData.storyPoints || 1, // Default to 1 if not provided
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -160,7 +158,6 @@ export const createBacklogItem = (backlogItemData: BacklogItemFormData) => {
     ...backlogItemData,
     id: uuidv4(),
     projectId: backlogItemData.projectId || "",
-    storyPoints: backlogItemData.storyPoints || 1, // Default to 1 if not provided
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -180,7 +177,6 @@ export const updateBacklogItem = (id: string, backlogItemData: BacklogItemFormDa
   const updatedBacklogItem: BacklogItem = {
     ...backlogItem,
     ...backlogItemData,
-    storyPoints: backlogItemData.storyPoints || backlogItem.storyPoints,
     updatedAt: new Date(),
   };
   
