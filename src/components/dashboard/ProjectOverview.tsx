@@ -3,14 +3,23 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FolderIcon } from "lucide-react";
+import { FolderIcon, Loader2 } from "lucide-react";
 import { Project } from "@/types";
 
 interface ProjectOverviewProps {
   projects: Project[];
+  loading?: boolean;
 }
 
-const ProjectOverview = ({ projects }: ProjectOverviewProps) => {
+const ProjectOverview = ({ projects, loading = false }: ProjectOverviewProps) => {
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   // Display recent projects (limited to 3)
   const recentProjects = projects.slice(0, 3);
 

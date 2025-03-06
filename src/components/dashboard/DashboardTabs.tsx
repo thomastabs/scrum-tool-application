@@ -37,11 +37,11 @@ const DashboardTabs = ({ activeTab, projects, loading }: DashboardTabsProps) => 
       </TabsList>
       
       <TabsContent value="overview" className="animate-fade-in">
-        <ProjectOverview projects={projects} />
+        <ProjectOverview projects={projects} loading={loading} />
       </TabsContent>
       
       <TabsContent value="projects" className="animate-fade-in">
-        <ProjectsList projects={projects} />
+        <ProjectsList projects={projects} loading={loading} />
       </TabsContent>
       
       <TabsContent value="collaborations" className="animate-fade-in">

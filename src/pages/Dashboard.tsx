@@ -6,11 +6,13 @@ import { supabase } from "@/lib/supabase";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardTabs from "@/components/dashboard/DashboardTabs";
 import { toast } from "@/components/ui/use-toast";
+import { Project } from "@/types";
 
 const Dashboard = () => {
-  const { projects, setProjects } = useProject();
+  const { setProjects } = useProject();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [userProjects, setUserProjects] = useState<Project[]>([]);
   const location = useLocation();
 
   // Get the 'tab' query parameter from the URL
@@ -46,7 +48,18 @@ const Dashboard = () => {
             variant: "destructive",
           });
         } else {
-          setProjects(data || []);
+          // Transform the Supabase data to match our Project type
+          const formattedProjects: Project[] = (data || []).map((project: any) => ({
+            id: project.id,
+            title: project.title,
+            description: project.description,
+            endGoal: project.end_goal,
+            createdAt: new Date(project.created_at),
+            updatedAt: new Date(project.updated_at || project.created_at)
+          }));
+          
+          setUserProjects(formattedProjects);
+          setProjects(formattedProjects);
         }
       } catch (error) {
         console.error("Unexpected error:", error);
@@ -67,7 +80,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 gap-6">
           <DashboardTabs 
             activeTab={activeTab} 
-            projects={projects} 
+            projects={userProjects} 
             loading={loading} 
           />
         </div>

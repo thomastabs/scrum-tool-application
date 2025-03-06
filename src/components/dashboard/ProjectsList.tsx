@@ -4,16 +4,25 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, Loader2 } from "lucide-react";
 import { Project } from "@/types";
 import ProjectForm from "@/components/ProjectForm";
 
 interface ProjectsListProps {
   projects: Project[];
+  loading?: boolean;
 }
 
-const ProjectsList = ({ projects }: ProjectsListProps) => {
+const ProjectsList = ({ projects, loading = false }: ProjectsListProps) => {
   const [showProjectForm, setShowProjectForm] = useState(false);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (projects.length === 0) {
     return (
@@ -51,7 +60,9 @@ const ProjectsList = ({ projects }: ProjectsListProps) => {
               <div className="flex justify-between">
                 <CardTitle className="text-xl">{project.title}</CardTitle>
                 <Badge variant="outline">
-                  {new Date(project.createdAt).toLocaleDateString()}
+                  {project.createdAt instanceof Date 
+                    ? project.createdAt.toLocaleDateString() 
+                    : new Date(project.createdAt).toLocaleDateString()}
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground line-clamp-2">{project.description}</p>
