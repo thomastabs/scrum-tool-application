@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { ProjectFormData, SprintFormData } from '@/types';
 
@@ -94,8 +93,7 @@ export async function getProjectsFromDB() {
     const userId = authData.session.user.id;
     console.log('User is authenticated, fetching projects for user ID:', userId);
     
-    // Try a simpler approach - instead of using the RLS policy directly, 
-    // let's just make an explicit query by owner_id
+    // Now that we've fixed the database relationship, let's use the proper query
     const { data, error } = await supabase
       .from('projects')
       .select('*')
@@ -103,20 +101,6 @@ export async function getProjectsFromDB() {
       
     if (error) {
       console.error('Supabase error fetching projects:', error);
-      
-      // Attempt a workaround for potential RLS issues
-      // Try to fetch projects with a more direct approach
-      console.log('Attempting alternative fetch approach...');
-      
-      // Use the service key if available (this would bypass RLS)
-      // Only do this in development, never in production
-      if (import.meta.env.DEV) {
-        console.log('Using development workaround to fetch projects');
-        
-        // Return empty data to prevent breaking the UI
-        return { data: [], error: new Error('Using fallback - please check Supabase RLS policies') };
-      }
-      
       return { data: [], error };
     }
     

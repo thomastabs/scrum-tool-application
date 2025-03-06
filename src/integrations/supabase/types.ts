@@ -147,7 +147,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "projects_owner_id_fkey"
+            foreignKeyName: "projects_owner_id_users_fkey"
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "users"
