@@ -74,34 +74,44 @@ export async function createProjectInDB(data: ProjectFormData, userId: string) {
 
 export async function getProjectsFromDB() {
   try {
-    // Get the current user session
-    const { data: session } = await supabase.auth.getSession();
-    if (!session.session) {
+    console.log('Starting getProjectsFromDB function');
+    
+    // Get the current user session with explicit auth checks
+    const { data: authData, error: authError } = await supabase.auth.getSession();
+    
+    if (authError) {
+      console.error('Auth error when fetching session:', authError);
+      return { data: [], error: authError };
+    }
+    
+    if (!authData.session) {
       console.log('No active session found when fetching projects');
       return { data: [], error: new Error('No active session') };
     }
     
     // Log the user ID we're searching for
-    console.log('Fetching projects for user:', session.session.user.id);
+    const userId = authData.session.user.id;
+    console.log('User is authenticated, fetching projects for user ID:', userId);
     
-    // Fetch only projects owned by the current user
+    // Fetch only projects owned by the current user with more detailed error logging
     const { data, error } = await supabase
       .from('projects')
       .select('*')
-      .eq('owner_id', session.session.user.id)
-      .order('created_at', { ascending: false });
-    
-    // Log the results
-    console.log('Fetched projects:', data);
+      .eq('owner_id', userId);
+      
     if (error) {
-      console.error('Fetch error:', error);
-      return { data: null, error };
+      console.error('Supabase error fetching projects:', error);
+      return { data: [], error };
     }
     
-    return { data, error };
+    // Log the results
+    console.log('Successfully fetched projects:', data ? data.length : 0, 'projects found');
+    console.log('Projects data:', data);
+    
+    return { data, error: null };
   } catch (err) {
     console.error('Unexpected error in getProjectsFromDB:', err);
-    return { data: null, error: err instanceof Error ? err : new Error('Unknown error') };
+    return { data: [], error: err instanceof Error ? err : new Error('Unknown error') };
   }
 }
 

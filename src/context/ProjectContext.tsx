@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useReducer, useEffect, useState } from "react";
 import { ProjectContextType } from "@/types";
 import { projectReducer, initialState } from "./projectReducer";
@@ -23,10 +24,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Function to fetch projects
   const fetchProjects = async () => {
-    console.log("Fetching projects...");
+    console.log("Fetching projects from ProjectContext...");
     setLoading(true);
     
     try {
+      // Clear existing projects first before fetching new ones
+      dispatch({ type: "CLEAR_PROJECTS" });
+      
       const { data, error } = await getProjectsFromDB();
       
       if (error) {
@@ -36,29 +40,33 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           description: "Failed to fetch projects. Please try again.",
           variant: "destructive",
         });
-      } else if (data) {
-        console.log("Projects fetched successfully:", data);
-        
-        // Clear existing projects first
-        dispatch({ type: "CLEAR_PROJECTS" });
-        
-        // Then add the newly fetched projects
-        data.forEach(project => {
-          dispatch({ 
-            type: "ADD_PROJECT", 
-            payload: {
-              id: project.id,
-              title: project.title,
-              description: project.description || "",
-              endGoal: project.end_goal || "",
-              owner_id: project.owner_id,
-              collaborators: project.collaborators || [],
-              createdAt: new Date(project.created_at),
-              updatedAt: new Date(project.updated_at || project.created_at)
-            } 
-          });
-        });
+        return;
+      } 
+      
+      if (!data || data.length === 0) {
+        console.log("No projects found for this user");
+        setLoading(false);
+        return;
       }
+      
+      console.log("Projects fetched successfully:", data);
+      
+      // Add the newly fetched projects
+      data.forEach(project => {
+        dispatch({ 
+          type: "ADD_PROJECT", 
+          payload: {
+            id: project.id,
+            title: project.title,
+            description: project.description || "",
+            endGoal: project.end_goal || "",
+            owner_id: project.owner_id,
+            collaborators: project.collaborators || [],
+            createdAt: new Date(project.created_at),
+            updatedAt: new Date(project.updated_at || project.created_at)
+          } 
+        });
+      });
     } catch (err) {
       console.error("Unexpected error in fetchProjects:", err);
       toast({
@@ -71,29 +79,43 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // Fetch projects when the component mounts and auth state changes
+  // Use a more robust approach to auth state changes and session management
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    // Check if user is already signed in and fetch projects
+    const checkSession = async () => {
+      try {
+        setLoading(true);
+        const { data } = await supabase.auth.getSession();
+        
+        if (data.session) {
+          console.log("Session found at mount, user ID:", data.session.user.id);
+          // We have a valid session, fetch projects
+          await fetchProjects();
+        } else {
+          console.log("No session found at mount");
+          // No session, ensure projects are cleared
+          dispatch({ type: "CLEAR_PROJECTS" });
+        }
+      } catch (error) {
+        console.error("Error checking session:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    checkSession();
+    
+    // Setup auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth state changed:", event, session?.user?.id);
       
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        // Refresh projects when user signs in
-        fetchProjects();
+        // User signed in or token refreshed, fetch projects
+        await fetchProjects();
       } else if (event === 'SIGNED_OUT') {
-        // Clear projects when user signs out
+        // User signed out, clear projects
         console.log("User signed out, clearing projects");
         dispatch({ type: "CLEAR_PROJECTS" });
-      }
-    });
-
-    // Check if user is already signed in and fetch projects
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        console.log("Session found at mount, fetching projects");
-        fetchProjects();
-      } else {
-        console.log("No session found at mount");
-        setLoading(false);
       }
     });
 
