@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -18,6 +18,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useProject } from "@/context/ProjectContext";
 import { X } from "lucide-react";
+import { createProjectInDB, getSession } from "@/lib/supabase";
+import { toast } from "@/components/ui/use-toast";
 
 const formSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -37,6 +39,7 @@ interface ProjectFormProps {
 
 const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, projectToEdit }) => {
   const { createProject, updateProject } = useProject();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditMode = !!projectToEdit;
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -48,13 +51,51 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, projectToEdit }) => 
     },
   });
 
-  const onSubmit = (data: ProjectFormData) => {
-    if (isEditMode && projectToEdit) {
-      updateProject(projectToEdit.id, data);
-    } else {
-      createProject(data);
+  const onSubmit = async (data: ProjectFormData) => {
+    try {
+      setIsSubmitting(true);
+      
+      if (isEditMode && projectToEdit) {
+        updateProject(projectToEdit.id, data);
+      } else {
+        // Get current user's ID before creating the project
+        const { session, error } = await getSession();
+        
+        if (error || !session?.user) {
+          toast({
+            title: "Authentication Error",
+            description: "You must be logged in to create a project",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        // Create project in the database
+        const { data: newProject, error: createError } = await createProjectInDB(data, session.user.id);
+        
+        if (createError) {
+          throw new Error(createError.message);
+        }
+        
+        if (newProject) {
+          createProject(newProject);
+          toast({
+            title: "Success",
+            description: "Project created successfully",
+          });
+        }
+      }
+      onClose();
+    } catch (error) {
+      console.error("Error creating project:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create project",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    onClose();
   };
 
   return (
@@ -131,11 +172,18 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, projectToEdit }) => 
             />
 
             <div className="flex justify-end space-x-2 pt-4">
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
                 Cancel
               </Button>
-              <Button type="submit">
-                {isEditMode ? "Update Project" : "Create Project"}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <span className="flex items-center">
+                    <span className="animate-spin mr-2 h-4 w-4 border-b-2 border-white rounded-full"></span>
+                    {isEditMode ? "Updating..." : "Creating..."}
+                  </span>
+                ) : (
+                  isEditMode ? "Update Project" : "Create Project"
+                )}
               </Button>
             </div>
           </form>
