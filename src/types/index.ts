@@ -1,3 +1,4 @@
+
 export interface Project {
   id: string;
   title: string;
@@ -96,6 +97,15 @@ export interface Collaborator {
 export interface CollaboratorFormData {
   email: string;
   role: "viewer" | "editor" | "admin";
+}
+
+// Add the missing ProjectState type
+export interface ProjectState {
+  projects: Project[];
+  sprints: Sprint[];
+  columns: Column[];
+  backlogItems: BacklogItem[];
+  selectedProject: Project | null;
 }
 
 export interface ProjectContextType {
