@@ -126,7 +126,6 @@ export type Database = {
           id: string
           owner_id: string
           title: string
-          user_id: string
         }
         Insert: {
           collaborators?: string[] | null
@@ -136,7 +135,6 @@ export type Database = {
           id?: string
           owner_id: string
           title: string
-          user_id?: string
         }
         Update: {
           collaborators?: string[] | null
@@ -146,9 +144,16 @@ export type Database = {
           id?: string
           owner_id?: string
           title?: string
-          user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "projects_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sprints: {
         Row: {

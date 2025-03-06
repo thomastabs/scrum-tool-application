@@ -1,12 +1,12 @@
-
 export interface Project {
   id: string;
   title: string;
   description: string;
   endGoal: string;
+  owner_id: string;
+  collaborators?: string[];
   createdAt: Date;
   updatedAt: Date;
-  owner_id?: string; // Reference to the users table
 }
 
 export interface Sprint {
