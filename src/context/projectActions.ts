@@ -18,6 +18,7 @@ export const createProject = (projectData: ProjectFormData) => {
   const newProject: Project = {
     ...projectData,
     id: uuidv4(),
+    owner_id: "", // Add the required owner_id property
     createdAt: new Date(),
     updatedAt: new Date(),
   };
