@@ -124,8 +124,8 @@ export type Database = {
           description: string | null
           end_goal: string | null
           id: string
+          owner_id: string
           title: string
-          user_id: string
         }
         Insert: {
           collaborators?: string[] | null
@@ -133,8 +133,8 @@ export type Database = {
           description?: string | null
           end_goal?: string | null
           id?: string
+          owner_id: string
           title: string
-          user_id: string
         }
         Update: {
           collaborators?: string[] | null
@@ -142,8 +142,8 @@ export type Database = {
           description?: string | null
           end_goal?: string | null
           id?: string
+          owner_id?: string
           title?: string
-          user_id?: string
         }
         Relationships: []
       }

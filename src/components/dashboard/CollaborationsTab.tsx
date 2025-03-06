@@ -29,7 +29,7 @@ const CollaborationsTab = () => {
         const { data, error } = await supabase
           .from('projects')
           .select('*')
-          .neq('user_id', userId)
+          .neq('owner_id', userId)
           .contains('collaborators', [userId]);
         
         if (error) {

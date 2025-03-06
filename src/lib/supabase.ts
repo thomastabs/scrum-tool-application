@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { ProjectFormData, SprintFormData } from '@/types';
 
@@ -42,7 +43,7 @@ export async function createProjectInDB(data: ProjectFormData, userId: string) {
   const { data: newProject, error } = await supabase
     .from('projects')
     .insert({
-      user_id: userId,
+      owner_id: userId,
       title: data.title,
       description: data.description,
       end_goal: data.endGoal
@@ -58,7 +59,7 @@ export async function getProjectsFromDB(userId: string) {
   const { data, error } = await supabase
     .from('projects')
     .select('*')
-    .or(`user_id.eq.${userId},collaborators.cs.{${userId}}`)
+    .or(`owner_id.eq.${userId},collaborators.cs.{${userId}}`)
     .order('created_at', { ascending: false });
   
   return { data, error };
