@@ -29,6 +29,7 @@ const ProjectDetailPage = () => {
   const [showSprintForm, setShowSprintForm] = useState(false);
   const [showEditProject, setShowEditProject] = useState(false);
   const [sprintToEdit, setSprintToEdit] = useState<Sprint | null>(null);
+  const [selectedSprint, setSelectedSprint] = useState<Sprint | null>(null);
 
   // Find the project by ID
   const project = projects.find(p => p.id === projectId);
@@ -51,6 +52,13 @@ const ProjectDetailPage = () => {
   const handleEditSprint = (sprint: Sprint) => {
     setSprintToEdit(sprint);
     setShowSprintForm(true);
+  };
+
+  // Adding the missing handler for viewing sprints
+  const handleViewSprint = (sprint: Sprint) => {
+    setSelectedSprint(sprint);
+    // If needed, navigate to sprint page or update state to display sprint board
+    navigate(`/my-projects/${projectId}/sprint/${sprint.id}`);
   };
 
   return (
@@ -81,6 +89,7 @@ const ProjectDetailPage = () => {
             projectId={project.id}
             onCreateSprint={() => setShowSprintForm(true)}
             onEditSprint={handleEditSprint}
+            onViewSprint={handleViewSprint}
           />
         </TabsContent>
 
