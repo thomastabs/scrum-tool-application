@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useReducer, useEffect } from "react";
 import { ProjectContextType } from "@/types";
 import { projectReducer, initialState } from "./projectReducer";
@@ -5,206 +6,26 @@ import {
   createProject, 
   updateProject, 
   createSprint, 
+  updateSprint, 
+  createTask, 
   updateTask, 
   createColumn, 
   createBacklogItem, 
   updateBacklogItem 
 } from "./projectActions";
 import { toast } from "@/components/ui/use-toast";
-import { supabase } from "@/lib/supabase";
-import { Project, ProjectFormData } from "@/types";
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [state, dispatch] = useReducer(projectReducer, initialState);
-
-  // Fetch projects from local storage on initial load
-  useEffect(() => {
+  const [state, dispatch] = useReducer(projectReducer, initialState, () => {
     const localData = localStorage.getItem("projectState");
-    if (localData) {
-      try {
-        const parsedData = JSON.parse(localData);
-        // Initialize with local data, will be replaced with DB data when fetchProjects is called
-        dispatch({ type: "INITIALIZE_STATE", payload: parsedData });
-      } catch (error) {
-        console.error("Error parsing local storage data:", error);
-      }
-    }
-  }, []);
+    return localData ? JSON.parse(localData) : initialState;
+  });
 
-  // Save state to local storage when it changes (as a backup)
   useEffect(() => {
     localStorage.setItem("projectState", JSON.stringify(state));
   }, [state]);
-
-  // Fetch projects from Supabase
-  const fetchProjects = async () => {
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session.session) {
-        toast({
-          title: "Authentication required",
-          description: "Please sign in to access your projects",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        throw error;
-      }
-
-      if (data) {
-        // Transform the database projects to match our frontend model
-        const frontendProjects: Project[] = data.map(dbProject => ({
-          id: dbProject.id,
-          title: dbProject.title || 'Untitled Project',
-          description: dbProject.description || '',
-          endGoal: dbProject.end_goal || '',
-          createdAt: new Date(dbProject.created_at),
-          updatedAt: new Date(dbProject.created_at),
-        }));
-
-        dispatch({ type: "SET_PROJECTS", payload: frontendProjects });
-        return frontendProjects;
-      }
-    } catch (error: any) {
-      toast({
-        title: "Error fetching projects",
-        description: error.message || "Could not load your projects",
-        variant: "destructive"
-      });
-      console.error("Error fetching projects:", error);
-      throw error;
-    }
-  };
-
-  // Create project in Supabase
-  const createProjectInDb = async (projectData: ProjectFormData) => {
-    try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) {
-        toast({
-          title: "Authentication required",
-          description: "Please sign in to create a project",
-          variant: "destructive"
-        });
-        return null;
-      }
-
-      const { data, error } = await supabase
-        .from('projects')
-        .insert({
-          title: projectData.title,
-          description: projectData.description,
-          end_goal: projectData.endGoal,
-          user_id: userData.user.id,
-        })
-        .select()
-        .single();
-
-      if (error) {
-        throw error;
-      }
-
-      if (data) {
-        const newProject: Project = {
-          id: data.id,
-          title: data.title,
-          description: data.description || '',
-          endGoal: data.end_goal || '',
-          createdAt: new Date(data.created_at),
-          updatedAt: new Date(data.created_at),
-        };
-
-        dispatch({ type: "ADD_PROJECT", payload: newProject });
-        return newProject;
-      }
-    } catch (error: any) {
-      toast({
-        title: "Error creating project",
-        description: error.message || "Could not create your project",
-        variant: "destructive"
-      });
-      console.error("Error creating project:", error);
-      return null;
-    }
-  };
-
-  // Update project in Supabase
-  const updateProjectInDb = async (id: string, projectData: ProjectFormData) => {
-    try {
-      const { data, error } = await supabase
-        .from('projects')
-        .update({
-          title: projectData.title,
-          description: projectData.description,
-          end_goal: projectData.endGoal,
-        })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) {
-        throw error;
-      }
-
-      if (data) {
-        const updatedProject: Project = {
-          id: data.id,
-          title: data.title,
-          description: data.description || '',
-          endGoal: data.end_goal || '',
-          createdAt: new Date(data.created_at),
-          updatedAt: new Date(data.updated_at || data.created_at),
-        };
-
-        dispatch({ type: "UPDATE_PROJECT", payload: updatedProject });
-        return updatedProject;
-      }
-    } catch (error: any) {
-      toast({
-        title: "Error updating project",
-        description: error.message || "Could not update your project",
-        variant: "destructive"
-      });
-      console.error("Error updating project:", error);
-      return null;
-    }
-  };
-
-  // Delete project from Supabase
-  const deleteProjectFromDb = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('projects')
-        .delete()
-        .eq('id', id);
-
-      if (error) {
-        throw error;
-      }
-
-      dispatch({ type: "REMOVE_PROJECT", payload: id });
-      toast({
-        title: "Project deleted",
-        description: "Project has been deleted successfully."
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error deleting project",
-        description: error.message || "Could not delete your project",
-        variant: "destructive"
-      });
-      console.error("Error deleting project:", error);
-    }
-  };
 
   const contextValue: ProjectContextType = {
     projects: state.projects,
@@ -212,22 +33,29 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     columns: state.columns,
     backlogItems: state.backlogItems,
     selectedProject: state.selectedProject,
-    fetchProjects,
-
+    
     selectProject: (id: string) => {
       dispatch({ type: "SELECT_PROJECT", payload: id });
     },
     
-    createProject: async (projectData) => {
-      await createProjectInDb(projectData);
+    createProject: (projectData) => {
+      const newProject = createProject(projectData);
+      dispatch({ type: "ADD_PROJECT", payload: newProject });
     },
     
-    updateProject: async (id, projectData) => {
-      await updateProjectInDb(id, projectData);
+    updateProject: (id, projectData) => {
+      const updatedProject = updateProject(id, projectData, state.projects);
+      if (updatedProject) {
+        dispatch({ type: "UPDATE_PROJECT", payload: updatedProject });
+      }
     },
     
-    deleteProject: async (id) => {
-      await deleteProjectFromDb(id);
+    deleteProject: (id) => {
+      dispatch({ type: "REMOVE_PROJECT", payload: id });
+      toast({
+        title: "Project deleted",
+        description: "Project has been deleted successfully."
+      });
     },
     
     createSprint: (sprintData) => {
@@ -236,10 +64,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     },
     
     updateSprint: (id, sprintData) => {
-      // const updatedSprint = updateSprint(id, sprintData, state.sprints);
-      // if (updatedSprint) {
-      //   dispatch({ type: "UPDATE_SPRINT", payload: updatedSprint });
-      // }
+      const updatedSprint = updateSprint(id, sprintData, state.sprints);
+      if (updatedSprint) {
+        dispatch({ type: "UPDATE_SPRINT", payload: updatedSprint });
+      }
     },
     
     deleteSprint: (id) => {
@@ -259,15 +87,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     },
     
     createTask: (sprintId, columnId, taskData) => {
-      const newTask = updateTask(sprintId, columnId, taskData);
+      const newTask = createTask(sprintId, columnId, taskData);
       dispatch({ type: "ADD_TASK", payload: newTask });
     },
     
     updateTask: (id, taskData) => {
-      // const updatedTask = updateTask(id, taskData, state.columns);
-      // if (updatedTask) {
-      //   dispatch({ type: "UPDATE_TASK", payload: updatedTask });
-      // }
+      const updatedTask = updateTask(id, taskData, state.columns);
+      if (updatedTask) {
+        dispatch({ type: "UPDATE_TASK", payload: updatedTask });
+      }
     },
     
     deleteTask: (id, columnId) => {

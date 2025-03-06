@@ -1,4 +1,3 @@
-
 export interface Project {
   id: string;
   title: string;
@@ -16,7 +15,6 @@ export interface Sprint {
   startDate: Date;
   endDate: Date;
   isCompleted: boolean;
-  justification?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -34,11 +32,10 @@ export interface Task {
   title: string;
   description: string;
   priority: "low" | "medium" | "high";
-  assignee?: string;
+  assignee: string;
   storyPoints: number;
   columnId: string;
   sprintId: string;
-  status: "todo" | "in-progress" | "done";
   createdAt: Date;
   updatedAt: Date;
 }
@@ -75,7 +72,6 @@ export interface TaskFormData {
   priority: "low" | "medium" | "high";
   assignee: string;
   storyPoints: number;
-  status: "todo" | "in-progress" | "done";
 }
 
 export interface BacklogItemFormData {
@@ -108,7 +104,6 @@ export interface ProjectContextType {
   columns: Column[];
   backlogItems: BacklogItem[];
   selectedProject: Project | null;
-  fetchProjects: () => Promise<Project[] | undefined>;
   selectProject: (id: string) => void;
   createProject: (project: ProjectFormData) => void;
   updateProject: (id: string, project: ProjectFormData) => void;
