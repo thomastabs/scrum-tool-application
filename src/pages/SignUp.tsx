@@ -66,29 +66,41 @@ const SignUp: React.FC = () => {
     
     setLoading(true);
     try {
+      console.log("Starting signup process for:", email);
       const { data, error } = await signUp(email, password);
       
       if (error) {
-        console.error("Sign up error:", error);
-        setError(error.message);
+        console.error("Sign up error returned:", error);
+        setError(error.message || "An error occurred during signup");
         toast({
           title: "Sign up failed",
-          description: error.message,
+          description: error.message || "An error occurred during signup",
+          variant: "destructive"
+        });
+      } else if (!data?.user) {
+        // Handle case where no error but also no user data returned
+        console.warn("No user data returned from signup but no error");
+        setError("Account could not be created. Please try again later.");
+        toast({
+          title: "Sign up failed",
+          description: "Account could not be created. Please try again later.",
           variant: "destructive"
         });
       } else {
+        console.log("Signup completed successfully");
         setEmailSent(true);
         toast({
           title: "Sign up successful",
           description: "Please check your email to verify your account"
         });
       }
-    } catch (err) {
-      console.error("Unexpected error during signup:", err);
-      setError("An unexpected error occurred. Please try again.");
+    } catch (err: any) {
+      console.error("Unexpected client-side error during signup:", err);
+      const errorMessage = err?.message || "An unexpected error occurred. Please try again.";
+      setError(errorMessage);
       toast({
         title: "Sign up failed",
-        description: "An unexpected error occurred. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {

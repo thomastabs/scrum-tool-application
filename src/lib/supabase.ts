@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { ProjectFormData, SprintFormData } from '@/types';
 
@@ -8,6 +9,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export async function signUp(email: string, password: string) {
   try {
+    // Log the signup attempt for debugging
+    console.log(`Attempting to sign up user with email: ${email}`);
+    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -18,14 +22,26 @@ export async function signUp(email: string, password: string) {
     
     if (error) {
       console.error("Supabase signup error:", error);
+      // Return the specific error from Supabase
+      return { data: null, error };
     }
     
-    return { data, error };
-  } catch (err) {
+    console.log("Signup successful, response data:", data);
+    return { data, error: null };
+  } catch (err: any) {
+    // Log the full error object for debugging
     console.error("Unexpected error in signUp function:", err);
+    
+    // Try to extract useful info from the error
+    const errorMessage = err?.message || "An unexpected error occurred during sign up.";
+    const errorDetails = err?.details || err?.error_description || "";
+    
     return { 
       data: null, 
-      error: { message: "An unexpected error occurred during sign up." } 
+      error: { 
+        message: `${errorMessage}${errorDetails ? `: ${errorDetails}` : ""}`,
+        status: err?.status || 500
+      } 
     };
   }
 }
