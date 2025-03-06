@@ -69,7 +69,7 @@ const SignUp: React.FC = () => {
       const { data, error } = await signUp(email, password);
       
       if (error) {
-        console.error("Sign up error:", error);
+        console.error("Sign up error:", error.message);
         
         // More specific error messages
         if (error.message.includes("already registered")) {
