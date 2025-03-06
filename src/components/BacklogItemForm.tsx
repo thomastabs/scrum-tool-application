@@ -38,10 +38,10 @@ interface BacklogItemFormProps {
   itemToEdit?: {
     id: string;
     title: string;
-    description: string;
-    priority: "low" | "medium" | "high";
-    storyPoints: number;
-  };
+    description?: string;
+    priority?: "low" | "medium" | "high";
+    storyPoints?: number;
+  } | null;
 }
 
 const BacklogItemForm: React.FC<BacklogItemFormProps> = ({ onClose, itemToEdit }) => {

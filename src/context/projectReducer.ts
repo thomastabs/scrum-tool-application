@@ -1,4 +1,3 @@
-
 import { State, Action } from "./projectTypes";
 import { Task } from "@/types";
 
