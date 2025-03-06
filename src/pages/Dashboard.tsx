@@ -11,6 +11,7 @@ const Dashboard = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const activeTab = searchParams.get("tab") || "overview";
@@ -27,6 +28,7 @@ const Dashboard = () => {
         
         if (session?.user) {
           setUserId(session.user.id);
+          setUser(session.user); // Store the user information
           
           // Only fetch projects if we have a userId
           const { data, error: projectsError } = await getProjectsFromDB(session.user.id);
@@ -64,7 +66,7 @@ const Dashboard = () => {
 
   return (
     <div className="container mx-auto py-8 animate-fade-in">
-      <DashboardHeader />
+      <DashboardHeader user={user} />
       <div className="mt-8">
         <DashboardTabs activeTab={activeTab} projects={projects} />
       </div>
