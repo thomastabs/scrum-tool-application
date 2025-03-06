@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useProject } from "@/context/ProjectContext";
 import { Task, Sprint } from "@/types";
@@ -8,66 +8,55 @@ import SprintHeader from "@/components/sprint/SprintHeader";
 import SprintColumn from "@/components/sprint/SprintColumn";
 import AddColumn from "@/components/sprint/AddColumn";
 import { Button } from "@/components/ui/button";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getProjectFromDB, getSprintFromDB } from "@/lib/supabase";
 import { toast } from "@/components/ui/use-toast";
 import ProjectNotFound from "@/components/project/ProjectNotFound";
 
 const SprintPage = () => {
   const { projectId, sprintId } = useParams<{ projectId: string, sprintId: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { columns, createColumn, deleteColumn, moveTask, completeSprint } = useProject();
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
 
-  // Fetch project data from Supabase
+  // Fetch project data
   const { data: project, isLoading: projectLoading } = useQuery({
     queryKey: ['project', projectId],
     queryFn: async () => {
       if (!projectId) return null;
-
-      console.log("Fetching project details for:", projectId);
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('id', projectId)
-        .single();
-
+      
+      const { data, error } = await getProjectFromDB(projectId);
       if (error) {
         console.error("Error fetching project:", error);
         throw error;
       }
-
+      
       return data;
     },
   });
 
-  // Fetch sprint data from Supabase with updated query to reflect the fixed foreign key
+  // Fetch sprint data with improved error handling
   const { data: sprint, isLoading: sprintLoading, error: sprintError } = useQuery({
     queryKey: ['sprint', sprintId],
     queryFn: async () => {
       if (!sprintId) return null;
 
-      console.log("Fetching sprint details for:", sprintId);
       try {
-        const { data, error } = await supabase
-          .from('sprints')
-          .select('*')
-          .eq('id', sprintId)
-          .maybeSingle(); // Use maybeSingle instead of single to handle case when sprint doesn't exist
-
+        const { data, error } = await getSprintFromDB(sprintId);
+        
         if (error) {
           console.error("Error fetching sprint:", error);
           throw error;
         }
-
+        
         if (!data) {
           console.error("Sprint not found");
           return null;
         }
-
-        console.log("Sprint data retrieved:", data);
+        
         return {
           id: data.id,
           projectId: data.project_id,
@@ -77,7 +66,8 @@ const SprintPage = () => {
           endDate: new Date(data.end_date),
           isCompleted: data.status === 'completed',
           createdAt: new Date(data.created_at),
-          updatedAt: new Date(data.created_at)
+          updatedAt: new Date(data.created_at),
+          justification: data.justification || '',
         } as Sprint;
       } catch (error) {
         console.error("Error processing sprint data:", error);
@@ -171,6 +161,15 @@ const SprintPage = () => {
     return doneTasks === totalTasks;
   };
 
+  // Handle navigation back to project
+  const handleBackToProject = () => {
+    if (projectId) {
+      navigate(`/my-projects/${projectId}`);
+    } else {
+      navigate("/?tab=projects");
+    }
+  };
+
   // Loading state
   if (projectLoading || sprintLoading) {
     return (
@@ -193,8 +192,8 @@ const SprintPage = () => {
         <div className="text-center py-12">
           <h2 className="text-2xl font-bold mb-4">Sprint Not Found</h2>
           <p className="mb-6">The sprint you're looking for does not exist or has been deleted.</p>
-          <Button asChild>
-            <Link to={`/my-projects/${projectId}`}>Go Back to Project</Link>
+          <Button onClick={handleBackToProject}>
+            Go Back to Project
           </Button>
         </div>
       </div>
@@ -205,7 +204,7 @@ const SprintPage = () => {
     <div className="container mx-auto px-4 py-8">
       <Button
         variant="ghost"
-        onClick={() => navigate(`/my-projects/${projectId}`)}
+        onClick={handleBackToProject}
         className="mb-6"
       >
         ← Back to Project

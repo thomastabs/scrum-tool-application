@@ -79,19 +79,57 @@ export async function getProjectsFromDB(userId: string) {
   
   console.log("Fetching projects for user ID:", userId);
   
-  const { data, error } = await supabase
-    .from('projects')
-    .select('*')
-    .eq('owner_id', userId)
-    .order('created_at', { ascending: false });
-  
-  if (error) {
-    console.error("Error fetching projects:", error);
-  } else {
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('owner_id', userId)
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error("Error fetching projects:", error);
+      return { data: [], error };
+    }
+    
     console.log("Fetched projects:", data);
+    return { data: data || [], error: null };
+  } catch (error) {
+    console.error("Exception fetching projects:", error);
+    return { data: [], error };
+  }
+}
+
+export async function getProjectFromDB(projectId: string) {
+  if (!projectId) {
+    console.error("Cannot fetch project: Project ID is null or undefined");
+    return { data: null, error: new Error("Project ID is required") };
   }
   
-  return { data, error };
+  console.log("Fetching project details for:", projectId);
+  
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('id', projectId)
+      .maybeSingle();
+    
+    if (error) {
+      console.error("Error fetching project:", error);
+      return { data: null, error };
+    }
+    
+    if (!data) {
+      console.log("Project not found:", projectId);
+      return { data: null, error: new Error("Project not found") };
+    }
+    
+    console.log("Project data retrieved:", data);
+    return { data, error: null };
+  } catch (error) {
+    console.error("Exception fetching project:", error);
+    return { data: null, error };
+  }
 }
 
 export async function updateProjectInDB(id: string, data: ProjectFormData) {
@@ -111,12 +149,36 @@ export async function updateProjectInDB(id: string, data: ProjectFormData) {
 }
 
 export async function deleteProjectFromDB(id: string) {
-  const { error } = await supabase
-    .from('projects')
-    .delete()
-    .eq('id', id);
+  console.log("Deleting project from database:", id);
   
-  return { error };
+  try {
+    // First delete all related sprints
+    const { error: sprintsError } = await supabase
+      .from('sprints')
+      .delete()
+      .eq('project_id', id);
+    
+    if (sprintsError) {
+      console.error("Error deleting related sprints:", sprintsError);
+    }
+    
+    // Then delete the project
+    const { error } = await supabase
+      .from('projects')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      console.error("Error deleting project:", error);
+      return { error };
+    }
+    
+    console.log("Project deleted successfully:", id);
+    return { error: null };
+  } catch (error) {
+    console.error("Exception deleting project:", error);
+    return { error };
+  }
 }
 
 // Update sprint functions to work with the fixed foreign key
@@ -172,6 +234,39 @@ export async function getSprintsFromDB(userId: string) {
   return { data, error };
 }
 
+export async function getSprintFromDB(sprintId: string) {
+  if (!sprintId) {
+    console.error("Cannot fetch sprint: Sprint ID is null or undefined");
+    return { data: null, error: new Error("Sprint ID is required") };
+  }
+  
+  console.log("Fetching sprint details for:", sprintId);
+  
+  try {
+    const { data, error } = await supabase
+      .from('sprints')
+      .select('*')
+      .eq('id', sprintId)
+      .maybeSingle();
+    
+    if (error) {
+      console.error("Error fetching sprint:", error);
+      return { data: null, error };
+    }
+    
+    if (!data) {
+      console.log("Sprint not found:", sprintId);
+      return { data: null, error: new Error("Sprint not found") };
+    }
+    
+    console.log("Sprint data retrieved:", data);
+    return { data, error: null };
+  } catch (error) {
+    console.error("Exception fetching sprint:", error);
+    return { data: null, error };
+  }
+}
+
 export async function updateSprintInDB(id: string, data: SprintFormData) {
   const { data: updatedSprint, error } = await supabase
     .from('sprints')
@@ -205,10 +300,24 @@ export async function completeSprintInDB(id: string) {
 }
 
 export async function deleteSprintFromDB(id: string) {
-  const { error } = await supabase
-    .from('sprints')
-    .delete()
-    .eq('id', id);
+  console.log("Deleting sprint from database:", id);
   
-  return { error };
+  try {
+    // Delete sprint
+    const { error } = await supabase
+      .from('sprints')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      console.error("Error deleting sprint:", error);
+      return { error };
+    }
+    
+    console.log("Sprint deleted successfully:", id);
+    return { error: null };
+  } catch (error) {
+    console.error("Exception deleting sprint:", error);
+    return { error };
+  }
 }

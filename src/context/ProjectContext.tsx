@@ -13,7 +13,7 @@ import {
   updateBacklogItem 
 } from "./projectActions";
 import { toast } from "@/components/ui/use-toast";
-import { supabase } from "@/lib/supabase";
+import { deleteProjectFromDB, deleteSprintFromDB, supabase } from "@/lib/supabase";
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
@@ -29,12 +29,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Helper function to get current user ID
   const getCurrentUser = async () => {
-    const { data, error } = await supabase.auth.getSession();
-    if (error) {
-      console.error("Error getting session:", error);
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error("Error getting session:", error);
+        return null;
+      }
+      return data.session?.user?.id || null;
+    } catch (error) {
+      console.error("Exception getting user session:", error);
       return null;
     }
-    return data.session?.user?.id || null;
   };
 
   const contextValue: ProjectContextType = {
@@ -60,8 +65,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     },
     
-    deleteProject: (id) => {
+    deleteProject: async (id) => {
+      // Remove the project from local state
       dispatch({ type: "REMOVE_PROJECT", payload: id });
+      
+      // Remove any sprints associated with this project
+      state.sprints
+        .filter(sprint => sprint.projectId === id)
+        .forEach(sprint => {
+          dispatch({ type: "REMOVE_SPRINT", payload: sprint.id });
+        });
+      
       toast({
         title: "Project deleted",
         description: "Project has been deleted successfully."
@@ -122,12 +136,27 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     },
     
-    deleteSprint: (id) => {
-      dispatch({ type: "REMOVE_SPRINT", payload: id });
-      toast({
-        title: "Sprint deleted",
-        description: "Sprint has been deleted successfully."
-      });
+    deleteSprint: async (id) => {
+      try {
+        // First delete from DB
+        const { error } = await deleteSprintFromDB(id);
+        if (error) throw error;
+        
+        // Then update local state
+        dispatch({ type: "REMOVE_SPRINT", payload: id });
+        
+        toast({
+          title: "Sprint deleted",
+          description: "Sprint has been deleted successfully."
+        });
+      } catch (error) {
+        console.error("Error deleting sprint:", error);
+        toast({
+          title: "Error",
+          description: "Failed to delete sprint. Please try again.",
+          variant: "destructive"
+        });
+      }
     },
     
     completeSprint: (id) => {
