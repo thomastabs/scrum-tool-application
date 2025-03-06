@@ -18,8 +18,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useProject } from "@/context/ProjectContext";
 import { X } from "lucide-react";
-import { createProjectInDB, getSession } from "@/lib/supabase";
+import { createProjectInDB, getSession, updateProjectInDB } from "@/lib/supabase";
 import { toast } from "@/components/ui/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const formSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -41,6 +42,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, projectToEdit }) => 
   const { createProject, updateProject } = useProject();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditMode = !!projectToEdit;
+  const navigate = useNavigate();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -56,7 +58,20 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, projectToEdit }) => 
       setIsSubmitting(true);
       
       if (isEditMode && projectToEdit) {
-        updateProject(projectToEdit.id, data);
+        // Update existing project
+        const { data: updatedProject, error } = await updateProjectInDB(projectToEdit.id, data);
+        
+        if (error) {
+          throw new Error(error.message);
+        }
+        
+        if (updatedProject) {
+          updateProject(projectToEdit.id, updatedProject);
+          toast({
+            title: "Success",
+            description: "Project updated successfully",
+          });
+        }
       } else {
         // Get current user's ID before creating the project
         const { session, error } = await getSession();
@@ -78,19 +93,26 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, projectToEdit }) => 
         }
         
         if (newProject) {
+          // Add the new project to state
           createProject(newProject);
+          
           toast({
             title: "Success",
             description: "Project created successfully",
           });
+          
+          // Navigate to the new project after a short delay to allow state to update
+          setTimeout(() => {
+            navigate(`/my-projects/${newProject.id}`);
+          }, 500);
         }
       }
       onClose();
     } catch (error) {
-      console.error("Error creating project:", error);
+      console.error("Error handling project:", error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create project",
+        description: error instanceof Error ? error.message : "Failed to process project",
         variant: "destructive",
       });
     } finally {

@@ -26,7 +26,6 @@ const CollaborationsTab = () => {
         }
         
         // Get projects where the user is not the owner
-        // This is simplified to focus on projects the user doesn't own
         const { data, error } = await supabase
           .from('projects')
           .select('*')
@@ -37,8 +36,18 @@ const CollaborationsTab = () => {
           throw error;
         }
         
-        // Later we'll implement proper collaboration filtering
-        setCollaborations(data || []);
+        // Transform data to match our Project type
+        const transformedData: Project[] = (data || []).map(item => ({
+          id: item.id,
+          title: item.title,
+          description: item.description || "",
+          endGoal: item.end_goal || "",
+          ownerId: item.owner_id,
+          createdAt: new Date(item.created_at),
+          updatedAt: new Date(item.updated_at || item.created_at),
+        }));
+        
+        setCollaborations(transformedData);
       } catch (error) {
         console.error("Error fetching collaborations:", error);
         toast({
