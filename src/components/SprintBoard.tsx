@@ -55,7 +55,7 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprintId }) => {
   };
 
   const handleAddColumn = (name: string) => {
-    createColumn(name);
+    createColumn(name, sprintId);
   };
 
   const closeTaskForm = () => {
@@ -83,7 +83,7 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprintId }) => {
           }
         />
       ))}
-      <AddColumn onAddColumn={handleAddColumn} />
+      <AddColumn onAddColumn={handleAddColumn} sprintId={sprintId} />
 
       {showTaskForm && selectedColumnId && (
         <TaskForm

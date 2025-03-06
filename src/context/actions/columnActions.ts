@@ -5,13 +5,16 @@ import { Column } from "@/types";
 
 // Since we don't have access to the store, we'll create a simple implementation
 // that can be used by the ProjectContext
-export const createColumn = (title: string) => {
+export const createColumn = (title: string, sprintId: string) => {
   try {
     // Create a new column with the correct type
     const newColumn: Column = {
       id: uuidv4(),
       title,
       tasks: [],
+      order_index: 0,
+      sprint_id: sprintId,
+      created_at: new Date(),
       createdAt: new Date(),
       updatedAt: new Date()
     };

@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useProject } from "@/context/ProjectContext";
@@ -83,7 +84,7 @@ const Project = () => {
   };
 
   const handleAddColumn = (name: string) => {
-    createColumn(name);
+    createColumn(name, sprint.id);
   };
 
   const handleDeleteColumn = (columnId: string) => {
@@ -122,7 +123,7 @@ const Project = () => {
           />
         ))}
 
-        <AddColumn onAddColumn={handleAddColumn} />
+        <AddColumn onAddColumn={handleAddColumn} sprintId={sprint.id} />
       </div>
 
       {showTaskForm && activeColumnId && (
