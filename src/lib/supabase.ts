@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { ProjectFormData, SprintFormData } from '@/types';
 
@@ -52,16 +53,20 @@ export async function getCurrentUser() {
 }
 
 // Add functions for project management
-export async function createProjectInDB(data: ProjectFormData, userId: string) {
-  const { data: userData } = await getCurrentUser();
-  if (!userData) {
-    return { data: null, error: new Error('User not found') };
+export async function createProjectInDB(data: ProjectFormData) {
+  // Get the current user session to ensure we have the user's ID
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) {
+    return { data: null, error: new Error('User not authenticated') };
   }
   
+  const userId = sessionData.session.user.id;
+  
+  // Insert project with the current user's ID as owner_id
   const { data: newProject, error } = await supabase
     .from('projects')
     .insert({
-      owner_id: userData.id,
+      owner_id: userId,
       title: data.title,
       description: data.description,
       end_goal: data.endGoal
@@ -69,16 +74,26 @@ export async function createProjectInDB(data: ProjectFormData, userId: string) {
     .select()
     .single();
   
+  if (error) {
+    console.error('Error creating project:', error);
+  }
+  
   return { data: newProject, error };
 }
 
 export async function getProjectsFromDB() {
+  // This will automatically only get projects where owner_id matches the authenticated user
+  // thanks to the RLS policies we've set up
   const { data, error } = await supabase
     .from('projects')
     .select('*')
     .order('created_at', { ascending: false });
   
-  return { data, error };
+  if (error) {
+    console.error('Error fetching projects:', error);
+  }
+  
+  return { data: data || [], error };
 }
 
 export async function updateProjectInDB(id: string, data: ProjectFormData) {
