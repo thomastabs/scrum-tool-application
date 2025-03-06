@@ -1,3 +1,4 @@
+
 import { State, Action } from "./projectTypes";
 
 export const initialState: State = {
@@ -33,10 +34,6 @@ export const initialState: State = {
 export const projectReducer = (state: State, action: Action): State => {
   switch (action.type) {
     case "ADD_PROJECT":
-      // Avoid duplicate projects by checking if the project already exists
-      if (state.projects.some(project => project.id === action.payload.id)) {
-        return state;
-      }
       return { ...state, projects: [...state.projects, action.payload] };
     case "UPDATE_PROJECT":
       return {
@@ -51,12 +48,6 @@ export const projectReducer = (state: State, action: Action): State => {
         ...state,
         projects: state.projects.filter((project) => project.id !== action.payload),
         selectedProject: state.selectedProject?.id === action.payload ? null : state.selectedProject,
-      };
-    case "CLEAR_PROJECTS":
-      return {
-        ...state,
-        projects: [],
-        selectedProject: null,
       };
     case "SELECT_PROJECT":
       return {

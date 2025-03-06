@@ -113,7 +113,6 @@ export interface ProjectContextType {
   columns: Column[];
   backlogItems: BacklogItem[];
   selectedProject: Project | null;
-  loading: boolean;
   selectProject: (id: string) => void;
   createProject: (project: ProjectFormData) => void;
   updateProject: (id: string, project: ProjectFormData) => void;
