@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { ProjectFormData, SprintFormData } from '@/types';
 
@@ -10,35 +9,42 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 export async function signUp(email: string, password: string) {
   console.log("Signing up with email:", email);
   
-  // Determine the current origin for redirect URL
-  const origin = window.location.origin;
-  const redirectTo = `${origin}/sign-in`;
-  console.log("Redirect URL set to:", redirectTo);
-  
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: redirectTo,
-      data: { 
-        email_confirmed: false 
+  try {
+    // Determine the current origin for redirect URL
+    const origin = window.location.origin;
+    const redirectTo = `${origin}/sign-in`;
+    console.log("Redirect URL set to:", redirectTo);
+    
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: redirectTo,
+      }
+    });
+    
+    if (error) {
+      console.error("Sign up error:", error.message);
+      return { data: null, error };
+    } 
+    
+    console.log("Sign up response:", data);
+    
+    if (data?.user) {
+      console.log("Sign up initiated for:", email);
+      
+      if (!data.session) {
+        console.log("Email verification required. Confirmation email sent to:", email);
+      } else {
+        console.log("Sign up successful with immediate session:", data.user?.email);
       }
     }
-  });
-  
-  if (error) {
-    console.error("Sign up error:", error.message);
-  } else if (data?.user) {
-    console.log("Sign up initiated for:", email);
     
-    if (!data.session) {
-      console.log("Email verification required. Confirmation email sent to:", email);
-    } else {
-      console.log("Sign up successful with immediate session:", data.user?.email);
-    }
+    return { data, error: null };
+  } catch (err) {
+    console.error("Unexpected error during sign up:", err);
+    return { data: null, error: new Error(err instanceof Error ? err.message : "Unknown error during sign up") };
   }
-  
-  return { data, error };
 }
 
 export async function signIn(email: string, password: string) {

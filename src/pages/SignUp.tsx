@@ -97,6 +97,10 @@ const SignUp: React.FC = () => {
           description: "Your account has been created. You are now signed in."
         });
         navigate("/");
+      } else {
+        // Unexpected response format
+        setErrorMessage("Unexpected response from server. Please try again.");
+        console.error("Unexpected sign up response:", data);
       }
     } catch (err: any) {
       console.error("Unexpected error during sign up:", err);

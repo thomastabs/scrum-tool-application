@@ -42,6 +42,7 @@ const SignIn: React.FC = () => {
       const { error } = await resendConfirmationEmail(email);
       
       if (error) {
+        console.error("Error resending verification:", error);
         setErrorMessage(`Failed to resend verification: ${error.message}`);
         toast({
           title: "Error",
@@ -100,7 +101,7 @@ const SignIn: React.FC = () => {
           description: error.message,
           variant: "destructive"
         });
-      } else if (data.session) {
+      } else if (data?.session) {
         toast({
           title: "Signed in successfully",
           description: "Welcome back!"
@@ -108,6 +109,7 @@ const SignIn: React.FC = () => {
         navigate("/");
       } else {
         setErrorMessage("Something went wrong. Please try again.");
+        console.error("Unexpected sign in response:", data);
       }
     } catch (err: any) {
       console.error("Unexpected error during sign in:", err);
