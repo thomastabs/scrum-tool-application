@@ -1,3 +1,4 @@
+
 export interface Project {
   id: string;
   title: string;
@@ -29,6 +30,7 @@ export interface Task {
   assignee?: string;
   sprintId: string;
   columnId: string;
+  storyPoints: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -39,6 +41,7 @@ export interface BacklogItem {
   description: string;
   priority: "low" | "medium" | "high";
   projectId: string;
+  storyPoints: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -72,6 +75,7 @@ export interface TaskFormData {
   priority: "low" | "medium" | "high";
   status: "todo" | "in-progress" | "done";
   assignee?: string;
+  storyPoints: number;
 }
 
 export interface BacklogItemFormData {
@@ -79,6 +83,7 @@ export interface BacklogItemFormData {
   description: string;
   priority: "low" | "medium" | "high";
   projectId?: string;
+  storyPoints: number;
 }
 
 export interface ProjectContextType {
@@ -112,4 +117,18 @@ export interface ProjectContextType {
   updateBacklogItem: (id: string, backlogItemData: BacklogItemFormData) => void;
   deleteBacklogItem: (id: string) => void;
   moveBacklogItemToSprint: (backlogItemId: string, sprintId: string) => void;
+}
+
+// Add missing types for collaborator functionality
+export interface Collaborator {
+  id: string;
+  email: string;
+  role: "viewer" | "editor" | "admin";
+  projectId: string;
+  createdAt: Date;
+}
+
+export interface CollaboratorFormData {
+  email: string;
+  role: "viewer" | "editor" | "admin";
 }

@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardTabs from "@/components/dashboard/DashboardTabs";
 import { Button } from "@/components/ui/button";
-import { ReloadIcon } from "lucide-react";
+import { RefreshCcw } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 
 const Dashboard = () => {
@@ -91,7 +91,7 @@ const Dashboard = () => {
               className="mt-2" 
               onClick={handleRefresh}
             >
-              <ReloadIcon className="h-4 w-4 mr-2" />
+              <RefreshCcw className="h-4 w-4 mr-2" />
               Retry
             </Button>
           </div>
