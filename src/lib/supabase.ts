@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { ProjectFormData, SprintFormData } from '@/types';
 
@@ -120,17 +119,19 @@ export async function deleteProjectFromDB(id: string) {
   return { error };
 }
 
-// Add functions for sprint management
-export async function createSprintInDB(projectId: string, data: SprintFormData) {
+// Update sprint functions to work with the fixed foreign key
+export async function createSprintInDB(projectId: string, data: SprintFormData, userId: string) {
+  // Include the user_id in the sprint creation
   const { data: newSprint, error } = await supabase
     .from('sprints')
     .insert({
       project_id: projectId,
+      user_id: userId, // Add user_id to connect to Users table
       title: data.title,
       description: data.description,
       start_date: data.startDate.toISOString(),
       end_date: data.endDate.toISOString(),
-      is_completed: false,
+      status: 'active',
       justification: data.justification
     })
     .select()
@@ -139,10 +140,12 @@ export async function createSprintInDB(projectId: string, data: SprintFormData) 
   return { data: newSprint, error };
 }
 
-export async function getSprintsFromDB() {
+export async function getSprintsFromDB(userId: string) {
+  // Add filter by user_id to match the foreign key constraint
   const { data, error } = await supabase
     .from('sprints')
     .select('*')
+    .eq('user_id', userId)
     .order('created_at', { ascending: false });
   
   return { data, error };

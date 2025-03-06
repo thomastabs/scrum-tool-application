@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useReducer, useEffect } from "react";
 import { ProjectContextType } from "@/types";
 import { projectReducer, initialState } from "./projectReducer";
@@ -14,6 +13,7 @@ import {
   updateBacklogItem 
 } from "./projectActions";
 import { toast } from "@/components/ui/use-toast";
+import { supabase } from "@/lib/supabase";
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
@@ -26,6 +26,16 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     localStorage.setItem("projectState", JSON.stringify(state));
   }, [state]);
+
+  // Helper function to get current user ID
+  const getCurrentUser = async () => {
+    const { session, error } = await supabase.auth.getSession();
+    if (error) {
+      console.error("Error getting session:", error);
+      return null;
+    }
+    return session?.user?.id || null;
+  };
 
   const contextValue: ProjectContextType = {
     projects: state.projects,
@@ -58,9 +68,51 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
     },
     
-    createSprint: (sprintData) => {
+    createSprint: async (sprintData) => {
+      // Get current user ID for the sprint creation
+      const userId = await getCurrentUser();
+      if (!userId) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to create a sprint",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const newSprint = createSprint(sprintData);
-      dispatch({ type: "ADD_SPRINT", payload: newSprint });
+      
+      // Attempt to create in DB with user_id
+      try {
+        const { data, error } = await supabase.from('sprints').insert({
+          project_id: sprintData.projectId,
+          user_id: userId,
+          title: sprintData.title,
+          description: sprintData.description,
+          start_date: sprintData.startDate.toISOString(),
+          end_date: sprintData.endDate.toISOString(),
+          status: 'active',
+          justification: sprintData.justification
+        }).select().single();
+        
+        if (error) throw error;
+        
+        // Update with DB data
+        newSprint.id = data.id;
+        dispatch({ type: "ADD_SPRINT", payload: newSprint });
+        
+        toast({
+          title: "Sprint created",
+          description: `${sprintData.title} has been created successfully.`
+        });
+      } catch (error) {
+        console.error("Error creating sprint in DB:", error);
+        toast({
+          title: "Error",
+          description: "Failed to create sprint. Please try again.",
+          variant: "destructive"
+        });
+      }
     },
     
     updateSprint: (id, sprintData) => {

@@ -42,7 +42,7 @@ const SprintPage = () => {
     },
   });
 
-  // Fetch sprint data from Supabase
+  // Fetch sprint data from Supabase with updated query to reflect the fixed foreign key
   const { data: sprint, isLoading: sprintLoading, error: sprintError } = useQuery({
     queryKey: ['sprint', sprintId],
     queryFn: async () => {
