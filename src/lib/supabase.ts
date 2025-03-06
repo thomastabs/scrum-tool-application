@@ -121,6 +121,13 @@ export async function deleteProjectFromDB(id: string) {
 
 // Update sprint functions to work with the fixed foreign key
 export async function createSprintInDB(projectId: string, data: SprintFormData, userId: string) {
+  console.log("Creating sprint with user ID:", userId, "for project:", projectId);
+  
+  if (!userId) {
+    console.error("Cannot create sprint: User ID is null or undefined");
+    throw new Error("User ID is required to create a sprint");
+  }
+  
   // Include the user_id in the sprint creation
   const { data: newSprint, error } = await supabase
     .from('sprints')
@@ -137,16 +144,30 @@ export async function createSprintInDB(projectId: string, data: SprintFormData, 
     .select()
     .single();
   
-  return { data: newSprint, error };
+  if (error) {
+    console.error("Error creating sprint:", error);
+    throw error;
+  }
+  
+  console.log("Sprint created successfully:", newSprint);
+  return { data: newSprint, error: null };
 }
 
 export async function getSprintsFromDB(userId: string) {
+  console.log("Fetching sprints for user ID:", userId);
+  
   // Add filter by user_id to match the foreign key constraint
   const { data, error } = await supabase
     .from('sprints')
     .select('*')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
+  
+  if (error) {
+    console.error("Error fetching sprints:", error);
+  } else {
+    console.log("Fetched sprints:", data);
+  }
   
   return { data, error };
 }

@@ -11,11 +11,12 @@ import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/components/ui/use-toast";
+import ProjectNotFound from "@/components/project/ProjectNotFound";
 
 const SprintPage = () => {
   const { projectId, sprintId } = useParams<{ projectId: string, sprintId: string }>();
   const navigate = useNavigate();
-  const { projects, columns, createColumn, deleteColumn, moveTask, completeSprint } = useProject();
+  const { columns, createColumn, deleteColumn, moveTask, completeSprint } = useProject();
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
@@ -49,40 +50,51 @@ const SprintPage = () => {
       if (!sprintId) return null;
 
       console.log("Fetching sprint details for:", sprintId);
-      const { data, error } = await supabase
-        .from('sprints')
-        .select('*')
-        .eq('id', sprintId)
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from('sprints')
+          .select('*')
+          .eq('id', sprintId)
+          .maybeSingle(); // Use maybeSingle instead of single to handle case when sprint doesn't exist
 
-      if (error) {
-        console.error("Error fetching sprint:", error);
+        if (error) {
+          console.error("Error fetching sprint:", error);
+          throw error;
+        }
+
+        if (!data) {
+          console.error("Sprint not found");
+          return null;
+        }
+
+        console.log("Sprint data retrieved:", data);
+        return {
+          id: data.id,
+          projectId: data.project_id,
+          title: data.title,
+          description: data.description || '',
+          startDate: new Date(data.start_date),
+          endDate: new Date(data.end_date),
+          isCompleted: data.status === 'completed',
+          createdAt: new Date(data.created_at),
+          updatedAt: new Date(data.created_at)
+        } as Sprint;
+      } catch (error) {
+        console.error("Error processing sprint data:", error);
         throw error;
       }
-
-      console.log("Sprint data retrieved:", data);
-      return {
-        id: data.id,
-        projectId: data.project_id,
-        title: data.title,
-        description: data.description || '',
-        startDate: new Date(data.start_date),
-        endDate: new Date(data.end_date),
-        isCompleted: data.status === 'completed',
-        createdAt: new Date(data.created_at),
-        updatedAt: new Date(data.created_at)
-      } as Sprint;
     },
+    meta: {
+      onError: (error: Error) => {
+        console.error("Error in sprint query:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load sprint details. Please try again.",
+          variant: "destructive"
+        });
+      }
+    }
   });
-
-  if (sprintError) {
-    console.error("Error loading sprint:", sprintError);
-    toast({
-      title: "Error",
-      description: "Failed to load sprint details. Please try again.",
-      variant: "destructive"
-    });
-  }
 
   // Only get the ONE instance of each standard column that we need
   const todoColumn = columns.find(column => column.title === "TO DO");
@@ -141,7 +153,7 @@ const SprintPage = () => {
 
   // Check if all tasks are completed
   const allTasksCompleted = () => {
-    if (!doneColumn) return false;
+    if (!doneColumn || !sprintId) return false;
     
     // Count total tasks for this sprint
     const totalTasks = sprintColumns.reduce(
@@ -170,15 +182,19 @@ const SprintPage = () => {
     );
   }
 
-  // Not found states
-  if (!project || !sprint) {
+  // Not found states - more specific error messages
+  if (!project) {
+    return <ProjectNotFound />;
+  }
+
+  if (!sprint) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center py-12">
           <h2 className="text-2xl font-bold mb-4">Sprint Not Found</h2>
-          <p className="mb-6">The sprint you're looking for does not exist.</p>
+          <p className="mb-6">The sprint you're looking for does not exist or has been deleted.</p>
           <Button asChild>
-            <Link to={projectId ? `/my-projects/${projectId}` : "/?tab=projects"}>Go Back</Link>
+            <Link to={`/my-projects/${projectId}`}>Go Back to Project</Link>
           </Button>
         </div>
       </div>
