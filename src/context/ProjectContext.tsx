@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useReducer, useEffect } from "react";
 import { ProjectContextType } from "@/types";
 import { projectReducer, initialState } from "./projectReducer";
@@ -105,8 +106,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           description: sprintData.description,
           start_date: sprintData.startDate.toISOString(),
           end_date: sprintData.endDate.toISOString(),
-          status: 'active'
-          // justification field removed as it doesn't exist in the database schema
+          duration: Math.ceil((sprintData.endDate.getTime() - sprintData.startDate.getTime()) / (1000 * 60 * 60 * 24))
+          // removed status and justification fields
         }).select().single();
         
         if (error) {

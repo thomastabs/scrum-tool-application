@@ -191,7 +191,7 @@ export async function createSprintInDB(projectId: string, data: SprintFormData, 
   }
   
   try {
-    // Remove 'justification' field from the insert payload since it doesn't exist in the DB
+    // Remove 'status' field from the insert payload since it doesn't exist in the DB
     const { data: newSprint, error } = await supabase
       .from('sprints')
       .insert({
@@ -201,8 +201,8 @@ export async function createSprintInDB(projectId: string, data: SprintFormData, 
         description: data.description,
         start_date: data.startDate.toISOString(),
         end_date: data.endDate.toISOString(),
-        status: 'active'
-        // justification field removed as it doesn't exist in the DB
+        duration: Math.ceil((data.endDate.getTime() - data.startDate.getTime()) / (1000 * 60 * 60 * 24))
+        // status and justification fields removed as they don't exist in the DB
       })
       .select()
       .single();
