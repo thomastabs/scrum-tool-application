@@ -45,7 +45,7 @@ const SprintCard: React.FC<SprintCardProps> = ({ sprint, projectId, onEdit }) =>
       </CardHeader>
       <CardContent>
         <p className="text-sm line-clamp-2">
-          {sprint.description}
+          {sprint.description || ""}
         </p>
       </CardContent>
       <CardFooter className="flex justify-between pt-0">

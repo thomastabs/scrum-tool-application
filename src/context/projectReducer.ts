@@ -1,3 +1,4 @@
+
 import { State, Action } from "./projectTypes";
 import { Task } from "@/types";
 
@@ -191,7 +192,7 @@ export const projectReducer = (state: State, action: Action): State => {
       const newTask: Task = {
         id: backlogItemId,
         title: backlogItem.title,
-        description: backlogItem.description || "",
+        description: backlogItem.description,
         priority: backlogItem.priority || "medium",
         storyPoints: backlogItem.storyPoints || 1,
         sprintId,

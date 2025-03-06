@@ -102,7 +102,7 @@ const ProjectDetailPage = () => {
             setShowSprintForm(false);
             setSprintToEdit(null);
           }}
-          sprintToEdit={sprintToEdit || undefined}
+          sprintToEdit={sprintToEdit}
         />
       )}
 
@@ -112,8 +112,8 @@ const ProjectDetailPage = () => {
           projectToEdit={{
             id: project.id,
             title: project.title,
-            description: project.description,
-            endGoal: project.endGoal,
+            description: project.description || "",
+            endGoal: project.endGoal || "",
           }}
         />
       )}
