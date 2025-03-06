@@ -1,12 +1,12 @@
-
+<lov-codelov-code>
 import React, { useState } from "react";
 import { useParams } from "react-router-dom";
-import TaskCard from "@/components/TaskCard"; // Fixed import path
+import TaskCard from "@/components/TaskCard";
 import TaskForm from "./TaskForm";
 import { useProject } from "@/context/ProjectContext";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
-import { Task } from "@/types";
+import { Task, BoardColumn } from "@/types"; // Updated import to use BoardColumn
 import SprintColumn from "./sprint/SprintColumn";
 import AddColumn from "./sprint/AddColumn";
 
@@ -21,9 +21,20 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprintId }) => {
   const [selectedColumnId, setSelectedColumnId] = useState<string | null>(null);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
 
-  const sprintColumns = columns.filter(
+  const columnsBySprintId = columns.filter(
     (column) => column.tasks.find((task) => task.sprintId === sprintId)
   );
+
+  // Convert columns to BoardColumn format for compatibility
+  const sprintColumns: BoardColumn[] = columnsBySprintId.map(col => ({
+    id: col.id,
+    title: col.title,
+    order_index: col.order_index || 0,
+    sprint_id: sprintId,
+    tasks: col.tasks.filter(task => task.sprintId === sprintId),
+    created_at: col.created_at || col.createdAt,
+    isDefault: col.isDefault || ['TO DO', 'IN PROGRESS', 'DONE'].includes(col.title)
+  }));
 
   const handleCreateTask = (columnId: string) => {
     setSelectedColumnId(columnId);
@@ -77,9 +88,7 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprintId }) => {
           handleDragOver={handleDragOver}
           handleDrop={handleDrop}
           isDefaultColumn={
-            column.title === "TO DO" || 
-            column.title === "IN PROGRESS" || 
-            column.title === "DONE"
+            column.isDefault || ['TO DO', 'IN PROGRESS', 'DONE'].includes(column.title)
           }
         />
       ))}
@@ -98,3 +107,4 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprintId }) => {
 };
 
 export default SprintBoard;
+</lov-code>

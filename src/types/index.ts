@@ -1,4 +1,3 @@
-
 export interface ProjectFormData {
   title: string;
   description?: string;
@@ -57,13 +56,17 @@ export interface BoardColumn {
   isDefault?: boolean;
 }
 
-// Define Column interface that was missing
+// Update Column interface to match BoardColumn structure
 export interface Column {
   id: string;
   title: string;
   tasks: Task[];
+  order_index: number;
+  sprint_id: string;
+  created_at: Date;
   createdAt: Date;
   updatedAt: Date;
+  isDefault?: boolean;
 }
 
 export interface BacklogItemFormData {

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useProject } from "@/context/ProjectContext";
-import { Task } from "@/types";
+import { Task, BoardColumn } from "@/types"; // Updated import to use BoardColumn
 import TaskForm from "./TaskForm";
 import { Button } from "@/components/ui/button";
 import SprintColumn from "./sprint/SprintColumn";
@@ -44,13 +44,24 @@ const Project = () => {
     column.tasks.some(task => task.sprintId === sprint.id)
   );
 
+  // Convert columns to BoardColumn format for compatibility
+  const convertToBoard = (col: typeof columns[0]): BoardColumn => ({
+    id: col.id,
+    title: col.title,
+    order_index: col.order_index || 0,
+    sprint_id: sprint.id,
+    tasks: col.tasks.filter(task => task.sprintId === sprint.id),
+    created_at: col.created_at || col.createdAt,
+    isDefault: col.isDefault || ['TO DO', 'IN PROGRESS', 'DONE'].includes(col.title)
+  });
+
   // Combine all columns used by this sprint
   const sprintColumns = [
     todoColumn,
     inProgressColumn,
     doneColumn,
     ...customColumns
-  ].filter(Boolean);
+  ].filter(Boolean).map(convertToBoard);
 
   const handleEditTask = (task: Task) => {
     setTaskToEdit(task);
@@ -114,11 +125,7 @@ const Project = () => {
             onDeleteColumn={handleDeleteColumn}
             handleDragOver={handleDragOver}
             handleDrop={handleDrop}
-            isDefaultColumn={
-              column.title === "TO DO" || 
-              column.title === "IN PROGRESS" || 
-              column.title === "DONE"
-            }
+            isDefaultColumn={column.isDefault || false}
           />
         ))}
 
