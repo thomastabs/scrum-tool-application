@@ -44,100 +44,33 @@ export type Database = {
           },
         ]
       }
-      collaborators: {
-        Row: {
-          created_at: string
-          id: string
-          project_id: string
-          role: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          project_id: string
-          role?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          project_id?: string
-          role?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "collaborators_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      invitations: {
-        Row: {
-          created_at: string
-          id: string
-          invited_email: string
-          inviter_id: string
-          project_id: string
-          role: string
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          invited_email: string
-          inviter_id: string
-          project_id: string
-          role?: string
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          invited_email?: string
-          inviter_id?: string
-          project_id?: string
-          role?: string
-          status?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "invitations_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       projects: {
         Row: {
+          collaborators: string[] | null
           created_at: string
           description: string | null
+          end_goal: string | null
           id: string
+          owner_id: string
           title: string
-          user_id: string
         }
         Insert: {
+          collaborators?: string[] | null
           created_at?: string
           description?: string | null
+          end_goal?: string | null
           id?: string
+          owner_id: string
           title: string
-          user_id: string
         }
         Update: {
+          collaborators?: string[] | null
           created_at?: string
           description?: string | null
+          end_goal?: string | null
           id?: string
+          owner_id?: string
           title?: string
-          user_id?: string
         }
         Relationships: []
       }
