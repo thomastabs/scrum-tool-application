@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useProject } from "@/context/ProjectContext";
 import { Task } from "@/types";
@@ -8,6 +8,8 @@ import SprintHeader from "@/components/sprint/SprintHeader";
 import SprintColumn from "@/components/sprint/SprintColumn";
 import AddColumn from "@/components/sprint/AddColumn";
 import { Button } from "@/components/ui/button";
+import { getColumnsForSprint, createColumnInDB, deleteColumnFromDB } from "@/lib/supabase";
+import { toast } from "@/components/ui/use-toast";
 
 const SprintPage = () => {
   const { projectId, sprintId } = useParams<{ projectId: string, sprintId: string }>();
@@ -16,10 +18,44 @@ const SprintPage = () => {
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
+  const [localColumns, setLocalColumns] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Find the project and sprint
   const project = projects.find(p => p.id === projectId);
   const sprint = sprints.find(s => s.id === sprintId);
+
+  useEffect(() => {
+    if (sprintId) {
+      const fetchColumns = async () => {
+        setIsLoading(true);
+        const { data, error } = await getColumnsForSprint(sprintId);
+        
+        if (error) {
+          toast({
+            title: "Error fetching columns",
+            description: error.message,
+            variant: "destructive"
+          });
+        } else if (data) {
+          // Format columns to match the expected structure
+          const formattedColumns = data.map(col => ({
+            id: col.id,
+            title: col.title,
+            isDefault: col.is_default,
+            tasks: columns
+              .flatMap(c => c.tasks)
+              .filter(task => task.sprintId === sprintId)
+              .filter(task => task.columnId === col.id) || []
+          }));
+          setLocalColumns(formattedColumns);
+        }
+        setIsLoading(false);
+      };
+
+      fetchColumns();
+    }
+  }, [sprintId, columns]);
 
   if (!project || !sprint) {
     return (
@@ -34,27 +70,6 @@ const SprintPage = () => {
       </div>
     );
   }
-
-  // Only get the ONE instance of each standard column that we need
-  const todoColumn = columns.find(column => column.title === "TO DO");
-  const inProgressColumn = columns.find(column => column.title === "IN PROGRESS");
-  const doneColumn = columns.find(column => column.title === "DONE");
-
-  // Get custom columns that have tasks for this sprint
-  const customColumns = columns.filter(column => 
-    column.title !== "TO DO" && 
-    column.title !== "IN PROGRESS" && 
-    column.title !== "DONE" &&
-    column.tasks.some(task => task.sprintId === sprint.id)
-  );
-
-  // Combine all columns used by this sprint
-  const sprintColumns = [
-    todoColumn,
-    inProgressColumn,
-    doneColumn,
-    ...customColumns
-  ].filter(Boolean) as any[];
 
   const handleEditTask = (task: Task) => {
     setTaskToEdit(task);
@@ -86,22 +101,66 @@ const SprintPage = () => {
     }
   };
 
-  const handleAddColumn = (name: string) => {
-    createColumn(name);
+  const handleAddColumn = async (name: string) => {
+    try {
+      const { data, error } = await createColumnInDB(sprint.id, name);
+      if (error) {
+        toast({
+          title: "Error creating column",
+          description: error.message,
+          variant: "destructive"
+        });
+      } else if (data) {
+        // Add column to local state
+        setLocalColumns(prev => [...prev, {
+          id: data.id,
+          title: data.title,
+          isDefault: data.is_default,
+          tasks: []
+        }]);
+        // Also add to global state
+        createColumn(name);
+      }
+    } catch (error) {
+      console.error("Error creating column:", error);
+    }
+  };
+
+  const handleDeleteColumn = async (columnId: string) => {
+    try {
+      const { error } = await deleteColumnFromDB(columnId);
+      if (error) {
+        toast({
+          title: "Error deleting column",
+          description: error.message,
+          variant: "destructive"
+        });
+      } else {
+        // Remove from local state
+        setLocalColumns(prev => prev.filter(col => col.id !== columnId));
+        // Also remove from global state
+        deleteColumn(columnId);
+      }
+    } catch (error) {
+      console.error("Error deleting column:", error);
+    }
   };
 
   // Check if all tasks are completed
   const allTasksCompleted = () => {
+    const doneColumn = localColumns.find(column => column.title === "DONE");
     if (!doneColumn) return false;
     
-    // Count total tasks for this sprint
-    const totalTasks = sprintColumns.reduce(
-      (count, column) => count + column.tasks.filter(task => task.sprintId === sprint.id).length,
-      0
+    // Get all tasks for this sprint
+    const sprintTasks = columns.flatMap(col => 
+      col.tasks.filter(task => task.sprintId === sprint.id)
     );
     
+    // Count total tasks for this sprint
+    const totalTasks = sprintTasks.length;
+    
     // Count tasks in DONE column
-    const doneTasks = doneColumn.tasks.filter(task => task.sprintId === sprint.id).length;
+    const doneTasks = doneColumn.tasks.length;
     
     // If there are no tasks, sprint can't be completed
     if (totalTasks === 0) return false;
@@ -109,6 +168,14 @@ const SprintPage = () => {
     // Check if all tasks are in DONE column
     return doneTasks === totalTasks;
   };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-center items-center h-64">Loading columns...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -127,21 +194,17 @@ const SprintPage = () => {
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-        {sprintColumns.map((column) => (
+        {localColumns.map((column) => (
           <SprintColumn 
             key={column.id}
             column={column}
             sprintId={sprint.id}
             onAddTask={handleAddTask}
             onEditTask={handleEditTask}
-            onDeleteColumn={deleteColumn}
+            onDeleteColumn={handleDeleteColumn}
             handleDragOver={handleDragOver}
             handleDrop={handleDrop}
-            isDefaultColumn={
-              column.title === "TO DO" || 
-              column.title === "IN PROGRESS" || 
-              column.title === "DONE"
-            }
+            isDefaultColumn={column.isDefault}
           />
         ))}
 
