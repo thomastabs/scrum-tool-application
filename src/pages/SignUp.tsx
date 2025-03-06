@@ -70,11 +70,12 @@ const SignUp: React.FC = () => {
         variant: "destructive"
       });
     } else {
-      setEmailSent(true);
+      // We've configured Supabase to not require email verification
       toast({
         title: "Sign up successful",
-        description: "Please check your email to verify your account"
+        description: "Your account has been created. You can now sign in."
       });
+      navigate("/sign-in");
     }
   };
 
@@ -101,68 +102,52 @@ const SignUp: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {emailSent ? (
-              <Alert>
-                <AlertDescription className="text-center py-4">
-                  <p className="mb-4">Verification email sent to <strong>{email}</strong></p>
-                  <p>Please check your inbox and click the link to verify your email address.</p>
-                  <Button 
-                    variant="outline" 
-                    className="mt-4"
-                    onClick={() => navigate("/sign-in")}
-                  >
-                    Go to Sign In
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            ) : (
-              <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input 
-                    id="email" 
-                    type="email" 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="your@email.com" 
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input 
-                    id="password" 
-                    type="password" 
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground">Must be at least 6 characters</p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm Password</Label>
-                  <Input 
-                    id="confirmPassword" 
-                    type="password" 
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Signing up...' : 'Sign Up'}
-                </Button>
+            <form onSubmit={handleSignUp} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input 
+                  id="email" 
+                  type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your@email.com" 
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input 
+                  id="password" 
+                  type="password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">Must be at least 6 characters</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Input 
+                  id="confirmPassword" 
+                  type="password" 
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Signing up...' : 'Sign Up'}
+              </Button>
 
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">
-                    Already have an account?{" "}
-                    <Link to="/sign-in" className="text-primary hover:underline">
-                      Sign in
-                    </Link>
-                  </p>
-                </div>
-              </form>
-            )}
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">
+                  Already have an account?{" "}
+                  <Link to="/sign-in" className="text-primary hover:underline">
+                    Sign in
+                  </Link>
+                </p>
+              </div>
+            </form>
           </CardContent>
         </Card>
       </main>

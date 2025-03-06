@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { ProjectFormData, SprintFormData } from '@/types';
 
@@ -12,9 +11,17 @@ export async function signUp(email: string, password: string) {
     email,
     password,
     options: {
+      // Set emailRedirectTo to current origin for if email confirmation is enabled
       emailRedirectTo: `${window.location.origin}/`,
+      // We're not using email confirmation, so we don't need to set this
+      // data: { email_confirm: false } 
     }
   });
+  
+  // If the signup is successful but email confirmation is required, let the user know
+  if (data?.user && !data.session) {
+    console.log("Email confirmation required. Check your inbox.");
+  }
   
   return { data, error };
 }
@@ -208,4 +215,3 @@ export async function deleteSprintFromDB(id: string) {
   
   return { error };
 }
-
