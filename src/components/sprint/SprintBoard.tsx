@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { Sprint, Task } from "@/types";
+import { Sprint, Task, BoardColumn } from "@/types";
 import { useProject } from "@/context/ProjectContext";
 import { Button } from "@/components/ui/button";
 import { ArrowLeftIcon } from "lucide-react";
@@ -21,7 +21,7 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint, onClose }) => {
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
-  const [localColumns, setLocalColumns] = useState<any[]>([]);
+  const [localColumns, setLocalColumns] = useState<BoardColumn[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -38,13 +38,12 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint, onClose }) => {
       } else if (data) {
         // Format columns to match the expected structure
         const formattedColumns = data.map(col => ({
-          id: col.id,
-          title: col.title,
-          isDefault: col.is_default,
+          ...col,
           tasks: columns
             .flatMap(c => c.tasks)
             .filter(task => task.sprintId === sprint.id)
-            .filter(task => task.columnId === col.id) || []
+            .filter(task => task.columnId === col.id) || [],
+          isDefault: ['TO DO', 'IN PROGRESS', 'DONE'].includes(col.title)
         }));
         setLocalColumns(formattedColumns);
       }
@@ -121,10 +120,9 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint, onClose }) => {
       } else if (data) {
         // Add column to local state
         setLocalColumns(prev => [...prev, {
-          id: data.id,
-          title: data.title,
-          isDefault: data.is_default,
-          tasks: []
+          ...data,
+          tasks: [],
+          isDefault: false
         }]);
         // Also add to global state
         createColumn(name);
@@ -185,7 +183,7 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint, onClose }) => {
             onDeleteColumn={handleDeleteColumn}
             handleDragOver={handleDragOver}
             handleDrop={handleDrop}
-            isDefaultColumn={column.isDefault}
+            isDefaultColumn={column.isDefault || false}
           />
         ))}
 

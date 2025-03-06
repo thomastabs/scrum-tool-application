@@ -2,56 +2,38 @@
 import { supabase } from './client';
 
 export async function getColumnsForSprint(sprintId: string) {
-  const { data, error } = await supabase
-    .from('kanban_columns')
+  return await supabase
+    .from('board_columns')
     .select('*')
     .eq('sprint_id', sprintId)
-    .order('position', { ascending: true });
-  
-  return { data, error };
+    .order('order_index');
 }
 
 export async function createColumnInDB(sprintId: string, title: string) {
-  // Get the highest position value
+  // Get the highest order_index
   const { data: columns } = await supabase
-    .from('kanban_columns')
-    .select('position')
+    .from('board_columns')
+    .select('order_index')
     .eq('sprint_id', sprintId)
-    .order('position', { ascending: false })
+    .order('order_index', { ascending: false })
     .limit(1);
   
-  const position = columns && columns.length > 0 ? columns[0].position + 1 : 0;
+  const nextOrderIndex = columns && columns.length > 0 ? columns[0].order_index + 1 : 0;
   
-  const { data: newColumn, error } = await supabase
-    .from('kanban_columns')
+  return await supabase
+    .from('board_columns')
     .insert({
-      sprint_id: sprintId,
       title,
-      position,
-      is_default: false
+      sprint_id: sprintId,
+      order_index: nextOrderIndex,
     })
     .select()
     .single();
-  
-  return { data: newColumn, error };
 }
 
 export async function deleteColumnFromDB(columnId: string) {
-  // Check if it's a default column
-  const { data: column } = await supabase
-    .from('kanban_columns')
-    .select('is_default')
-    .eq('id', columnId)
-    .single();
-  
-  if (column && column.is_default) {
-    return { error: new Error('Cannot delete default columns') };
-  }
-  
-  const { error } = await supabase
-    .from('kanban_columns')
+  return await supabase
+    .from('board_columns')
     .delete()
     .eq('id', columnId);
-  
-  return { error };
 }

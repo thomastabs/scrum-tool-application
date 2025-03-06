@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useProject } from "@/context/ProjectContext";
-import { Task } from "@/types";
+import { Task, BoardColumn } from "@/types";
 import TaskForm from "@/components/TaskForm";
 import SprintHeader from "@/components/sprint/SprintHeader";
 import SprintColumn from "@/components/sprint/SprintColumn";
@@ -18,7 +18,7 @@ const SprintPage = () => {
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
-  const [localColumns, setLocalColumns] = useState<any[]>([]);
+  const [localColumns, setLocalColumns] = useState<BoardColumn[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Find the project and sprint
@@ -40,13 +40,12 @@ const SprintPage = () => {
         } else if (data) {
           // Format columns to match the expected structure
           const formattedColumns = data.map(col => ({
-            id: col.id,
-            title: col.title,
-            isDefault: col.is_default,
+            ...col,
             tasks: columns
               .flatMap(c => c.tasks)
               .filter(task => task.sprintId === sprintId)
-              .filter(task => task.columnId === col.id) || []
+              .filter(task => task.columnId === col.id) || [],
+            isDefault: ['TO DO', 'IN PROGRESS', 'DONE'].includes(col.title)
           }));
           setLocalColumns(formattedColumns);
         }
@@ -113,10 +112,9 @@ const SprintPage = () => {
       } else if (data) {
         // Add column to local state
         setLocalColumns(prev => [...prev, {
-          id: data.id,
-          title: data.title,
-          isDefault: data.is_default,
-          tasks: []
+          ...data,
+          tasks: [],
+          isDefault: false
         }]);
         // Also add to global state
         createColumn(name);
@@ -204,7 +202,7 @@ const SprintPage = () => {
             onDeleteColumn={handleDeleteColumn}
             handleDragOver={handleDragOver}
             handleDrop={handleDrop}
-            isDefaultColumn={column.isDefault}
+            isDefaultColumn={column.isDefault || false}
           />
         ))}
 
