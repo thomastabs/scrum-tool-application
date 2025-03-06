@@ -12,26 +12,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { PlusIcon, ExternalLinkIcon, LogOut } from "lucide-react";
+import { PlusIcon, ExternalLinkIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { supabase, signOut } from "@/lib/supabase";
-import { toast } from "@/components/ui/use-toast";
-import ProfileDashboard from "@/components/ProfileDashboard";
 
 const Index = () => {
   const { projects, selectedProject, selectProject } = useProject();
   const [showProjectForm, setShowProjectForm] = useState(false);
-  const [user, setUser] = useState<any>(null);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const getUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      setUser(data.user);
-    };
-    
-    getUser();
-  }, []);
 
   // Redirect to project detail page when a project is selected
   useEffect(() => {
@@ -39,19 +26,6 @@ const Index = () => {
       navigate(`/my-projects/${selectedProject.id}`);
     }
   }, [selectedProject, navigate]);
-
-  const handleSignOut = async () => {
-    const { error } = await signOut();
-    if (error) {
-      toast({
-        title: "Error signing out",
-        description: error.message,
-        variant: "destructive"
-      });
-    } else {
-      navigate("/sign-in");
-    }
-  };
 
   // If we have a selected project, render nothing as we'll redirect in the useEffect
   if (selectedProject) {
@@ -69,13 +43,6 @@ const Index = () => {
             </p>
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm">{user?.email}</span>
-              <ProfileDashboard user={user} />
-              <Button variant="outline" size="sm" onClick={handleSignOut}>
-                <LogOut className="h-4 w-4 mr-1" /> Sign Out
-              </Button>
-            </div>
             <Button onClick={() => setShowProjectForm(true)}>
               <PlusIcon className="h-4 w-4 mr-1" /> New Project
             </Button>
