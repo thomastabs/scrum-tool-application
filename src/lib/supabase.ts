@@ -76,8 +76,12 @@ export async function getProjectsFromDB() {
   // Get the current user session
   const { data: session } = await supabase.auth.getSession();
   if (!session.session) {
+    console.log('No active session found when fetching projects');
     return { data: [], error: new Error('No active session') };
   }
+  
+  // Log the user ID we're searching for
+  console.log('Fetching projects for user:', session.session.user.id);
   
   // Fetch only projects owned by the current user
   const { data, error } = await supabase
@@ -85,6 +89,10 @@ export async function getProjectsFromDB() {
     .select('*')
     .eq('owner_id', session.session.user.id)
     .order('created_at', { ascending: false });
+  
+  // Log the results
+  console.log('Fetched projects:', data);
+  console.log('Fetch error:', error);
   
   return { data, error };
 }
