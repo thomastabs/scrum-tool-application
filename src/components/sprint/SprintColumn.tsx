@@ -1,12 +1,12 @@
 
 import React from "react";
-import { BoardColumn, Task } from "@/types";
+import { Column, Task } from "@/types";
 import TaskCard from "../TaskCard";
 import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
 
 interface SprintColumnProps {
-  column: BoardColumn;
+  column: Column;
   sprintId: string;
   onAddTask: (columnId: string) => void;
   onEditTask: (task: Task) => void;

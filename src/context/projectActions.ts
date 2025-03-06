@@ -91,8 +91,7 @@ export const createTask = (sprintId: string, columnId: string, taskData: TaskFor
     ...taskData,
     id: uuidv4(),
     columnId,
-    sprintId, // Ensuring the sprintId foreign key is set correctly
-    projectId: "", // This will be set correctly in the context before saving
+    sprintId,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -136,17 +135,13 @@ export const updateTask = (id: string, taskData: TaskFormData, columns: Column[]
 };
 
 // Column actions
-export const createColumn = (title: string, sprintId: string = "") => {
+export const createColumn = (title: string) => {
   const newColumn: Column = {
     id: uuidv4(),
     title,
     tasks: [],
-    order_index: 0, // Default order index
-    sprint_id: sprintId, // Set the sprint ID
-    created_at: new Date(), // Match the database field name
     createdAt: new Date(),
     updatedAt: new Date(),
-    isDefault: false
   };
   
   toast({

@@ -1,8 +1,9 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { ProjectFormData, SprintFormData } from '@/types';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://cgbjynxpgpriccapjbed.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNnYmp5bnhwZ3ByaWNjYXBqYmVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEyNzQxMTAsImV4cCI6MjA1Njg1MDExMH0.UYJAgQ9X_hYwQ-8pGmIlAD_9q_DuF2t365xQA9_m4iE';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://btutiksghrrxrxqxwlnk.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ0dXRpa3NnaHJyeHJ4cXh3bG5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA3NDk2ODUsImV4cCI6MjA1NjMyNTY4NX0.SSAGtVl0jMLM9v6isoC4oZOZ-Q92nLNZO2RMOUZeyaE';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -137,7 +138,6 @@ export async function createSprintInDB(projectId: string, data: SprintFormData) 
     return { data: null, error: new Error('User not authenticated') };
   }
 
-  // First, create the sprint
   const { data: newSprint, error } = await supabase
     .from('sprints')
     .insert({
@@ -152,30 +152,7 @@ export async function createSprintInDB(projectId: string, data: SprintFormData) 
     .select()
     .single();
   
-  if (error || !newSprint) {
-    return { data: null, error: error || new Error('Failed to create sprint') };
-  }
-  
-  // Then create the default columns
-  const defaultColumns = [
-    { title: 'TO DO', position: 0, is_default: true },
-    { title: 'IN PROGRESS', position: 1, is_default: true },
-    { title: 'DONE', position: 2, is_default: true }
-  ];
-  
-  // Create the columns
-  for (const column of defaultColumns) {
-    await supabase
-      .from('kanban_columns')
-      .insert({
-        sprint_id: newSprint.id,
-        title: column.title,
-        position: column.position,
-        is_default: column.is_default
-      });
-  }
-  
-  return { data: newSprint, error: null };
+  return { data: newSprint, error };
 }
 
 export async function getSprintsFromDB() {
@@ -232,57 +209,3 @@ export async function deleteSprintFromDB(id: string) {
   return { error };
 }
 
-export async function getColumnsForSprint(sprintId: string) {
-  const { data, error } = await supabase
-    .from('kanban_columns')
-    .select('*')
-    .eq('sprint_id', sprintId)
-    .order('position', { ascending: true });
-  
-  return { data, error };
-}
-
-export async function createColumnInDB(sprintId: string, title: string) {
-  // Get the highest position value
-  const { data: columns } = await supabase
-    .from('kanban_columns')
-    .select('position')
-    .eq('sprint_id', sprintId)
-    .order('position', { ascending: false })
-    .limit(1);
-  
-  const position = columns && columns.length > 0 ? columns[0].position + 1 : 0;
-  
-  const { data: newColumn, error } = await supabase
-    .from('kanban_columns')
-    .insert({
-      sprint_id: sprintId,
-      title,
-      position,
-      is_default: false
-    })
-    .select()
-    .single();
-  
-  return { data: newColumn, error };
-}
-
-export async function deleteColumnFromDB(columnId: string) {
-  // Check if it's a default column
-  const { data: column } = await supabase
-    .from('kanban_columns')
-    .select('is_default')
-    .eq('id', columnId)
-    .single();
-  
-  if (column && column.is_default) {
-    return { error: new Error('Cannot delete default columns') };
-  }
-  
-  const { error } = await supabase
-    .from('kanban_columns')
-    .delete()
-    .eq('id', columnId);
-  
-  return { error };
-}

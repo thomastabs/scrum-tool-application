@@ -34,39 +34,22 @@ export interface TaskFormData {
   priority?: 'low' | 'medium' | 'high';
   storyPoints?: number;
   assignee?: string;
-  status?: 'to_do' | 'in_progress' | 'done';
 }
 
 export interface Task extends TaskFormData {
   id: string;
   sprintId: string;
   columnId: string;
-  projectId: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface BoardColumn {
-  id: string;
-  title: string;
-  order_index: number;
-  sprint_id: string;
-  tasks: Task[];
-  created_at: Date;
-  isDefault?: boolean;
-}
-
-// Update Column interface to match BoardColumn structure
 export interface Column {
   id: string;
   title: string;
   tasks: Task[];
-  order_index: number;
-  sprint_id: string;
-  created_at: Date;
   createdAt: Date;
   updatedAt: Date;
-  isDefault?: boolean;
 }
 
 export interface BacklogItemFormData {

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useReducer, useEffect } from "react";
 import { ProjectContextType } from "@/types";
 import { projectReducer, initialState } from "./projectReducer";
@@ -134,12 +135,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     
     createTask: (sprintId, columnId, taskData) => {
       const newTask = createTask(sprintId, columnId, taskData);
-      
-      // Set the projectId based on the selected project
-      if (state.selectedProject) {
-        newTask.projectId = state.selectedProject.id;
-      }
-      
       dispatch({ type: "ADD_TASK", payload: newTask });
     },
     
@@ -165,15 +160,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
     },
     
-    createColumn: (title: string) => {
-      // We need to determine which sprint this column belongs to
-      // If we have sprints for the selected project, use the first one
-      const projectSprints = state.sprints.filter(s => 
-        state.selectedProject && s.projectId === state.selectedProject.id
-      );
-      const sprintId = projectSprints.length > 0 ? projectSprints[0].id : "";
-      
-      const newColumn = createColumn(title, sprintId);
+    createColumn: (title) => {
+      const newColumn = createColumn(title);
       dispatch({ type: "ADD_COLUMN", payload: newColumn });
     },
     
