@@ -14,6 +14,11 @@ import {
   updateBacklogItem 
 } from "./projectActions";
 import { toast } from "@/components/ui/use-toast";
+import { 
+  deleteAllProjectsFromDB,
+  deleteProjectFromDB,
+  deleteSprintFromDB
+} from "@/lib/supabase";
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
@@ -51,11 +56,42 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     },
     
     deleteProject: (id) => {
-      dispatch({ type: "REMOVE_PROJECT", payload: id });
-      toast({
-        title: "Project deleted",
-        description: "Project has been deleted successfully."
-      });
+      deleteProjectFromDB(id)
+        .then(({ error }) => {
+          if (error) {
+            toast({
+              title: "Error deleting project",
+              description: error.message,
+              variant: "destructive"
+            });
+          } else {
+            dispatch({ type: "REMOVE_PROJECT", payload: id });
+            toast({
+              title: "Project deleted",
+              description: "Project has been deleted successfully."
+            });
+          }
+        });
+    },
+    
+    deleteAllProjects: () => {
+      deleteAllProjectsFromDB()
+        .then(({ error }) => {
+          if (error) {
+            toast({
+              title: "Error deleting projects",
+              description: error.message,
+              variant: "destructive"
+            });
+          } else {
+            // Clear all projects from state
+            dispatch({ type: "CLEAR_ALL_PROJECTS" });
+            toast({
+              title: "All projects deleted",
+              description: "All projects have been deleted successfully."
+            });
+          }
+        });
     },
     
     createSprint: (sprintData) => {
@@ -71,11 +107,22 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     },
     
     deleteSprint: (id) => {
-      dispatch({ type: "REMOVE_SPRINT", payload: id });
-      toast({
-        title: "Sprint deleted",
-        description: "Sprint has been deleted successfully."
-      });
+      deleteSprintFromDB(id)
+        .then(({ error }) => {
+          if (error) {
+            toast({
+              title: "Error deleting sprint",
+              description: error.message,
+              variant: "destructive"
+            });
+          } else {
+            dispatch({ type: "REMOVE_SPRINT", payload: id });
+            toast({
+              title: "Sprint deleted",
+              description: "Sprint has been deleted successfully."
+            });
+          }
+        });
     },
     
     completeSprint: (id) => {

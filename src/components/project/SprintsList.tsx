@@ -10,13 +10,15 @@ interface SprintsListProps {
   projectId: string;
   onCreateSprint: () => void;
   onEditSprint: (sprint: Sprint) => void;
+  onViewSprint: (sprint: Sprint) => void;
 }
 
 const SprintsList: React.FC<SprintsListProps> = ({ 
   sprints, 
   projectId, 
   onCreateSprint, 
-  onEditSprint 
+  onEditSprint,
+  onViewSprint
 }) => {
   if (sprints.length === 0) {
     return (
@@ -40,6 +42,7 @@ const SprintsList: React.FC<SprintsListProps> = ({
           sprint={sprint}
           projectId={projectId}
           onEdit={onEditSprint}
+          onViewSprint={onViewSprint}
         />
       ))}
     </div>

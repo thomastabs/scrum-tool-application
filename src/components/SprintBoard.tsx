@@ -1,51 +1,37 @@
 
 import React, { useState } from "react";
-import { useProject } from "@/context/ProjectContext";
-import { Sprint, Task, Column } from "@/types";
+import { useParams } from "react-router-dom";
+import TaskCard from "@/components/TaskCard"; // Fixed import path
 import TaskForm from "./TaskForm";
-import SprintHeader from "./sprint/SprintHeader";
+import { useProject } from "@/context/ProjectContext";
+import { Button } from "@/components/ui/button";
+import { PlusIcon } from "lucide-react";
+import { Task } from "@/types";
 import SprintColumn from "./sprint/SprintColumn";
 import AddColumn from "./sprint/AddColumn";
 
 interface SprintBoardProps {
-  sprint: Sprint;
+  sprintId: string;
 }
 
-const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
-  const { columns, createColumn, deleteColumn, moveTask, completeSprint } = useProject();
+const SprintBoard: React.FC<SprintBoardProps> = ({ sprintId }) => {
+  const { columns, createTask, createColumn, deleteColumn, moveTask } = useProject();
+  const { projectId } = useParams<{ projectId: string }>();
   const [showTaskForm, setShowTaskForm] = useState(false);
+  const [selectedColumnId, setSelectedColumnId] = useState<string | null>(null);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
-  const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
 
-  // Only get the ONE instance of each standard column that we need
-  const todoColumn = columns.find(column => column.title === "TO DO");
-  const inProgressColumn = columns.find(column => column.title === "IN PROGRESS");
-  const doneColumn = columns.find(column => column.title === "DONE");
-
-  // Get custom columns that have tasks for this sprint
-  const customColumns = columns.filter(column => 
-    column.title !== "TO DO" && 
-    column.title !== "IN PROGRESS" && 
-    column.title !== "DONE" &&
-    column.tasks.some(task => task.sprintId === sprint.id)
+  const sprintColumns = columns.filter(
+    (column) => column.tasks.find((task) => task.sprintId === sprintId)
   );
 
-  // Combine all columns used by this sprint
-  const sprintColumns = [
-    todoColumn,
-    inProgressColumn,
-    doneColumn,
-    ...customColumns
-  ].filter(Boolean) as Column[];
-
-  const handleEditTask = (task: Task) => {
-    setTaskToEdit(task);
+  const handleCreateTask = (columnId: string) => {
+    setSelectedColumnId(columnId);
     setShowTaskForm(true);
   };
 
-  const handleAddTask = (columnId: string) => {
-    setActiveColumnId(columnId);
-    setTaskToEdit(null);
+  const handleEditTask = (task: Task) => {
+    setTaskToEdit(task);
     setShowTaskForm(true);
   };
 
@@ -72,65 +58,39 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
     createColumn(name);
   };
 
-  // Check if all tasks are completed
-  const allTasksCompleted = () => {
-    if (!doneColumn) return false;
-    
-    // Count total tasks for this sprint
-    const totalTasks = sprintColumns.reduce(
-      (count, column) => count + column.tasks.filter(task => task.sprintId === sprint.id).length,
-      0
-    );
-    
-    // Count tasks in DONE column
-    const doneTasks = doneColumn.tasks.filter(task => task.sprintId === sprint.id).length;
-    
-    // If there are no tasks, sprint can't be completed
-    if (totalTasks === 0) return false;
-    
-    // Check if all tasks are in DONE column
-    return doneTasks === totalTasks;
+  const closeTaskForm = () => {
+    setShowTaskForm(false);
+    setSelectedColumnId(null);
+    setTaskToEdit(null);
   };
 
   return (
-    <div className="p-4">
-      <SprintHeader 
-        sprint={sprint} 
-        canComplete={allTasksCompleted()} 
-        onCompleteSprint={completeSprint} 
-      />
+    <div className="flex flex-grow overflow-x-auto">
+      {sprintColumns.map((column) => (
+        <SprintColumn 
+          key={column.id} 
+          column={column} 
+          sprintId={sprintId}
+          onAddTask={handleCreateTask}
+          onEditTask={handleEditTask}
+          onDeleteColumn={deleteColumn}
+          handleDragOver={handleDragOver}
+          handleDrop={handleDrop}
+          isDefaultColumn={
+            column.title === "TO DO" || 
+            column.title === "IN PROGRESS" || 
+            column.title === "DONE"
+          }
+        />
+      ))}
+      <AddColumn onAddColumn={handleAddColumn} />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-        {sprintColumns.map((column) => (
-          <SprintColumn 
-            key={column.id}
-            column={column}
-            sprintId={sprint.id}
-            onAddTask={handleAddTask}
-            onEditTask={handleEditTask}
-            onDeleteColumn={deleteColumn}
-            handleDragOver={handleDragOver}
-            handleDrop={handleDrop}
-            isDefaultColumn={
-              column.title === "TO DO" || 
-              column.title === "IN PROGRESS" || 
-              column.title === "DONE"
-            }
-          />
-        ))}
-
-        <AddColumn onAddColumn={handleAddColumn} />
-      </div>
-
-      {showTaskForm && activeColumnId && (
+      {showTaskForm && selectedColumnId && (
         <TaskForm
-          onClose={() => {
-            setShowTaskForm(false);
-            setTaskToEdit(null);
-          }}
-          sprintId={sprint.id}
-          columnId={activeColumnId}
-          taskToEdit={taskToEdit || undefined}
+          columnId={selectedColumnId}
+          sprintId={sprintId}
+          onClose={closeTaskForm}
+          taskToEdit={taskToEdit}
         />
       )}
     </div>

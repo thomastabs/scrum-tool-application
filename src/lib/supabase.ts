@@ -39,11 +39,16 @@ export async function getSession() {
 }
 
 // Add functions for project management
-export async function createProjectInDB(data: ProjectFormData, userId: string) {
+export async function createProjectInDB(data: ProjectFormData) {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) {
+    return { data: null, error: new Error('User not authenticated') };
+  }
+
   const { data: newProject, error } = await supabase
     .from('projects')
     .insert({
-      user_id: userId,
+      owner_id: userData.user.id, // Using auth.users.id
       title: data.title,
       description: data.description,
       end_goal: data.endGoal
@@ -55,9 +60,15 @@ export async function createProjectInDB(data: ProjectFormData, userId: string) {
 }
 
 export async function getProjectsFromDB() {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) {
+    return { data: null, error: new Error('User not authenticated') };
+  }
+
   const { data, error } = await supabase
     .from('projects')
     .select('*')
+    .eq('owner_id', userData.user.id) // Filter by the user's ID
     .order('created_at', { ascending: false });
   
   return { data, error };
@@ -69,8 +80,7 @@ export async function updateProjectInDB(id: string, data: ProjectFormData) {
     .update({
       title: data.title,
       description: data.description,
-      end_goal: data.endGoal,
-      updated_at: new Date().toISOString()
+      end_goal: data.endGoal
     })
     .eq('id', id)
     .select()
@@ -88,18 +98,56 @@ export async function deleteProjectFromDB(id: string) {
   return { error };
 }
 
+export async function deleteAllProjectsFromDB() {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) {
+    return { error: new Error('User not authenticated') };
+  }
+
+  // First, delete all sprints associated with the user's projects
+  const { data: projects } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('owner_id', userData.user.id);
+  
+  if (projects && projects.length > 0) {
+    const projectIds = projects.map(project => project.id);
+    
+    // Delete all sprints associated with these projects
+    await supabase
+      .from('sprints')
+      .delete()
+      .in('project_id', projectIds);
+    
+    // Delete all projects
+    const { error } = await supabase
+      .from('projects')
+      .delete()
+      .eq('owner_id', userData.user.id);
+    
+    return { error };
+  }
+  
+  return { error: null };
+}
+
 // Add functions for sprint management
 export async function createSprintInDB(projectId: string, data: SprintFormData) {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) {
+    return { data: null, error: new Error('User not authenticated') };
+  }
+
   const { data: newSprint, error } = await supabase
     .from('sprints')
     .insert({
       project_id: projectId,
+      user_id: userData.user.id, // Using auth.users.id
       title: data.title,
       description: data.description,
       start_date: data.startDate.toISOString(),
       end_date: data.endDate.toISOString(),
-      is_completed: false,
-      justification: data.justification
+      duration: Math.ceil((data.endDate.getTime() - data.startDate.getTime()) / (1000 * 60 * 60 * 24)) // Calculate duration in days
     })
     .select()
     .single();
@@ -108,9 +156,15 @@ export async function createSprintInDB(projectId: string, data: SprintFormData) 
 }
 
 export async function getSprintsFromDB() {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) {
+    return { data: null, error: new Error('User not authenticated') };
+  }
+
   const { data, error } = await supabase
     .from('sprints')
     .select('*')
+    .eq('user_id', userData.user.id) // Filter by the user's ID
     .order('created_at', { ascending: false });
   
   return { data, error };
@@ -124,8 +178,7 @@ export async function updateSprintInDB(id: string, data: SprintFormData) {
       description: data.description,
       start_date: data.startDate.toISOString(),
       end_date: data.endDate.toISOString(),
-      justification: data.justification,
-      updated_at: new Date().toISOString()
+      duration: Math.ceil((data.endDate.getTime() - data.startDate.getTime()) / (1000 * 60 * 60 * 24)) // Calculate duration in days
     })
     .eq('id', id)
     .select()
@@ -138,8 +191,7 @@ export async function completeSprintInDB(id: string) {
   const { data, error } = await supabase
     .from('sprints')
     .update({
-      is_completed: true,
-      updated_at: new Date().toISOString()
+      status: 'completed'
     })
     .eq('id', id)
     .select()
@@ -156,3 +208,4 @@ export async function deleteSprintFromDB(id: string) {
   
   return { error };
 }
+
