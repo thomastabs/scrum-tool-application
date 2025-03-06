@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { ProjectFormData, SprintFormData } from '@/types';
 
@@ -46,7 +45,8 @@ export async function createProjectInDB(data: ProjectFormData, userId: string) {
       owner_id: userId,
       title: data.title,
       description: data.description,
-      end_goal: data.endGoal
+      end_goal: data.endGoal,
+      collaborators: [userId] // Add the owner as a collaborator too
     })
     .select()
     .single();
@@ -61,6 +61,8 @@ export async function getProjectsFromDB(userId: string) {
     .select('*')
     .or(`owner_id.eq.${userId},collaborators.cs.{${userId}}`)
     .order('created_at', { ascending: false });
+  
+  console.log("Projects fetched:", data);
   
   return { data, error };
 }

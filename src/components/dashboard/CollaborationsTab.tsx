@@ -33,6 +33,7 @@ const CollaborationsTab = () => {
           .contains('collaborators', [userId]);
         
         if (error) {
+          console.error("Collaborations fetch error:", error);
           throw error;
         }
         
