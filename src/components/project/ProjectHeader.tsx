@@ -1,10 +1,9 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Project } from "@/types";
 import { Button } from "@/components/ui/button";
-import { PencilIcon, TrashIcon, PlusIcon, UsersIcon } from "lucide-react";
-import InviteUserForm from "@/components/collaborations/InviteUserForm";
+import { PencilIcon, TrashIcon, PlusIcon } from "lucide-react";
 
 interface ProjectHeaderProps {
   project: Project;
@@ -20,7 +19,6 @@ const ProjectHeader: React.FC<ProjectHeaderProps> = ({
   onNewSprint,
 }) => {
   const navigate = useNavigate();
-  const [showInviteForm, setShowInviteForm] = useState(false);
 
   return (
     <>
@@ -56,24 +54,10 @@ const ProjectHeader: React.FC<ProjectHeaderProps> = ({
             {project.description}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline"
-            onClick={() => setShowInviteForm(true)}
-          >
-            <UsersIcon className="h-4 w-4 mr-1" /> Invite
-          </Button>
-          <Button onClick={onNewSprint}>
-            <PlusIcon className="h-4 w-4 mr-1" /> New Sprint
-          </Button>
-        </div>
+        <Button onClick={onNewSprint}>
+          <PlusIcon className="h-4 w-4 mr-1" /> New Sprint
+        </Button>
       </div>
-
-      <InviteUserForm 
-        project={project}
-        open={showInviteForm}
-        onOpenChange={setShowInviteForm}
-      />
     </>
   );
 };

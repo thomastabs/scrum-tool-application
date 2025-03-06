@@ -5,7 +5,6 @@ import { signOut } from "@/lib/supabase";
 import { toast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import ProfileDashboard from "@/components/ProfileDashboard";
-import NotificationsButton from "../notifications/NotificationsButton";
 
 interface DashboardHeaderProps {
   user: any;
@@ -35,7 +34,6 @@ const DashboardHeader = ({ user }: DashboardHeaderProps) => {
       </div>
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <NotificationsButton />
           <span className="text-sm">{user?.email}</span>
           <ProfileDashboard user={user} />
           <Button variant="outline" size="sm" onClick={handleSignOut}>
