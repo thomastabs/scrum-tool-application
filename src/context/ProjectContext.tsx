@@ -25,39 +25,50 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const fetchProjects = async () => {
     console.log("Fetching projects...");
     setLoading(true);
-    const { data, error } = await getProjectsFromDB();
     
-    if (error) {
-      console.error("Error fetching projects:", error);
+    try {
+      const { data, error } = await getProjectsFromDB();
+      
+      if (error) {
+        console.error("Error fetching projects:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch projects. Please try again.",
+          variant: "destructive",
+        });
+      } else if (data) {
+        console.log("Projects fetched successfully:", data);
+        
+        // Clear existing projects first
+        dispatch({ type: "CLEAR_PROJECTS" });
+        
+        // Then add the newly fetched projects
+        data.forEach(project => {
+          dispatch({ 
+            type: "ADD_PROJECT", 
+            payload: {
+              id: project.id,
+              title: project.title,
+              description: project.description || "",
+              endGoal: project.end_goal || "",
+              owner_id: project.owner_id,
+              collaborators: project.collaborators || [],
+              createdAt: new Date(project.created_at),
+              updatedAt: new Date(project.updated_at || project.created_at)
+            } 
+          });
+        });
+      }
+    } catch (err) {
+      console.error("Unexpected error in fetchProjects:", err);
       toast({
         title: "Error",
-        description: "Failed to fetch projects. Please try again.",
+        description: "Something went wrong while fetching projects.",
         variant: "destructive",
       });
-    } else if (data) {
-      console.log("Projects fetched successfully:", data);
-      
-      // Clear existing projects first
-      dispatch({ type: "CLEAR_PROJECTS" });
-      
-      // Then add the newly fetched projects
-      data.forEach(project => {
-        dispatch({ 
-          type: "ADD_PROJECT", 
-          payload: {
-            id: project.id,
-            title: project.title,
-            description: project.description || "",
-            endGoal: project.end_goal || "",
-            owner_id: project.owner_id,
-            collaborators: project.collaborators || [],
-            createdAt: new Date(project.created_at),
-            updatedAt: new Date(project.updated_at || project.created_at)
-          } 
-        });
-      });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   // Fetch projects when the component mounts and auth state changes
