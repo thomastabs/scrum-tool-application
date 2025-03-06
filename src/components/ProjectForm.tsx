@@ -18,8 +18,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useProject } from "@/context/ProjectContext";
 import { X } from "lucide-react";
-import { supabase, createProjectInDB } from "@/lib/supabase";
-import { toast } from "@/components/ui/use-toast";
 
 const formSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -50,56 +48,13 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, projectToEdit }) => 
     },
   });
 
-  const onSubmit = async (data: ProjectFormData) => {
-    try {
-      const { data: userData } = await supabase.auth.getUser();
-      const userId = userData.user?.id;
-      
-      if (!userId) {
-        toast({
-          title: "Authentication error",
-          description: "You must be logged in to create a project",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      if (isEditMode && projectToEdit) {
-        updateProject(projectToEdit.id, data);
-        onClose();
-      } else {
-        // Create project in Supabase first
-        const { error } = await createProjectInDB(data, userId);
-        
-        if (error) {
-          console.error("Detailed error:", error);
-          toast({
-            title: "Error creating project",
-            description: error.message,
-            variant: "destructive"
-          });
-        } else {
-          // Create project in local state only if Supabase creation succeeds
-          createProject(data);
-          
-          toast({
-            title: "Project created",
-            description: "Your project has been created successfully"
-          });
-          
-          // Refresh the page to show the new project
-          window.location.reload();
-          onClose();
-        }
-      }
-    } catch (error: any) {
-      console.error("Error in project creation:", error);
-      toast({
-        title: "Error",
-        description: error.message || "An unexpected error occurred",
-        variant: "destructive"
-      });
+  const onSubmit = (data: ProjectFormData) => {
+    if (isEditMode && projectToEdit) {
+      updateProject(projectToEdit.id, data);
+    } else {
+      createProject(data);
     }
+    onClose();
   };
 
   return (

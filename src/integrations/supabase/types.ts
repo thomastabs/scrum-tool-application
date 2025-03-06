@@ -122,7 +122,6 @@ export type Database = {
           collaborators: string[] | null
           created_at: string
           description: string | null
-          end_goal: string | null
           id: string
           title: string
           user_id: string
@@ -131,7 +130,6 @@ export type Database = {
           collaborators?: string[] | null
           created_at?: string
           description?: string | null
-          end_goal?: string | null
           id?: string
           title: string
           user_id: string
@@ -140,7 +138,6 @@ export type Database = {
           collaborators?: string[] | null
           created_at?: string
           description?: string | null
-          end_goal?: string | null
           id?: string
           title?: string
           user_id?: string

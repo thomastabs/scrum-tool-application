@@ -40,47 +40,26 @@ export async function getSession() {
 
 // Project management functions
 export async function createProjectInDB(data: ProjectFormData, userId: string) {
-  console.log("Creating project for user:", userId);
   const { data: newProject, error } = await supabase
     .from('projects')
     .insert({
       user_id: userId,
       title: data.title,
       description: data.description,
-      end_goal: data.endGoal
+      end_goal: data.endGoal,
+      collaborators: []
     })
     .select()
     .single();
-  
-  if (error) {
-    console.error("Error creating project:", error);
-  } else {
-    console.log("Project created successfully:", newProject);
-  }
   
   return { data: newProject, error };
 }
 
 export async function getProjectsFromDB() {
-  const { data: user } = await supabase.auth.getUser();
-  const userId = user.user?.id;
-  
-  if (!userId) {
-    return { data: [], error: new Error('User not authenticated') };
-  }
-  
-  console.log("Fetching projects for user:", userId);
   const { data, error } = await supabase
     .from('projects')
     .select('*')
-    .eq('user_id', userId)
     .order('created_at', { ascending: false });
-  
-  if (error) {
-    console.error("Error fetching projects:", error);
-  } else {
-    console.log("Projects fetched successfully:", data);
-  }
   
   return { data, error };
 }
