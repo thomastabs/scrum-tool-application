@@ -155,6 +155,42 @@ export const createColumn = (title: string, sprintId: string) => {
   return newColumn;
 };
 
+// Create default columns for a sprint
+export const createDefaultColumns = (sprintId: string) => {
+  return [
+    {
+      id: uuidv4(),
+      title: "TO DO",
+      tasks: [],
+      order_index: 0,
+      sprint_id: sprintId,
+      created_at: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      id: uuidv4(),
+      title: "IN PROGRESS",
+      tasks: [],
+      order_index: 1,
+      sprint_id: sprintId,
+      created_at: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      id: uuidv4(),
+      title: "DONE",
+      tasks: [],
+      order_index: 2,
+      sprint_id: sprintId,
+      created_at: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+  ];
+};
+
 // Backlog actions
 export const createBacklogItem = (backlogItemData: BacklogItemFormData) => {
   const newBacklogItem: BacklogItem = {

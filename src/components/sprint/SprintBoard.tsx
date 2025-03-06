@@ -20,17 +20,15 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint, onClose }) => {
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
 
+  // Get columns that belong to this sprint
+  const sprintColumns = columns.filter(column => column.sprint_id === sprint.id);
+
   // Check if all tasks are completed for a sprint
   const allTasksCompleted = () => {
     if (!sprint) return false;
     
-    const doneColumn = columns.find(column => column.title === "DONE");
+    const doneColumn = sprintColumns.find(column => column.title === "DONE");
     if (!doneColumn) return false;
-    
-    // Get all columns that have tasks for this sprint
-    const sprintColumns = columns.filter(col => 
-      col.tasks.some(task => task.sprintId === sprint.id)
-    );
     
     // Count total tasks for this sprint
     const totalTasks = sprintColumns.reduce(
@@ -77,27 +75,6 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint, onClose }) => {
       }
     }
   };
-
-  // Only get the ONE instance of each standard column that we need
-  const todoColumn = columns.find(column => column.title === "TO DO");
-  const inProgressColumn = columns.find(column => column.title === "IN PROGRESS");
-  const doneColumn = columns.find(column => column.title === "DONE");
-
-  // Get custom columns that have tasks for this sprint
-  const customColumns = columns.filter(column => 
-    column.title !== "TO DO" && 
-    column.title !== "IN PROGRESS" && 
-    column.title !== "DONE" &&
-    column.tasks.some(task => task.sprintId === sprint.id)
-  );
-
-  // Combine all columns used by this sprint
-  const sprintColumns = [
-    todoColumn,
-    inProgressColumn,
-    doneColumn,
-    ...customColumns
-  ].filter(Boolean) as any[];
 
   return (
     <div className="animate-fade-in">

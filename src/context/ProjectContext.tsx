@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useReducer, useEffect } from "react";
 import { ProjectContextType } from "@/types";
 import { projectReducer, initialState } from "./projectReducer";
@@ -10,7 +11,8 @@ import {
   updateTask, 
   createColumn, 
   createBacklogItem, 
-  updateBacklogItem 
+  updateBacklogItem,
+  createDefaultColumns
 } from "./projectActions";
 import { toast } from "@/components/ui/use-toast";
 import { 
@@ -96,6 +98,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     createSprint: (sprintData) => {
       const newSprint = createSprint(sprintData);
       dispatch({ type: "ADD_SPRINT", payload: newSprint });
+      
+      // Create default columns for the new sprint
+      const defaultColumns = createDefaultColumns(newSprint.id);
+      defaultColumns.forEach(column => {
+        dispatch({ type: "ADD_COLUMN", payload: column });
+      });
     },
     
     updateSprint: (id, sprintData) => {

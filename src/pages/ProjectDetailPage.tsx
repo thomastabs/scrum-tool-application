@@ -13,7 +13,7 @@ import { Sprint } from "@/types";
 const ProjectDetailPage = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const { projects, sprints } = useProject();
+  const { projects, sprints, deleteProject } = useProject();
   const [showSprintForm, setShowSprintForm] = useState(false);
   const [showEditProject, setShowEditProject] = useState(false);
   const [sprintToEdit, setSprintToEdit] = useState<Sprint | null>(null);
@@ -32,7 +32,8 @@ const ProjectDetailPage = () => {
 
   const handleDeleteProject = () => {
     if (window.confirm("Are you sure you want to delete this project?")) {
-      // Navigate back to projects page instead of calling deleteProject directly
+      // Call deleteProject directly instead of just navigating away
+      deleteProject(project.id);
       navigate("/?tab=projects");
     }
   };

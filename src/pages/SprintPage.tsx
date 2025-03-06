@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useProject } from "@/context/ProjectContext";
 import { Task } from "@/types";
@@ -34,26 +35,8 @@ const SprintPage = () => {
     );
   }
 
-  // Only get the ONE instance of each standard column that we need
-  const todoColumn = columns.find(column => column.title === "TO DO");
-  const inProgressColumn = columns.find(column => column.title === "IN PROGRESS");
-  const doneColumn = columns.find(column => column.title === "DONE");
-
-  // Get custom columns that have tasks for this sprint
-  const customColumns = columns.filter(column => 
-    column.title !== "TO DO" && 
-    column.title !== "IN PROGRESS" && 
-    column.title !== "DONE" &&
-    column.tasks.some(task => task.sprintId === sprint.id)
-  );
-
-  // Combine all columns used by this sprint
-  const sprintColumns = [
-    todoColumn,
-    inProgressColumn,
-    doneColumn,
-    ...customColumns
-  ].filter(Boolean) as any[];
+  // Get columns that belong to this sprint
+  const sprintColumns = columns.filter(column => column.sprint_id === sprint.id);
 
   const handleEditTask = (task: Task) => {
     setTaskToEdit(task);
@@ -85,13 +68,13 @@ const SprintPage = () => {
     }
   };
 
-  const handleAddColumn = (name: string) => {
-    // Make sure to pass the sprint ID 
-    createColumn(name, sprint.id);
+  const handleAddColumn = (name: string, sprintId: string) => {
+    createColumn(name, sprintId);
   };
 
   // Check if all tasks are completed
   const allTasksCompleted = () => {
+    const doneColumn = sprintColumns.find(column => column.title === "DONE");
     if (!doneColumn) return false;
     
     // Count total tasks for this sprint
