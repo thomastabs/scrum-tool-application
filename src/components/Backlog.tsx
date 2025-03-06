@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useProject } from "@/context/ProjectContext";
 import { BacklogItem, Sprint } from "@/types";
@@ -223,6 +222,7 @@ const Backlog: React.FC<BacklogProps> = ({ projectId }) => {
             setItemToEdit(null);
           }}
           itemToEdit={itemToEdit}
+          projectId={projectId}
         />
       )}
     </div>
