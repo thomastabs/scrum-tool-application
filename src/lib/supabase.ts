@@ -44,11 +44,10 @@ export async function createProjectInDB(data: ProjectFormData, userId: string) {
   const { data: newProject, error } = await supabase
     .from('projects')
     .insert({
-      owner_id: userId,
+      user_id: userId,
       title: data.title,
       description: data.description,
-      end_goal: data.endGoal,
-      collaborators: []
+      end_goal: data.endGoal
     })
     .select()
     .single();
@@ -74,7 +73,7 @@ export async function getProjectsFromDB() {
   const { data, error } = await supabase
     .from('projects')
     .select('*')
-    .eq('owner_id', userId)
+    .eq('user_id', userId)
     .order('created_at', { ascending: false });
   
   if (error) {

@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -65,19 +66,22 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, projectToEdit }) => 
       
       if (isEditMode && projectToEdit) {
         updateProject(projectToEdit.id, data);
+        onClose();
       } else {
-        // Create project in local state
-        createProject(data);
-        
-        // Create project in Supabase
+        // Create project in Supabase first
         const { error } = await createProjectInDB(data, userId);
+        
         if (error) {
+          console.error("Detailed error:", error);
           toast({
             title: "Error creating project",
             description: error.message,
             variant: "destructive"
           });
         } else {
+          // Create project in local state only if Supabase creation succeeds
+          createProject(data);
+          
           toast({
             title: "Project created",
             description: "Your project has been created successfully"
@@ -85,9 +89,9 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, projectToEdit }) => 
           
           // Refresh the page to show the new project
           window.location.reload();
+          onClose();
         }
       }
-      onClose();
     } catch (error: any) {
       console.error("Error in project creation:", error);
       toast({
