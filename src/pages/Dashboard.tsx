@@ -5,10 +5,12 @@ import { useProject } from "@/context/ProjectContext";
 import { supabase } from "@/lib/supabase";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardTabs from "@/components/dashboard/DashboardTabs";
+import { toast } from "@/components/ui/use-toast";
 
 const Dashboard = () => {
-  const { projects } = useProject();
+  const { projects, setProjects } = useProject();
   const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const location = useLocation();
 
   // Get the 'tab' query parameter from the URL
@@ -24,12 +26,50 @@ const Dashboard = () => {
     getUser();
   }, []);
 
+  useEffect(() => {
+    const fetchUserProjects = async () => {
+      if (!user) return;
+      
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('owner_id', user.id)
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          console.error("Error fetching projects:", error);
+          toast({
+            title: "Error fetching projects",
+            description: error.message,
+            variant: "destructive",
+          });
+        } else {
+          setProjects(data || []);
+        }
+      } catch (error) {
+        console.error("Unexpected error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchUserProjects();
+    }
+  }, [user, setProjects]);
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 animate-fade-in">
         <DashboardHeader user={user} />
         <div className="grid grid-cols-1 gap-6">
-          <DashboardTabs activeTab={activeTab} projects={projects} />
+          <DashboardTabs 
+            activeTab={activeTab} 
+            projects={projects} 
+            loading={loading} 
+          />
         </div>
       </div>
     </div>

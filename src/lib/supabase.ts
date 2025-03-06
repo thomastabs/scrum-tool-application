@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { ProjectFormData, SprintFormData } from '@/types';
 
@@ -43,7 +42,7 @@ export async function createProjectInDB(data: ProjectFormData, userId: string) {
   const { data: newProject, error } = await supabase
     .from('projects')
     .insert({
-      user_id: userId,
+      owner_id: userId,
       title: data.title,
       description: data.description,
       end_goal: data.endGoal
@@ -55,9 +54,18 @@ export async function createProjectInDB(data: ProjectFormData, userId: string) {
 }
 
 export async function getProjectsFromDB() {
+  // Get the current user ID
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return { data: [], error: new Error('No authenticated user') };
+  }
+  
+  // Get only projects where current user is the owner
   const { data, error } = await supabase
     .from('projects')
     .select('*')
+    .eq('owner_id', user.id)
     .order('created_at', { ascending: false });
   
   return { data, error };
