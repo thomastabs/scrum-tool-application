@@ -1,47 +1,30 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { signOut } from "@/lib/supabase";
-import { toast } from "@/components/ui/use-toast";
-import { useNavigate } from "react-router-dom";
-import ProfileDashboard from "@/components/ProfileDashboard";
+import { useTheme } from "@/context/ThemeContext";
+import { Moon, Sun } from "lucide-react";
 
-interface DashboardHeaderProps {
-  user: any;
-}
-
-const DashboardHeader = ({ user }: DashboardHeaderProps) => {
-  const navigate = useNavigate();
-
-  const handleSignOut = async () => {
-    const { error } = await signOut();
-    if (error) {
-      toast({
-        title: "Error signing out",
-        description: error.message,
-        variant: "destructive"
-      });
-    } else {
-      navigate("/sign-in");
-    }
-  };
+const DashboardHeader = () => {
+  const { theme, setTheme } = useTheme();
 
   return (
-    <div className="flex justify-between items-center mb-8">
+    <header className="mb-8 flex items-center justify-between">
       <div>
-        <h1 className="text-3xl font-bold">Scrumify Hub</h1>
-        <p className="text-muted-foreground mt-2">Dashboard</p>
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-muted-foreground mt-1">
+          Welcome to your Agile Sprint Manager dashboard
+        </p>
       </div>
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm">{user?.email}</span>
-          <ProfileDashboard user={user} />
-          <Button variant="outline" size="sm" onClick={handleSignOut}>
-            Sign Out
-          </Button>
-        </div>
+      <div className="flex items-center space-x-2">
+        <Button 
+          variant="outline" 
+          size="icon"
+          onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+        >
+          {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
+        </Button>
       </div>
-    </div>
+    </header>
   );
 };
 

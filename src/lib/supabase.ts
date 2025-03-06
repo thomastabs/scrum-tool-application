@@ -7,48 +7,15 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIU
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export async function signUp(email: string, password: string) {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: `${window.location.origin}/`,
-    }
-  });
-  
-  return { data, error };
-}
-
-export async function signIn(email: string, password: string) {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-  
-  return { data, error };
-}
-
-export async function signOut() {
-  const { error } = await supabase.auth.signOut();
-  return { error };
-}
-
-export async function getSession() {
-  const { data, error } = await supabase.auth.getSession();
-  return { session: data.session, error };
-}
-
 // Add functions for project management
 export async function createProjectInDB(data: ProjectFormData) {
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) {
-    return { data: null, error: new Error('User not authenticated') };
-  }
+  // Removed auth check, using a temporary user ID for now
+  const tempUserId = '00000000-0000-0000-0000-000000000000';
 
   const { data: newProject, error } = await supabase
     .from('projects')
     .insert({
-      owner_id: userData.user.id, // Using auth.users.id
+      owner_id: tempUserId,
       title: data.title,
       description: data.description,
       end_goal: data.endGoal
@@ -60,15 +27,13 @@ export async function createProjectInDB(data: ProjectFormData) {
 }
 
 export async function getProjectsFromDB() {
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) {
-    return { data: null, error: new Error('User not authenticated') };
-  }
+  // Removed auth check, using a temporary user ID for now
+  const tempUserId = '00000000-0000-0000-0000-000000000000';
 
   const { data, error } = await supabase
     .from('projects')
     .select('*')
-    .eq('owner_id', userData.user.id) // Filter by the user's ID
+    .eq('owner_id', tempUserId) // Filter by the temporary user ID
     .order('created_at', { ascending: false });
   
   return { data, error };
@@ -99,16 +64,14 @@ export async function deleteProjectFromDB(id: string) {
 }
 
 export async function deleteAllProjectsFromDB() {
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) {
-    return { error: new Error('User not authenticated') };
-  }
+  // Removed auth check, using a temporary user ID for now
+  const tempUserId = '00000000-0000-0000-0000-000000000000';
 
   // First, delete all sprints associated with the user's projects
   const { data: projects } = await supabase
     .from('projects')
     .select('id')
-    .eq('owner_id', userData.user.id);
+    .eq('owner_id', tempUserId);
   
   if (projects && projects.length > 0) {
     const projectIds = projects.map(project => project.id);
@@ -123,7 +86,7 @@ export async function deleteAllProjectsFromDB() {
     const { error } = await supabase
       .from('projects')
       .delete()
-      .eq('owner_id', userData.user.id);
+      .eq('owner_id', tempUserId);
     
     return { error };
   }
@@ -133,16 +96,14 @@ export async function deleteAllProjectsFromDB() {
 
 // Add functions for sprint management
 export async function createSprintInDB(projectId: string, data: SprintFormData) {
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) {
-    return { data: null, error: new Error('User not authenticated') };
-  }
+  // Removed auth check, using a temporary user ID for now
+  const tempUserId = '00000000-0000-0000-0000-000000000000';
 
   const { data: newSprint, error } = await supabase
     .from('sprints')
     .insert({
       project_id: projectId,
-      user_id: userData.user.id, // Using auth.users.id
+      user_id: tempUserId,
       title: data.title,
       description: data.description,
       start_date: data.startDate.toISOString(),
@@ -156,15 +117,13 @@ export async function createSprintInDB(projectId: string, data: SprintFormData) 
 }
 
 export async function getSprintsFromDB() {
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) {
-    return { data: null, error: new Error('User not authenticated') };
-  }
+  // Removed auth check, using a temporary user ID for now
+  const tempUserId = '00000000-0000-0000-0000-000000000000';
 
   const { data, error } = await supabase
     .from('sprints')
     .select('*')
-    .eq('user_id', userData.user.id) // Filter by the user's ID
+    .eq('user_id', tempUserId) // Filter by the temporary user ID
     .order('created_at', { ascending: false });
   
   return { data, error };
@@ -208,4 +167,3 @@ export async function deleteSprintFromDB(id: string) {
   
   return { error };
 }
-
