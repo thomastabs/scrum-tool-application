@@ -21,6 +21,7 @@ const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(projectReducer, initialState);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
 
   // Function to fetch projects
   const fetchProjects = async () => {
@@ -31,13 +32,21 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // Clear existing projects first before fetching new ones
       dispatch({ type: "CLEAR_PROJECTS" });
       
+      // Check if user is authenticated first
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        console.log("No authenticated session found, skipping project fetch");
+        setLoading(false);
+        return;
+      }
+      
       const { data, error } = await getProjectsFromDB();
       
       if (error) {
         console.error("Error fetching projects:", error);
         toast({
           title: "Error",
-          description: "Failed to fetch projects. Please try again.",
+          description: "Failed to fetch projects. Please try refreshing the page.",
           variant: "destructive",
         });
         return;
@@ -76,13 +85,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
     } finally {
       setLoading(false);
+      setInitialized(true);
     }
   };
 
   // Use a more robust approach to auth state changes and session management
   useEffect(() => {
     // Check if user is already signed in and fetch projects
-    const checkSession = async () => {
+    const initialSessionCheck = async () => {
       try {
         setLoading(true);
         const { data } = await supabase.auth.getSession();
@@ -95,15 +105,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           console.log("No session found at mount");
           // No session, ensure projects are cleared
           dispatch({ type: "CLEAR_PROJECTS" });
+          setInitialized(true);
+          setLoading(false);
         }
       } catch (error) {
         console.error("Error checking session:", error);
-      } finally {
+        setInitialized(true);
         setLoading(false);
       }
     };
     
-    checkSession();
+    initialSessionCheck();
     
     // Setup auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -116,6 +128,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         // User signed out, clear projects
         console.log("User signed out, clearing projects");
         dispatch({ type: "CLEAR_PROJECTS" });
+        setLoading(false);
       }
     });
 
