@@ -8,7 +8,7 @@ import DashboardTabs from "@/components/dashboard/DashboardTabs";
 import { Project } from "@/types";
 
 const Dashboard = () => {
-  const { projects: contextProjects, setProjects } = useProject();
+  const { setProjects } = useProject();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [userProjects, setUserProjects] = useState<Project[]>([]);
@@ -35,6 +35,14 @@ const Dashboard = () => {
             
             if (error) {
               console.error("Error fetching projects:", error);
+              return;
+            }
+            
+            // If no projects were found, set empty arrays
+            if (!projectsData || projectsData.length === 0) {
+              setUserProjects([]);
+              setProjects([]);
+              setLoading(false);
               return;
             }
             

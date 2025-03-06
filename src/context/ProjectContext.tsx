@@ -35,6 +35,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     selectedProject: state.selectedProject,
     
     setProjects: (projects) => {
+      // Clear localStorage to ensure only database projects are used
+      localStorage.removeItem("projectState");
       dispatch({ type: "SET_PROJECTS", payload: projects });
     },
     
