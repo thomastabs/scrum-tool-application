@@ -80,7 +80,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          invited_email: string
+          invited_user_id: string | null
           inviter_id: string
           project_id: string
           role: string
@@ -90,7 +90,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
-          invited_email: string
+          invited_user_id?: string | null
           inviter_id: string
           project_id: string
           role?: string
@@ -100,7 +100,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
-          invited_email?: string
+          invited_user_id?: string | null
           inviter_id?: string
           project_id?: string
           role?: string
@@ -119,23 +119,32 @@ export type Database = {
       }
       projects: {
         Row: {
+          collaborators: string[] | null
           created_at: string
           description: string | null
+          end_goal: string | null
           id: string
+          owner_id: string
           title: string
           user_id: string
         }
         Insert: {
+          collaborators?: string[] | null
           created_at?: string
           description?: string | null
+          end_goal?: string | null
           id?: string
+          owner_id: string
           title: string
-          user_id: string
+          user_id?: string
         }
         Update: {
+          collaborators?: string[] | null
           created_at?: string
           description?: string | null
+          end_goal?: string | null
           id?: string
+          owner_id?: string
           title?: string
           user_id?: string
         }
@@ -257,6 +266,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      users: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+        }
+        Relationships: []
       }
     }
     Views: {

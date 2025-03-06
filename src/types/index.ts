@@ -1,3 +1,4 @@
+
 export interface Project {
   id: string;
   title: string;
@@ -5,6 +6,7 @@ export interface Project {
   endGoal: string;
   createdAt: Date;
   updatedAt: Date;
+  owner_id?: string; // Reference to the users table
 }
 
 export interface Sprint {
@@ -96,6 +98,13 @@ export interface Collaborator {
 export interface CollaboratorFormData {
   email: string;
   role: "viewer" | "editor" | "admin";
+}
+
+// Add User type to match our new users table
+export interface User {
+  id: string;
+  email: string;
+  createdAt: Date;
 }
 
 export interface ProjectContextType {

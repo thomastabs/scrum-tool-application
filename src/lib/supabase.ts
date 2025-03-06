@@ -38,12 +38,32 @@ export async function getSession() {
   return { session: data.session, error };
 }
 
+// Get current user from our public.users table
+export async function getCurrentUser() {
+  const { data: session } = await supabase.auth.getSession();
+  if (!session.session) return { data: null, error: new Error('No session found') };
+  
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', session.session.user.id)
+    .single();
+    
+  return { data, error };
+}
+
 // Add functions for project management
 export async function createProjectInDB(data: ProjectFormData, userId: string) {
+  const { data: userData } = await getCurrentUser();
+  if (!userData) {
+    return { data: null, error: new Error('User not found') };
+  }
+  
   const { data: newProject, error } = await supabase
     .from('projects')
     .insert({
       user_id: userId,
+      owner_id: userData.id, // Use the users table id
       title: data.title,
       description: data.description,
       end_goal: data.endGoal
