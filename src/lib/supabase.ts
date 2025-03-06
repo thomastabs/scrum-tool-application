@@ -27,12 +27,26 @@ export async function signUp(email: string, password: string) {
 }
 
 export async function signIn(email: string, password: string) {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-  
-  return { data, error };
+  console.log("Attempting to sign in with:", email);
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    
+    if (error) {
+      console.error("Sign in error:", error.message);
+    } else if (data?.session) {
+      console.log("Sign in successful:", data.user?.email);
+    } else {
+      console.log("No session returned after sign in");
+    }
+    
+    return { data, error };
+  } catch (err) {
+    console.error("Unexpected error in signIn function:", err);
+    throw err;
+  }
 }
 
 export async function signOut() {

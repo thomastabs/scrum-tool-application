@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { signIn, getSession } from "@/lib/supabase";
 import { toast } from "@/components/ui/use-toast";
 
@@ -12,6 +13,7 @@ const SignIn: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const navigate = useNavigate();
 
   // Check if user is already signed in
@@ -28,8 +30,10 @@ const SignIn: React.FC = () => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
     
     if (!email || !password) {
+      setErrorMessage("Please enter both email and password");
       toast({
         title: "Error",
         description: "Please enter both email and password",
@@ -39,21 +43,40 @@ const SignIn: React.FC = () => {
     }
     
     setLoading(true);
-    const { data, error } = await signIn(email, password);
-    setLoading(false);
-    
-    if (error) {
-      toast({
-        title: "Sign in failed",
-        description: error.message,
-        variant: "destructive"
-      });
-    } else {
-      toast({
-        title: "Signed in successfully",
-        description: "Welcome back!"
-      });
-      navigate("/");
+    try {
+      const { data, error } = await signIn(email, password);
+      
+      if (error) {
+        console.error("Sign in error:", error);
+        
+        // More specific error messages
+        if (error.message.includes("Invalid login credentials")) {
+          setErrorMessage("The email or password you entered is incorrect. Please try again.");
+        } else if (error.message.includes("Email not confirmed")) {
+          setErrorMessage("Your email has not been confirmed. Please check your inbox for a confirmation email.");
+        } else {
+          setErrorMessage(error.message);
+        }
+        
+        toast({
+          title: "Sign in failed",
+          description: error.message,
+          variant: "destructive"
+        });
+      } else if (data.session) {
+        toast({
+          title: "Signed in successfully",
+          description: "Welcome back!"
+        });
+        navigate("/");
+      } else {
+        setErrorMessage("Something went wrong. Please try again.");
+      }
+    } catch (err: any) {
+      console.error("Unexpected error during sign in:", err);
+      setErrorMessage("An unexpected error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -80,6 +103,12 @@ const SignIn: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {errorMessage && (
+              <Alert className="mb-4 border-destructive/50 text-destructive">
+                <AlertDescription>{errorMessage}</AlertDescription>
+              </Alert>
+            )}
+            
             <form onSubmit={handleSignIn} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
