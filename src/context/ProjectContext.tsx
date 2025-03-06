@@ -29,12 +29,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Helper function to get current user ID
   const getCurrentUser = async () => {
-    const { session, error } = await supabase.auth.getSession();
+    const { data, error } = await supabase.auth.getSession();
     if (error) {
       console.error("Error getting session:", error);
       return null;
     }
-    return session?.user?.id || null;
+    return data.session?.user?.id || null;
   };
 
   const contextValue: ProjectContextType = {
