@@ -1,8 +1,6 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useProject } from "@/context/ProjectContext";
-import Project from "@/components/Project";
 import ProjectForm from "@/components/ProjectForm";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,7 +57,8 @@ const Index = () => {
             >
               ← Back to Projects
             </Button>
-            <Project project={selectedProject} />
+            {/* Navigate to the project detail page instead of using Project component directly */}
+            {navigate(`/my-projects/${selectedProject.id}`)}
           </div>
         </div>
       ) : (
