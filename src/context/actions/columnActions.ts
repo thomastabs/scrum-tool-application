@@ -5,15 +5,19 @@ import { Column } from "@/types";
 
 // Since we don't have access to the store, we'll create a simple implementation
 // that can be used by the ProjectContext
-export const createColumn = (title: string) => {
+export const createColumn = (title: string, sprintId: string = "") => {
   try {
     // Create a new column with the correct type
     const newColumn: Column = {
       id: uuidv4(),
       title,
       tasks: [],
+      order_index: 0, // Default order index
+      sprint_id: sprintId, // Set the sprint ID
+      created_at: new Date(), // Match the database field name
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      isDefault: false
     };
     
     // Return the new column instead of dispatching to a store

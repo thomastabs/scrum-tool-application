@@ -165,8 +165,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
     },
     
-    createColumn: (title) => {
-      const newColumn = createColumn(title);
+    createColumn: (title: string) => {
+      // We need to determine which sprint this column belongs to
+      // If we have sprints for the selected project, use the first one
+      const projectSprints = state.sprints.filter(s => 
+        state.selectedProject && s.projectId === state.selectedProject.id
+      );
+      const sprintId = projectSprints.length > 0 ? projectSprints[0].id : "";
+      
+      const newColumn = createColumn(title, sprintId);
       dispatch({ type: "ADD_COLUMN", payload: newColumn });
     },
     
