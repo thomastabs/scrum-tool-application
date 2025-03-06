@@ -134,7 +134,7 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint, onClose }) => {
           />
         ))}
 
-        <AddColumn onAddColumn={createColumn} />
+        <AddColumn onAddColumn={createColumn} sprintId={sprint.id} />
       </div>
 
       {showTaskForm && activeColumnId && (

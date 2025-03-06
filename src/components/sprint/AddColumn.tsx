@@ -5,16 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Plus } from "lucide-react";
 
 interface AddColumnProps {
-  onAddColumn: (name: string) => void;
+  onAddColumn: (name: string, sprintId: string) => void;
+  sprintId: string;
 }
 
-const AddColumn: React.FC<AddColumnProps> = ({ onAddColumn }) => {
+const AddColumn: React.FC<AddColumnProps> = ({ onAddColumn, sprintId }) => {
   const [showAddColumn, setShowAddColumn] = useState(false);
   const [newColumnName, setNewColumnName] = useState("");
 
   const handleAddColumn = () => {
     if (newColumnName.trim()) {
-      onAddColumn(newColumnName.trim());
+      onAddColumn(newColumnName.trim(), sprintId);
       setNewColumnName("");
       setShowAddColumn(false);
     }

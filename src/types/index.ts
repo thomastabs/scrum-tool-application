@@ -1,3 +1,4 @@
+
 export interface ProjectFormData {
   title: string;
   description?: string;
@@ -48,6 +49,9 @@ export interface Column {
   id: string;
   title: string;
   tasks: Task[];
+  order_index: number;
+  sprint_id: string;
+  created_at: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -103,7 +107,7 @@ export interface ProjectContextType {
   deleteTask: (id: string, columnId: string) => void;
   moveTask: (taskId: string, sourceColumnId: string, targetColumnId: string) => void;
   
-  createColumn: (title: string) => void;
+  createColumn: (title: string, sprintId: string) => void;
   deleteColumn: (id: string) => void;
   
   createBacklogItem: (backlogItemData: BacklogItemFormData) => void;

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useReducer, useEffect } from "react";
 import { ProjectContextType } from "@/types";
 import { projectReducer, initialState } from "./projectReducer";
@@ -160,8 +159,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
     },
     
-    createColumn: (title) => {
-      const newColumn = createColumn(title);
+    createColumn: (title, sprintId) => {
+      const newColumn = createColumn(title, sprintId);
       dispatch({ type: "ADD_COLUMN", payload: newColumn });
     },
     

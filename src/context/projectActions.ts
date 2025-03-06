@@ -135,11 +135,14 @@ export const updateTask = (id: string, taskData: TaskFormData, columns: Column[]
 };
 
 // Column actions
-export const createColumn = (title: string) => {
+export const createColumn = (title: string, sprintId: string) => {
   const newColumn: Column = {
     id: uuidv4(),
     title,
     tasks: [],
+    order_index: 0, // Default order_index
+    sprint_id: sprintId, // Connect column to sprint
+    created_at: new Date(),
     createdAt: new Date(),
     updatedAt: new Date(),
   };

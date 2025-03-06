@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useProject } from "@/context/ProjectContext";
@@ -87,7 +86,8 @@ const SprintPage = () => {
   };
 
   const handleAddColumn = (name: string) => {
-    createColumn(name);
+    // Make sure to pass the sprint ID 
+    createColumn(name, sprint.id);
   };
 
   // Check if all tasks are completed
@@ -145,7 +145,7 @@ const SprintPage = () => {
           />
         ))}
 
-        <AddColumn onAddColumn={handleAddColumn} />
+        <AddColumn onAddColumn={handleAddColumn} sprintId={sprint.id} />
       </div>
 
       {showTaskForm && activeColumnId && (
