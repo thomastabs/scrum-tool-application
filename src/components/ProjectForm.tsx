@@ -18,9 +18,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useProject } from "@/context/ProjectContext";
 import { X } from "lucide-react";
-import { createProjectInDB, supabase } from "@/lib/supabase";
-import { toast } from "@/components/ui/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
 
 const formSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -41,7 +38,6 @@ interface ProjectFormProps {
 const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, projectToEdit }) => {
   const { createProject, updateProject } = useProject();
   const isEditMode = !!projectToEdit;
-  const queryClient = useQueryClient();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -52,65 +48,13 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, projectToEdit }) => 
     },
   });
 
-  const onSubmit = async (data: ProjectFormData) => {
-    try {
-      // Get current user
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      
-      if (userError) {
-        throw userError;
-      }
-      
-      if (!userData.user) {
-        toast({
-          title: "Authentication Error",
-          description: "You must be logged in to create a project",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const userId = userData.user.id;
-      console.log("Creating project for user ID:", userId);
-
-      if (isEditMode && projectToEdit) {
-        updateProject(projectToEdit.id, data);
-      } else {
-        // Create project in database first
-        const { data: newProject, error } = await createProjectInDB(data, userId);
-        
-        if (error) {
-          console.error("Error creating project in DB:", error);
-          toast({
-            title: "Error",
-            description: "Failed to create project. Please try again.",
-            variant: "destructive"
-          });
-          return;
-        }
-        
-        console.log("Project created successfully:", newProject);
-        
-        // Update local state
-        createProject(data);
-        
-        // Invalidate the projects query to refresh the dashboard
-        queryClient.invalidateQueries({ queryKey: ['projects'] });
-        
-        toast({
-          title: "Success",
-          description: "Project created successfully",
-        });
-      }
-      onClose();
-    } catch (error: any) {
-      console.error("Error in project creation:", error.message);
-      toast({
-        title: "Error",
-        description: error.message || "An error occurred",
-        variant: "destructive"
-      });
+  const onSubmit = (data: ProjectFormData) => {
+    if (isEditMode && projectToEdit) {
+      updateProject(projectToEdit.id, data);
+    } else {
+      createProject(data);
     }
+    onClose();
   };
 
   return (

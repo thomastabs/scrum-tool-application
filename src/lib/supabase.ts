@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { ProjectFormData, SprintFormData } from '@/types';
 
@@ -39,97 +40,27 @@ export async function getSession() {
 
 // Add functions for project management
 export async function createProjectInDB(data: ProjectFormData, userId: string) {
-  console.log("Creating project with user ID:", userId);
-  
-  if (!userId) {
-    console.error("Cannot create project: User ID is null or undefined");
-    throw new Error("User ID is required to create a project");
-  }
-  
-  const projectData = {
-    owner_id: userId,
-    title: data.title,
-    description: data.description,
-    end_goal: data.endGoal
-  };
-  
-  console.log("Project data to insert:", projectData);
-  
   const { data: newProject, error } = await supabase
     .from('projects')
-    .insert(projectData)
+    .insert({
+      user_id: userId,
+      title: data.title,
+      description: data.description,
+      end_goal: data.endGoal
+    })
     .select()
     .single();
-  
-  if (error) {
-    console.error("Error creating project:", error);
-    throw error;
-  } else {
-    console.log("Project created successfully:", newProject);
-  }
   
   return { data: newProject, error };
 }
 
-export async function getProjectsFromDB(userId: string) {
-  if (!userId) {
-    console.error("Cannot fetch projects: User ID is null or undefined");
-    return { data: [], error: new Error("User ID is required to fetch projects") };
-  }
+export async function getProjectsFromDB() {
+  const { data, error } = await supabase
+    .from('projects')
+    .select('*')
+    .order('created_at', { ascending: false });
   
-  console.log("Fetching projects for user ID:", userId);
-  
-  try {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('owner_id', userId)
-      .order('created_at', { ascending: false });
-    
-    if (error) {
-      console.error("Error fetching projects:", error);
-      return { data: [], error };
-    }
-    
-    console.log("Fetched projects:", data);
-    return { data: data || [], error: null };
-  } catch (error) {
-    console.error("Exception fetching projects:", error);
-    return { data: [], error };
-  }
-}
-
-export async function getProjectFromDB(projectId: string) {
-  if (!projectId) {
-    console.error("Cannot fetch project: Project ID is null or undefined");
-    return { data: null, error: new Error("Project ID is required") };
-  }
-  
-  console.log("Fetching project details for:", projectId);
-  
-  try {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('id', projectId)
-      .maybeSingle();
-    
-    if (error) {
-      console.error("Error fetching project:", error);
-      return { data: null, error };
-    }
-    
-    if (!data) {
-      console.log("Project not found:", projectId);
-      return { data: null, error: new Error("Project not found") };
-    }
-    
-    console.log("Project data retrieved:", data);
-    return { data, error: null };
-  } catch (error) {
-    console.error("Exception fetching project:", error);
-    return { data: null, error };
-  }
+  return { data, error };
 }
 
 export async function updateProjectInDB(id: string, data: ProjectFormData) {
@@ -149,155 +80,58 @@ export async function updateProjectInDB(id: string, data: ProjectFormData) {
 }
 
 export async function deleteProjectFromDB(id: string) {
-  console.log("Deleting project from database:", id);
+  const { error } = await supabase
+    .from('projects')
+    .delete()
+    .eq('id', id);
   
-  try {
-    // First delete all related sprints
-    const { error: sprintsError } = await supabase
-      .from('sprints')
-      .delete()
-      .eq('project_id', id);
-    
-    if (sprintsError) {
-      console.error("Error deleting related sprints:", sprintsError);
-    }
-    
-    // Then delete the project
-    const { error } = await supabase
-      .from('projects')
-      .delete()
-      .eq('id', id);
-    
-    if (error) {
-      console.error("Error deleting project:", error);
-      return { error };
-    }
-    
-    console.log("Project deleted successfully:", id);
-    return { error: null };
-  } catch (error) {
-    console.error("Exception deleting project:", error);
-    return { error };
-  }
+  return { error };
 }
 
-// Update sprint functions to work with the actual database schema
-export async function createSprintInDB(projectId: string, data: SprintFormData, userId: string) {
-  console.log("Creating sprint with user ID:", userId, "for project:", projectId);
+// Add functions for sprint management
+export async function createSprintInDB(projectId: string, data: SprintFormData) {
+  const { data: newSprint, error } = await supabase
+    .from('sprints')
+    .insert({
+      project_id: projectId,
+      title: data.title,
+      description: data.description,
+      start_date: data.startDate.toISOString(),
+      end_date: data.endDate.toISOString(),
+      is_completed: false,
+      justification: data.justification
+    })
+    .select()
+    .single();
   
-  if (!userId) {
-    console.error("Cannot create sprint: User ID is null or undefined");
-    throw new Error("User ID is required to create a sprint");
-  }
-  
-  try {
-    // Remove 'status' field from the insert payload since it doesn't exist in the DB
-    const { data: newSprint, error } = await supabase
-      .from('sprints')
-      .insert({
-        project_id: projectId,
-        user_id: userId,
-        title: data.title,
-        description: data.description,
-        start_date: data.startDate.toISOString(),
-        end_date: data.endDate.toISOString(),
-        duration: Math.ceil((data.endDate.getTime() - data.startDate.getTime()) / (1000 * 60 * 60 * 24))
-        // status and justification fields removed as they don't exist in the DB
-      })
-      .select()
-      .single();
-    
-    if (error) {
-      console.error("Error creating sprint:", error);
-      throw error;
-    }
-    
-    console.log("Sprint created successfully:", newSprint);
-    return { data: newSprint, error: null };
-  } catch (error) {
-    console.error("Exception creating sprint:", error);
-    return { data: null, error };
-  }
+  return { data: newSprint, error };
 }
 
-export async function getSprintsFromDB(userId: string) {
-  console.log("Fetching sprints for user ID:", userId);
-  
-  // Add filter by user_id to match the foreign key constraint
+export async function getSprintsFromDB() {
   const { data, error } = await supabase
     .from('sprints')
     .select('*')
-    .eq('user_id', userId)
     .order('created_at', { ascending: false });
-  
-  if (error) {
-    console.error("Error fetching sprints:", error);
-  } else {
-    console.log("Fetched sprints:", data);
-  }
   
   return { data, error };
 }
 
-export async function getSprintFromDB(sprintId: string) {
-  if (!sprintId) {
-    console.error("Cannot fetch sprint: Sprint ID is null or undefined");
-    return { data: null, error: new Error("Sprint ID is required") };
-  }
-  
-  console.log("Fetching sprint details for:", sprintId);
-  
-  try {
-    const { data, error } = await supabase
-      .from('sprints')
-      .select('*')
-      .eq('id', sprintId)
-      .maybeSingle();
-    
-    if (error) {
-      console.error("Error fetching sprint:", error);
-      return { data: null, error };
-    }
-    
-    if (!data) {
-      console.log("Sprint not found:", sprintId);
-      return { data: null, error: new Error("Sprint not found") };
-    }
-    
-    console.log("Sprint data retrieved:", data);
-    return { data, error: null };
-  } catch (error) {
-    console.error("Exception fetching sprint:", error);
-    return { data: null, error };
-  }
-}
-
 export async function updateSprintInDB(id: string, data: SprintFormData) {
-  try {
-    const { data: updatedSprint, error } = await supabase
-      .from('sprints')
-      .update({
-        title: data.title,
-        description: data.description,
-        start_date: data.startDate.toISOString(),
-        end_date: data.endDate.toISOString(),
-        // justification removed
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) {
-      console.error("Error updating sprint:", error);
-      return { data: null, error };
-    }
-    
-    return { data: updatedSprint, error: null };
-  } catch (error) {
-    console.error("Exception updating sprint:", error);
-    return { data: null, error };
-  }
+  const { data: updatedSprint, error } = await supabase
+    .from('sprints')
+    .update({
+      title: data.title,
+      description: data.description,
+      start_date: data.startDate.toISOString(),
+      end_date: data.endDate.toISOString(),
+      justification: data.justification,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', id)
+    .select()
+    .single();
+  
+  return { data: updatedSprint, error };
 }
 
 export async function completeSprintInDB(id: string) {
@@ -315,24 +149,10 @@ export async function completeSprintInDB(id: string) {
 }
 
 export async function deleteSprintFromDB(id: string) {
-  console.log("Deleting sprint from database:", id);
+  const { error } = await supabase
+    .from('sprints')
+    .delete()
+    .eq('id', id);
   
-  try {
-    // Delete sprint
-    const { error } = await supabase
-      .from('sprints')
-      .delete()
-      .eq('id', id);
-    
-    if (error) {
-      console.error("Error deleting sprint:", error);
-      return { error };
-    }
-    
-    console.log("Sprint deleted successfully:", id);
-    return { error: null };
-  } catch (error) {
-    console.error("Exception deleting sprint:", error);
-    return { error };
-  }
+  return { error };
 }

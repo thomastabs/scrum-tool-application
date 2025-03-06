@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -36,6 +37,7 @@ const formSchema = z.object({
   endDate: z.date({
     required_error: "End date is required",
   }),
+  justification: z.string().optional(),
 }).refine((data) => data.endDate > data.startDate, {
   message: "End date must be after start date",
   path: ["endDate"],
@@ -68,6 +70,7 @@ const SprintForm: React.FC<SprintFormProps> = ({ onClose, sprintToEdit }) => {
       endDate: sprintToEdit?.endDate 
         ? new Date(sprintToEdit.endDate) 
         : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // Default to 2 weeks
+      justification: "",
     },
   });
 
@@ -213,6 +216,29 @@ const SprintForm: React.FC<SprintFormProps> = ({ onClose, sprintToEdit }) => {
                 )}
               />
             </div>
+
+            {isEditMode && (
+              <FormField
+                control={form.control}
+                name="justification"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Justification (if changing duration)</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Provide justification for duration change"
+                        className="min-h-[80px]"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Required only if you're changing the sprint duration
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <div className="flex justify-end space-x-2 pt-4">
               <Button type="button" variant="outline" onClick={onClose}>

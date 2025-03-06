@@ -14,7 +14,6 @@ import {
   updateBacklogItem 
 } from "./projectActions";
 import { toast } from "@/components/ui/use-toast";
-import { deleteProjectFromDB, deleteSprintFromDB, supabase } from "@/lib/supabase";
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
@@ -27,21 +26,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     localStorage.setItem("projectState", JSON.stringify(state));
   }, [state]);
-
-  // Helper function to get current user ID
-  const getCurrentUser = async () => {
-    try {
-      const { data, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error("Error getting session:", error);
-        return null;
-      }
-      return data.session?.user?.id || null;
-    } catch (error) {
-      console.error("Exception getting user session:", error);
-      return null;
-    }
-  };
 
   const contextValue: ProjectContextType = {
     projects: state.projects,
@@ -66,76 +50,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     },
     
-    deleteProject: async (id) => {
-      // Remove the project from local state
+    deleteProject: (id) => {
       dispatch({ type: "REMOVE_PROJECT", payload: id });
-      
-      // Remove any sprints associated with this project
-      state.sprints
-        .filter(sprint => sprint.projectId === id)
-        .forEach(sprint => {
-          dispatch({ type: "REMOVE_SPRINT", payload: sprint.id });
-        });
-      
       toast({
         title: "Project deleted",
         description: "Project has been deleted successfully."
       });
     },
     
-    createSprint: async (sprintData) => {
-      // Get current user ID for the sprint creation
-      const userId = await getCurrentUser();
-      if (!userId) {
-        toast({
-          title: "Error",
-          description: "You must be logged in to create a sprint",
-          variant: "destructive"
-        });
-        return;
-      }
-
+    createSprint: (sprintData) => {
       const newSprint = createSprint(sprintData);
-      
-      // Attempt to create in DB with user_id
-      try {
-        const { data, error } = await supabase.from('sprints').insert({
-          project_id: sprintData.projectId,
-          user_id: userId,
-          title: sprintData.title,
-          description: sprintData.description,
-          start_date: sprintData.startDate.toISOString(),
-          end_date: sprintData.endDate.toISOString(),
-          duration: Math.ceil((sprintData.endDate.getTime() - sprintData.startDate.getTime()) / (1000 * 60 * 60 * 24))
-          // removed status and justification fields
-        }).select().single();
-        
-        if (error) {
-          console.error("Error creating sprint in DB:", error);
-          toast({
-            title: "Error",
-            description: "Failed to create sprint. Please try again.",
-            variant: "destructive"
-          });
-          throw error;
-        }
-        
-        // Update with DB data
-        newSprint.id = data.id;
-        dispatch({ type: "ADD_SPRINT", payload: newSprint });
-        
-        toast({
-          title: "Sprint created",
-          description: `${sprintData.title} has been created successfully.`
-        });
-      } catch (error) {
-        console.error("Error creating sprint in DB:", error);
-        toast({
-          title: "Error",
-          description: "Failed to create sprint. Please try again.",
-          variant: "destructive"
-        });
-      }
+      dispatch({ type: "ADD_SPRINT", payload: newSprint });
     },
     
     updateSprint: (id, sprintData) => {
@@ -145,27 +70,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     },
     
-    deleteSprint: async (id) => {
-      try {
-        // First delete from DB
-        const { error } = await deleteSprintFromDB(id);
-        if (error) throw error;
-        
-        // Then update local state
-        dispatch({ type: "REMOVE_SPRINT", payload: id });
-        
-        toast({
-          title: "Sprint deleted",
-          description: "Sprint has been deleted successfully."
-        });
-      } catch (error) {
-        console.error("Error deleting sprint:", error);
-        toast({
-          title: "Error",
-          description: "Failed to delete sprint. Please try again.",
-          variant: "destructive"
-        });
-      }
+    deleteSprint: (id) => {
+      dispatch({ type: "REMOVE_SPRINT", payload: id });
+      toast({
+        title: "Sprint deleted",
+        description: "Sprint has been deleted successfully."
+      });
     },
     
     completeSprint: (id) => {
