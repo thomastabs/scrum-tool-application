@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { ProjectFormData, SprintFormData } from '@/types';
 
@@ -86,6 +85,41 @@ export async function deleteProjectFromDB(id: string) {
     .eq('id', id);
   
   return { error };
+}
+
+export async function deleteAllProjectsFromDB() {
+  // Get the current user
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+  
+  // First, delete all sprints associated with the user's projects
+  const { data: projects } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('owner_id', user.id);
+    
+  if (projects && projects.length > 0) {
+    const projectIds = projects.map(project => project.id);
+    
+    // Delete all sprints for these projects
+    await supabase
+      .from('sprints')
+      .delete()
+      .in('project_id', projectIds);
+      
+    // Delete all projects
+    const { error } = await supabase
+      .from('projects')
+      .delete()
+      .eq('owner_id', user.id);
+      
+    if (error) throw error;
+  }
+  
+  return { success: true };
 }
 
 // Add functions for sprint management
