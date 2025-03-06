@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { ProjectFormData, SprintFormData } from '@/types';
 
@@ -43,10 +42,10 @@ export async function createProjectInDB(data: ProjectFormData, userId: string) {
   const { data: newProject, error } = await supabase
     .from('projects')
     .insert({
-      user_id: userId,
       title: data.title,
       description: data.description,
-      end_goal: data.endGoal
+      end_goal: data.endGoal,
+      user_id: userId // Explicitly set the user_id
     })
     .select()
     .single();

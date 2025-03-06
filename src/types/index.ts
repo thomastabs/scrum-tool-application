@@ -103,7 +103,7 @@ export interface ProjectContextType {
   projects: Project[];
   sprints: Sprint[];
   columns: Column[];
-  backlogItems: BacklogItem[];
+  backlogItems: BacklogItems[];
   selectedProject: Project | null;
   selectProject: (id: string) => void;
   createProject: (project: ProjectFormData) => void;

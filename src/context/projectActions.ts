@@ -1,4 +1,3 @@
-
 import { v4 as uuidv4 } from "uuid";
 import { 
   Project, 
@@ -18,6 +17,7 @@ export const createProject = (projectData: ProjectFormData) => {
   const newProject: Project = {
     ...projectData,
     id: uuidv4(),
+    user_id: "", // This will be set by Supabase RLS
     createdAt: new Date(),
     updatedAt: new Date(),
   };

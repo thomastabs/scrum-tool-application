@@ -1,6 +1,5 @@
-
 import React, { createContext, useContext, useReducer, useEffect } from "react";
-import { ProjectContextType } from "@/types";
+import { ProjectContextType, Project } from "@/types";
 import { projectReducer, initialState } from "./projectReducer";
 import { 
   createProject, 
@@ -15,6 +14,7 @@ import {
 } from "./projectActions";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/lib/supabase";
+import { createProjectInDB } from "@/lib/supabase";
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
@@ -64,7 +64,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       dispatch({ type: "SELECT_PROJECT", payload: id });
     },
     
-    createProject: (projectData) => {
+    createProject: async (projectData) => {
       if (!state.userId) {
         toast({
           title: "Authentication required",
@@ -74,8 +74,26 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return;
       }
       
-      const newProject = createProject(projectData);
-      dispatch({ type: "ADD_PROJECT", payload: newProject });
+      const { data, error } = await createProjectInDB(projectData, state.userId);
+      
+      if (error) {
+        toast({
+          title: "Error creating project",
+          description: error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      if (data) {
+        const newProject: Project = {
+          ...data,
+          createdAt: new Date(data.created_at),
+          updatedAt: new Date(data.updated_at),
+          user_id: state.userId,
+        };
+        dispatch({ type: "ADD_PROJECT", payload: newProject });
+      }
     },
     
     updateProject: (id, projectData) => {
