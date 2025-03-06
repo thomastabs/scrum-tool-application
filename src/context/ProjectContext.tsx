@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useReducer, useEffect } from "react";
+import React, { createContext, useContext, useReducer, useEffect, useState } from "react";
 import { ProjectContextType } from "@/types";
 import { projectReducer, initialState } from "./projectReducer";
 import { 
@@ -14,18 +14,26 @@ import {
   updateBacklogItem 
 } from "./projectActions";
 import { toast } from "@/components/ui/use-toast";
+import { supabase } from "@/lib/supabase";
+import { Project } from "@/types";
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [state, dispatch] = useReducer(projectReducer, initialState, () => {
-    const localData = localStorage.getItem("projectState");
-    return localData ? JSON.parse(localData) : initialState;
-  });
+  const [state, dispatch] = useReducer(projectReducer, initialState);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    localStorage.setItem("projectState", JSON.stringify(state));
-  }, [state]);
+  // Function to directly set projects from database
+  const setProjects = (projects: Project[]) => {
+    // Clear local storage to prevent caching issues
+    localStorage.removeItem("projectState");
+    
+    dispatch({ type: "SET_PROJECTS", payload: projects });
+  };
+
+  // useEffect(() => {
+  //   localStorage.setItem("projectState", JSON.stringify(state));
+  // }, [state]);
 
   const contextValue: ProjectContextType = {
     projects: state.projects,
@@ -33,29 +41,161 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     columns: state.columns,
     backlogItems: state.backlogItems,
     selectedProject: state.selectedProject,
+    loading,
+    setProjects, // Add the new function
     
     selectProject: (id: string) => {
       dispatch({ type: "SELECT_PROJECT", payload: id });
     },
     
-    createProject: (projectData) => {
-      const newProject = createProject(projectData);
-      dispatch({ type: "ADD_PROJECT", payload: newProject });
-    },
-    
-    updateProject: (id, projectData) => {
-      const updatedProject = updateProject(id, projectData, state.projects);
-      if (updatedProject) {
-        dispatch({ type: "UPDATE_PROJECT", payload: updatedProject });
+    createProject: async (projectData) => {
+      setLoading(true);
+      try {
+        const { data: user } = await supabase.auth.getUser();
+        
+        if (!user.user) {
+          toast({
+            title: "Error creating project",
+            description: "You must be logged in to create a project",
+            variant: "destructive"
+          });
+          setLoading(false);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from('projects')
+          .insert({
+            title: projectData.title,
+            description: projectData.description,
+            end_goal: projectData.endGoal,
+            user_id: user.user.id
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error("Error creating project:", error);
+          toast({
+            title: "Error creating project",
+            description: error.message,
+            variant: "destructive"
+          });
+          setLoading(false);
+          return;
+        }
+
+        // Convert to the application's Project format
+        const newProject: Project = {
+          id: data.id,
+          title: data.title,
+          description: data.description || "",
+          endGoal: data.end_goal || "",
+          createdAt: new Date(data.created_at),
+          updatedAt: new Date(data.created_at)
+        };
+
+        dispatch({ type: "ADD_PROJECT", payload: newProject });
+        toast({
+          title: "Project created",
+          description: `${projectData.title} has been created successfully.`
+        });
+      } catch (err) {
+        console.error("Error in createProject:", err);
+        toast({
+          title: "Error creating project",
+          description: "An unexpected error occurred. Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
       }
     },
     
-    deleteProject: (id) => {
-      dispatch({ type: "REMOVE_PROJECT", payload: id });
-      toast({
-        title: "Project deleted",
-        description: "Project has been deleted successfully."
-      });
+    updateProject: async (id, projectData) => {
+      setLoading(true);
+      try {
+        const { error } = await supabase
+          .from('projects')
+          .update({
+            title: projectData.title,
+            description: projectData.description,
+            end_goal: projectData.endGoal
+          })
+          .eq('id', id);
+
+        if (error) {
+          console.error("Error updating project:", error);
+          toast({
+            title: "Error updating project",
+            description: error.message,
+            variant: "destructive"
+          });
+          setLoading(false);
+          return;
+        }
+
+        // Update local state
+        const updatedProject = {
+          id,
+          title: projectData.title,
+          description: projectData.description,
+          endGoal: projectData.endGoal,
+          updatedAt: new Date(),
+          createdAt: state.projects.find(p => p.id === id)?.createdAt || new Date()
+        };
+        
+        dispatch({ type: "UPDATE_PROJECT", payload: updatedProject });
+        toast({
+          title: "Project updated",
+          description: `${projectData.title} has been updated successfully.`
+        });
+      } catch (err) {
+        console.error("Error in updateProject:", err);
+        toast({
+          title: "Error updating project",
+          description: "An unexpected error occurred. Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    },
+    
+    deleteProject: async (id) => {
+      setLoading(true);
+      try {
+        const { error } = await supabase
+          .from('projects')
+          .delete()
+          .eq('id', id);
+
+        if (error) {
+          console.error("Error deleting project:", error);
+          toast({
+            title: "Error deleting project",
+            description: error.message,
+            variant: "destructive"
+          });
+          setLoading(false);
+          return;
+        }
+
+        dispatch({ type: "REMOVE_PROJECT", payload: id });
+        toast({
+          title: "Project deleted",
+          description: "Project has been deleted successfully."
+        });
+      } catch (err) {
+        console.error("Error in deleteProject:", err);
+        toast({
+          title: "Error deleting project",
+          description: "An unexpected error occurred. Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
     },
     
     createSprint: (sprintData) => {

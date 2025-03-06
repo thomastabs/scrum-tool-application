@@ -1,4 +1,3 @@
-
 import { State, Action } from "./projectTypes";
 
 export const initialState: State = {
@@ -33,6 +32,8 @@ export const initialState: State = {
 
 export const projectReducer = (state: State, action: Action): State => {
   switch (action.type) {
+    case "SET_PROJECTS":
+      return { ...state, projects: action.payload };
     case "ADD_PROJECT":
       return { ...state, projects: [...state.projects, action.payload] };
     case "UPDATE_PROJECT":
