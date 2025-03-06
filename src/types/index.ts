@@ -68,6 +68,19 @@ export interface BacklogItem extends BacklogItemFormData {
   updatedAt: Date;
 }
 
+export interface Collaborator {
+  id: string;
+  projectId: string;
+  userId: string;
+  role: 'admin' | 'editor' | 'viewer';
+  createdAt: Date;
+}
+
+export interface CollaboratorFormData {
+  email: string;
+  role: 'admin' | 'editor' | 'viewer';
+}
+
 export interface ProjectContextType {
   projects: Project[];
   sprints: Sprint[];

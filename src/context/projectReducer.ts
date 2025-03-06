@@ -1,5 +1,5 @@
-
 import { State, Action } from "./projectTypes";
+import { Task } from "@/types";
 
 export const initialState: State = {
   projects: [],
