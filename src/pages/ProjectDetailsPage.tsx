@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useProject } from "@/context/ProjectContext";
@@ -101,7 +102,13 @@ const ProjectDetailPage = () => {
             setShowSprintForm(false);
             setSprintToEdit(null);
           }}
-          sprintToEdit={sprintToEdit}
+          sprintToEdit={sprintToEdit ? {
+            id: sprintToEdit.id,
+            title: sprintToEdit.title,
+            description: sprintToEdit.description || "",
+            startDate: sprintToEdit.startDate,
+            endDate: sprintToEdit.endDate,
+          } : null}
         />
       )}
 

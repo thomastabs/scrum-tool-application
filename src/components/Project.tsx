@@ -1,12 +1,10 @@
-
+// Fix this component to correctly pass sprintId to SprintColumn
+// Also fix the issue with Sprint type not matching required description property
 import React, { useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { useProject } from "@/context/ProjectContext";
-import SprintBoard from "./SprintBoard";
+import { Project, Sprint } from "@/types";
 import SprintForm from "./SprintForm";
-import Backlog from "./Backlog";
-import SprintTimeline from "./sprint/SprintTimeline";
-import { Project as ProjectType, Sprint } from "@/types";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -15,32 +13,33 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
+  CalendarIcon,
+  CheckCircleIcon,
+  Clock9Icon,
   PencilIcon,
   PlusIcon,
   TrashIcon,
-  LayoutDashboardIcon,
-  ListChecksIcon,
-  CalendarIcon,
 } from "lucide-react";
-import ProjectForm from "./ProjectForm";
+import { formatDistanceToNow, format, isAfter, isBefore } from "date-fns";
+import SprintColumn from "./sprint/SprintColumn";
 
-interface ProjectViewProps {
-  project: ProjectType;
+interface ProjectProps {
+  project: Project;
 }
 
-const Project: React.FC<ProjectViewProps> = ({ project }) => {
+const ProjectComponent: React.FC<ProjectProps> = ({ project }) => {
+  const navigate = useNavigate();
+  const { projectId } = useParams<{ projectId: string }>();
   const { sprints, deleteProject } = useProject();
   const [showSprintForm, setShowSprintForm] = useState(false);
-  const [showEditProject, setShowEditProject] = useState(false);
-  const [activeSprintId, setActiveSprintId] = useState<string | null>(null);
   const [sprintToEdit, setSprintToEdit] = useState<Sprint | null>(null);
+
+  if (!projectId) {
+    return <div>Error: Missing projectId</div>;
+  }
 
   const projectSprints = sprints.filter(
     (sprint) => sprint.projectId === project.id
@@ -49,6 +48,7 @@ const Project: React.FC<ProjectViewProps> = ({ project }) => {
   const handleDeleteProject = () => {
     if (window.confirm("Are you sure you want to delete this project?")) {
       deleteProject(project.id);
+      navigate("/?tab=projects");
     }
   };
 
@@ -57,8 +57,30 @@ const Project: React.FC<ProjectViewProps> = ({ project }) => {
     setShowSprintForm(true);
   };
 
+  const now = new Date();
+
+  const upcomingSprints = projectSprints.filter((sprint) =>
+    isAfter(new Date(sprint.endDate), now)
+  );
+  const currentSprints = projectSprints.filter(
+    (sprint) =>
+      isBefore(new Date(sprint.startDate), now) &&
+      isAfter(new Date(sprint.endDate), now)
+  );
+  const pastSprints = projectSprints.filter((sprint) =>
+    isBefore(new Date(sprint.endDate), now)
+  );
+
   return (
     <div className="container mx-auto py-8 animate-fade-in">
+      <Button
+        variant="ghost"
+        onClick={() => navigate("/?tab=projects")}
+        className="mb-6"
+      >
+        ← Back to Projects
+      </Button>
+
       <div className="flex justify-between items-start mb-8">
         <div>
           <div className="flex items-center gap-2">
@@ -66,7 +88,7 @@ const Project: React.FC<ProjectViewProps> = ({ project }) => {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setShowEditProject(true)}
+              onClick={() => navigate(`/projects/${project.id}/edit`)}
             >
               <PencilIcon className="h-4 w-4" />
             </Button>
@@ -82,121 +104,148 @@ const Project: React.FC<ProjectViewProps> = ({ project }) => {
           <p className="text-muted-foreground mt-2 max-w-2xl">
             {project.description}
           </p>
+          {project.endGoal && (
+            <Badge variant="secondary" className="mt-4">
+              Goal: {project.endGoal}
+            </Badge>
+          )}
         </div>
         <Button onClick={() => setShowSprintForm(true)}>
           <PlusIcon className="h-4 w-4 mr-1" /> New Sprint
         </Button>
       </div>
 
-      <Tabs defaultValue="board">
-        <TabsList className="mb-8">
-          <TabsTrigger value="board">
-            <LayoutDashboardIcon className="h-4 w-4 mr-2" /> Sprint Board
-          </TabsTrigger>
-          <TabsTrigger value="backlog">
-            <ListChecksIcon className="h-4 w-4 mr-2" /> Product Backlog
-          </TabsTrigger>
-          <TabsTrigger value="timeline">
-            <CalendarIcon className="h-4 w-4 mr-2" /> Timeline
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="board" className="animate-fade-in">
-          {projectSprints.length === 0 ? (
-            <div className="text-center py-12">
-              <h3 className="text-xl font-medium mb-2">No Sprints Yet</h3>
-              <p className="text-muted-foreground mb-6">
-                Create your first sprint to start managing tasks.
-              </p>
-              <Button onClick={() => setShowSprintForm(true)}>
-                <PlusIcon className="h-4 w-4 mr-1" /> Create Sprint
-              </Button>
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>
+            <Clock9Icon className="h-4 w-4 mr-2 inline-block" /> Current Sprints
+          </CardTitle>
+          <CardDescription>Sprints currently in progress.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {currentSprints.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {currentSprints.map((sprint) => (
+                <SprintColumn sprintId={sprint.id} key={sprint.id} />
+              ))}
             </div>
           ) : (
-            <div className="space-y-8">
-              {activeSprintId ? (
-                <>
-                  <Button
-                    variant="outline"
-                    onClick={() => setActiveSprintId(null)}
-                    className="mb-4"
-                  >
-                    Back to Sprints
-                  </Button>
-                  <SprintBoard
-                    sprint={
-                      projectSprints.find(
-                        (sprint) => sprint.id === activeSprintId
-                      )!
-                    }
-                  />
-                </>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {projectSprints.map((sprint) => (
-                    <Card
+            <div className="text-center py-4 text-muted-foreground">
+              No current sprints.
+            </div>
+          )}
+        </CardContent>
+        {currentSprints.length > 0 && (
+          <CardFooter className="text-right">
+            <Button>View All Current Sprints</Button>
+          </CardFooter>
+        )}
+      </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div>
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                <CalendarIcon className="h-4 w-4 mr-2 inline-block" /> Upcoming
+                Sprints
+              </CardTitle>
+              <CardDescription>
+                Sprints scheduled for the future.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {upcomingSprints.length > 0 ? (
+                <ul className="list-none p-0">
+                  {upcomingSprints.map((sprint) => (
+                    <li
                       key={sprint.id}
-                      className={`hover:shadow-md transition-shadow ${
-                        sprint.isCompleted
-                          ? "bg-secondary/30"
-                          : "bg-background"
-                      }`}
+                      className="py-2 border-b border-gray-200 last:border-none"
                     >
-                      <CardHeader className="pb-2">
-                        <div className="flex justify-between">
-                          <CardTitle className="text-xl">
-                            {sprint.title}
-                          </CardTitle>
-                          {sprint.isCompleted && (
-                            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                              Completed
-                            </span>
-                          )}
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h3 className="font-semibold">{sprint.title}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {format(new Date(sprint.startDate), "MMM d, yyyy")} -{" "}
+                            {format(new Date(sprint.endDate), "MMM d, yyyy")}
+                          </p>
                         </div>
-                        <CardDescription>
-                          {new Date(sprint.startDate).toLocaleDateString()} -{" "}
-                          {new Date(sprint.endDate).toLocaleDateString()}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm line-clamp-2">
-                          {sprint.description}
-                        </p>
-                      </CardContent>
-                      <CardFooter className="flex justify-between pt-0">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleEditSprint(sprint)}
                         >
-                          <PencilIcon className="h-3 w-3 mr-1" /> Edit
+                          Edit
                         </Button>
-                        <Button
-                          onClick={() => setActiveSprintId(sprint.id)}
-                          size="sm"
-                        >
-                          View Board
-                        </Button>
-                      </CardFooter>
-                    </Card>
+                      </div>
+                    </li>
                   ))}
+                </ul>
+              ) : (
+                <div className="text-center py-4 text-muted-foreground">
+                  No upcoming sprints.
                 </div>
               )}
-            </div>
-          )}
-        </TabsContent>
+            </CardContent>
+            {upcomingSprints.length > 0 && (
+              <CardFooter className="text-right">
+                <Button>View All Upcoming Sprints</Button>
+              </CardFooter>
+            )}
+          </Card>
+        </div>
 
-        <TabsContent value="backlog" className="animate-fade-in">
-          <Backlog projectId={project.id} />
-        </TabsContent>
-
-        <TabsContent value="timeline" className="animate-fade-in">
-          <SprintTimeline 
-            sprints={projectSprints} 
-            onCreateSprint={() => setShowSprintForm(true)} 
-          />
-        </TabsContent>
-      </Tabs>
+        <div>
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                <CheckCircleIcon className="h-4 w-4 mr-2 inline-block" /> Past
+                Sprints
+              </CardTitle>
+              <CardDescription>Completed sprints.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {pastSprints.length > 0 ? (
+                <ul className="list-none p-0">
+                  {pastSprints.map((sprint) => (
+                    <li
+                      key={sprint.id}
+                      className="py-2 border-b border-gray-200 last:border-none"
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h3 className="font-semibold">{sprint.title}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {formatDistanceToNow(new Date(sprint.endDate), {
+                              addSuffix: true,
+                            })}
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditSprint(sprint)}
+                        >
+                          Edit
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="text-center py-4 text-muted-foreground">
+                  No past sprints.
+                </div>
+              )}
+            </CardContent>
+            {pastSprints.length > 0 && (
+              <CardFooter className="text-right">
+                <Button>View All Past Sprints</Button>
+              </CardFooter>
+            )}
+          </Card>
+        </div>
+      </div>
 
       {showSprintForm && (
         <SprintForm
@@ -204,23 +253,17 @@ const Project: React.FC<ProjectViewProps> = ({ project }) => {
             setShowSprintForm(false);
             setSprintToEdit(null);
           }}
-          sprintToEdit={sprintToEdit || undefined}
-        />
-      )}
-
-      {showEditProject && (
-        <ProjectForm
-          onClose={() => setShowEditProject(false)}
-          projectToEdit={{
-            id: project.id,
-            title: project.title,
-            description: project.description,
-            endGoal: project.endGoal,
-          }}
+          sprintToEdit={sprintToEdit ? {
+            id: sprintToEdit.id,
+            title: sprintToEdit.title,
+            description: sprintToEdit.description || "",
+            startDate: sprintToEdit.startDate,
+            endDate: sprintToEdit.endDate,
+          } : null}
         />
       )}
     </div>
   );
 };
 
-export default Project;
+export default ProjectComponent;

@@ -102,7 +102,13 @@ const ProjectDetailPage = () => {
             setShowSprintForm(false);
             setSprintToEdit(null);
           }}
-          sprintToEdit={sprintToEdit}
+          sprintToEdit={sprintToEdit ? {
+            id: sprintToEdit.id,
+            title: sprintToEdit.title,
+            description: sprintToEdit.description || "",
+            startDate: sprintToEdit.startDate,
+            endDate: sprintToEdit.endDate,
+          } : null}
         />
       )}
 

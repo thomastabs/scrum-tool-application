@@ -187,7 +187,7 @@ export const projectReducer = (state: State, action: Action): State => {
 
       if (!backlogItem) return state;
 
-      // Create a task from backlog item
+      // Create a task from backlog item, ensuring optional fields are properly handled
       const newTask: Task = {
         id: backlogItemId,
         title: backlogItem.title,
