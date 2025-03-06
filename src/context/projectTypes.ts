@@ -29,8 +29,7 @@ export type Action =
   | { type: "ADD_BACKLOG_ITEM"; payload: BacklogItem }
   | { type: "UPDATE_BACKLOG_ITEM"; payload: BacklogItem }
   | { type: "REMOVE_BACKLOG_ITEM"; payload: string }
-  | { type: "MOVE_BACKLOG_ITEM_TO_SPRINT"; payload: { backlogItemId: string; sprintId: string } }
-  | { type: "SET_USER_ID"; payload: string | null };
+  | { type: "MOVE_BACKLOG_ITEM_TO_SPRINT"; payload: { backlogItemId: string; sprintId: string } };
 
 export type State = {
   projects: Project[];
@@ -38,5 +37,4 @@ export type State = {
   columns: Column[];
   backlogItems: BacklogItem[];
   selectedProject: Project | null;
-  userId: string | null;
 };

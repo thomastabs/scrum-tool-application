@@ -1,3 +1,4 @@
+
 import { State, Action } from "./projectTypes";
 
 export const initialState: State = {
@@ -28,7 +29,6 @@ export const initialState: State = {
   ],
   backlogItems: [],
   selectedProject: null,
-  userId: null,
 };
 
 export const projectReducer = (state: State, action: Action): State => {
@@ -55,11 +55,6 @@ export const projectReducer = (state: State, action: Action): State => {
         selectedProject: action.payload 
           ? state.projects.find(p => p.id === action.payload) || null 
           : null,
-      };
-    case "SET_USER_ID":
-      return {
-        ...state,
-        userId: action.payload
       };
     case "ADD_SPRINT":
       return { ...state, sprints: [...state.sprints, action.payload] };
