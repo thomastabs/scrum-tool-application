@@ -5,33 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FolderIcon } from "lucide-react";
 import { Project } from "@/types";
-import { Skeleton } from "@/components/ui/skeleton";
 
 interface ProjectOverviewProps {
   projects: Project[];
-  loading: boolean;
 }
 
-const ProjectOverview = ({ projects, loading }: ProjectOverviewProps) => {
-  if (loading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {[1, 2, 3].map((i) => (
-          <Card key={i} className="animate-pulse">
-            <CardHeader className="pb-2">
-              <Skeleton className="h-6 w-1/2 mb-2" />
-              <Skeleton className="h-4 w-3/4 mb-1" />
-              <Skeleton className="h-4 w-1/2" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-8 w-full rounded" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
-  }
-
+const ProjectOverview = ({ projects }: ProjectOverviewProps) => {
   // Display recent projects (limited to 3)
   const recentProjects = projects.slice(0, 3);
 

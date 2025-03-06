@@ -14,8 +14,7 @@ const CollaborationsTab = () => {
           <UsersIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium mb-2">Coming Soon</h3>
           <p className="text-muted-foreground">
-            Collaboration features will be implemented in the future. You'll be able to collaborate 
-            with other users by inviting them to your projects.
+            Collaboration features will be implemented in the future.
           </p>
         </div>
       </CardContent>

@@ -1,4 +1,3 @@
-
 export interface Project {
   id: string;
   title: string;
@@ -50,14 +49,6 @@ export interface BacklogItem {
   storyPoints: number;
   createdAt: Date;
   updatedAt: Date;
-}
-
-export interface ProjectState {
-  projects: Project[];
-  sprints: Sprint[];
-  columns: Column[];
-  backlogItems: BacklogItem[];
-  selectedProject: Project | null;
 }
 
 export interface ProjectFormData {
@@ -113,7 +104,6 @@ export interface ProjectContextType {
   columns: Column[];
   backlogItems: BacklogItem[];
   selectedProject: Project | null;
-  setProjects: (projects: Project[]) => void;
   selectProject: (id: string) => void;
   createProject: (project: ProjectFormData) => void;
   updateProject: (id: string, project: ProjectFormData) => void;
