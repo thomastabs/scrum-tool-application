@@ -20,7 +20,6 @@ async function createProject(
     title: data.title,
     description: data.description,
     endGoal: data.endGoal,
-    owner_id: userId, // Add the required owner_id property using the userId parameter
     createdAt: new Date(),
     updatedAt: new Date()
   };

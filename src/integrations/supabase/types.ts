@@ -74,20 +74,13 @@ export type Database = {
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "collaborators_user_id_fkey1"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
         ]
       }
       invitations: {
         Row: {
           created_at: string
           id: string
-          invited_user_id: string | null
+          invited_email: string
           inviter_id: string
           project_id: string
           role: string
@@ -97,7 +90,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
-          invited_user_id?: string | null
+          invited_email: string
           inviter_id: string
           project_id: string
           role?: string
@@ -107,7 +100,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
-          invited_user_id?: string | null
+          invited_email?: string
           inviter_id?: string
           project_id?: string
           role?: string
@@ -115,20 +108,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "invitations_invited_user_id_fkey1"
-            columns: ["invited_user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invitations_inviter_id_fkey1"
-            columns: ["inviter_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "invitations_project_id_fkey"
             columns: ["project_id"]
@@ -140,41 +119,27 @@ export type Database = {
       }
       projects: {
         Row: {
-          collaborators: string[] | null
           created_at: string
           description: string | null
-          end_goal: string | null
           id: string
-          owner_id: string
           title: string
+          user_id: string
         }
         Insert: {
-          collaborators?: string[] | null
           created_at?: string
           description?: string | null
-          end_goal?: string | null
           id?: string
-          owner_id: string
           title: string
+          user_id: string
         }
         Update: {
-          collaborators?: string[] | null
           created_at?: string
           description?: string | null
-          end_goal?: string | null
           id?: string
-          owner_id?: string
           title?: string
+          user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "projects_owner_id_users_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       sprints: {
         Row: {
@@ -291,32 +256,7 @@ export type Database = {
             referencedRelation: "sprints"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "tasks_user_id_fkey1"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
         ]
-      }
-      users: {
-        Row: {
-          created_at: string
-          email: string
-          id: string
-        }
-        Insert: {
-          created_at?: string
-          email: string
-          id: string
-        }
-        Update: {
-          created_at?: string
-          email?: string
-          id?: string
-        }
-        Relationships: []
       }
     }
     Views: {

@@ -13,7 +13,6 @@ export const createProject = (
     title: projectData.title,
     description: projectData.description,
     endGoal: projectData.endGoal,
-    owner_id: "", // Add the required owner_id property
     createdAt: new Date(),
     updatedAt: new Date()
   };

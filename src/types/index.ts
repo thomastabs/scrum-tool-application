@@ -3,8 +3,6 @@ export interface Project {
   title: string;
   description: string;
   endGoal: string;
-  owner_id: string;
-  collaborators?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -98,13 +96,6 @@ export interface Collaborator {
 export interface CollaboratorFormData {
   email: string;
   role: "viewer" | "editor" | "admin";
-}
-
-// Add User type to match our new users table
-export interface User {
-  id: string;
-  email: string;
-  createdAt: Date;
 }
 
 export interface ProjectContextType {

@@ -38,35 +38,12 @@ export async function getSession() {
   return { session: data.session, error };
 }
 
-// Get current user from our public.users table
-export async function getCurrentUser() {
-  const { data: session } = await supabase.auth.getSession();
-  if (!session.session) return { data: null, error: new Error('No session found') };
-  
-  const { data, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', session.session.user.id)
-    .single();
-    
-  return { data, error };
-}
-
 // Add functions for project management
-export async function createProjectInDB(data: ProjectFormData) {
-  // Get the current user session to ensure we have the user's ID
-  const { data: sessionData } = await supabase.auth.getSession();
-  if (!sessionData.session) {
-    return { data: null, error: new Error('User not authenticated') };
-  }
-  
-  const userId = sessionData.session.user.id;
-  
-  // Insert project with the current user's ID as owner_id
+export async function createProjectInDB(data: ProjectFormData, userId: string) {
   const { data: newProject, error } = await supabase
     .from('projects')
     .insert({
-      owner_id: userId,
+      user_id: userId,
       title: data.title,
       description: data.description,
       end_goal: data.endGoal
@@ -74,26 +51,16 @@ export async function createProjectInDB(data: ProjectFormData) {
     .select()
     .single();
   
-  if (error) {
-    console.error('Error creating project:', error);
-  }
-  
   return { data: newProject, error };
 }
 
 export async function getProjectsFromDB() {
-  // This will automatically only get projects where owner_id matches the authenticated user
-  // thanks to the RLS policies we've set up
   const { data, error } = await supabase
     .from('projects')
     .select('*')
     .order('created_at', { ascending: false });
   
-  if (error) {
-    console.error('Error fetching projects:', error);
-  }
-  
-  return { data: data || [], error };
+  return { data, error };
 }
 
 export async function updateProjectInDB(id: string, data: ProjectFormData) {
