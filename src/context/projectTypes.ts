@@ -8,10 +8,14 @@ import {
   ProjectFormData,
   SprintFormData,
   TaskFormData,
-  BacklogItemFormData
+  BacklogItemFormData,
+  Collaborator,
+  CollaboratorFormData
 } from "@/types";
 
 export type Action =
+  | { type: "INITIALIZE_STATE"; payload: State }
+  | { type: "SET_PROJECTS"; payload: Project[] }
   | { type: "ADD_PROJECT"; payload: Project }
   | { type: "UPDATE_PROJECT"; payload: Project }
   | { type: "REMOVE_PROJECT"; payload: string }
