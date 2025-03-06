@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { ProjectFormData, SprintFormData } from '@/types';
 
@@ -93,11 +94,10 @@ export async function getProjectsFromDB() {
     const userId = authData.session.user.id;
     console.log('User is authenticated, fetching projects for user ID:', userId);
     
-    // Now that we've fixed the database relationship, let's use the proper query
+    // With our fixed security definer function, the RLS policy should work correctly now
     const { data, error } = await supabase
       .from('projects')
-      .select('*')
-      .eq('owner_id', userId);
+      .select('*');
       
     if (error) {
       console.error('Supabase error fetching projects:', error);
