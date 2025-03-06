@@ -1,91 +1,189 @@
-
 import { v4 as uuidv4 } from "uuid";
-import { Project } from "@/types";
-import { Toast } from "@/types/toast";
+import { 
+  Project, 
+  ProjectFormData, 
+  Sprint, 
+  SprintFormData, 
+  Task, 
+  TaskFormData, 
+  BacklogItem, 
+  BacklogItemFormData, 
+  Column 
+} from "@/types";
+import { toast } from "@/components/ui/use-toast";
 
-export const createProject = (
-  projects: Project[],
-  projectData: { title: string; description: string; endGoal: string },
-  toast: (props: Toast) => void
-): Project[] => {
+// Project actions
+export const createProject = (projectData: ProjectFormData) => {
   const newProject: Project = {
+    ...projectData,
     id: uuidv4(),
-    title: projectData.title,
-    description: projectData.description,
-    endGoal: projectData.endGoal,
+    user_id: "", // This will be set by Supabase RLS
     createdAt: new Date(),
-    updatedAt: new Date()
+    updatedAt: new Date(),
   };
-  
-  const updatedProjects = [...projects, newProject];
   
   toast({
     title: "Project created",
     description: `${projectData.title} has been created successfully.`
   });
-
-  return updatedProjects;
+  
+  return newProject;
 };
 
-export const updateProject = (
-  projects: Project[],
-  id: string,
-  projectData: { title: string; description: string; endGoal: string },
-  toast: (props: Toast) => void
-): Project[] => {
-  const updatedProjects = projects.map(project => 
-    project.id === id
-      ? { 
-          ...project, 
-          ...projectData,
-          updatedAt: new Date()
-        }
-      : project
-  );
+export const updateProject = (id: string, projectData: ProjectFormData, projects: Project[]) => {
+  const project = projects.find(p => p.id === id);
+  if (!project) return null;
+
+  const updatedProject: Project = {
+    ...project,
+    ...projectData,
+    updatedAt: new Date(),
+  };
   
   toast({
     title: "Project updated",
     description: `${projectData.title} has been updated successfully.`
   });
-
-  return updatedProjects;
+  
+  return updatedProject;
 };
 
-export const deleteProject = (
-  projects: Project[],
-  sprints: any[],
-  columns: any[],
-  id: string,
-  toast: (props: Toast) => void
-): { updatedProjects: Project[], updatedSprints: any[], updatedColumns: any[] } => {
-  const projectToDelete = projects.find(project => project.id === id);
-  
-  if (!projectToDelete) {
-    return { updatedProjects: projects, updatedSprints: sprints, updatedColumns: columns };
-  }
-  
-  // Get sprints that belong to this project
-  const projectSprintIds = sprints
-    .filter(sprint => sprint.projectId === id)
-    .map(sprint => sprint.id);
-  
-  // Filter out sprints that belong to this project
-  const updatedSprints = sprints.filter(sprint => sprint.projectId !== id);
-  
-  // Filter out columns that have tasks associated with this project's sprints
-  const updatedColumns = columns.filter(column => 
-    !column.tasks.some(task => 
-      projectSprintIds.includes(task.sprintId)
-    )
-  );
-  
-  // Delete the project itself
-  const updatedProjects = projects.filter(project => project.id !== id);
+// Sprint actions
+export const createSprint = (sprintData: SprintFormData) => {
+  const newSprint: Sprint = {
+    ...sprintData,
+    id: uuidv4(),
+    isCompleted: false,
+    projectId: sprintData.projectId || "",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
   
   toast({
-    title: "Project deleted",
-    description: `${projectToDelete.title} has been deleted successfully.`
+    title: "Sprint created",
+    description: `${sprintData.title} has been created successfully.`
   });
+  
+  return newSprint;
+};
 
-  return { updatedProjects, updatedSprints, updatedColumns };
+export const updateSprint = (id: string, sprintData: SprintFormData, sprints: Sprint[]) => {
+  const sprint = sprints.find(s => s.id === id);
+  if (!sprint) return null;
+
+  const updatedSprint: Sprint = {
+    ...sprint,
+    ...sprintData,
+    updatedAt: new Date(),
+  };
+  
+  toast({
+    title: "Sprint updated",
+    description: `${sprintData.title} has been updated successfully.`
+  });
+  
+  return updatedSprint;
+};
+
+// Task actions
+export const createTask = (sprintId: string, columnId: string, taskData: TaskFormData) => {
+  const newTask: Task = {
+    ...taskData,
+    id: uuidv4(),
+    columnId,
+    sprintId,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  
+  toast({
+    title: "Task created",
+    description: `${taskData.title} has been created successfully.`
+  });
+  
+  return newTask;
+};
+
+export const updateTask = (id: string, taskData: TaskFormData, columns: Column[]) => {
+  // Find the task from all columns
+  let task: Task | undefined;
+  let columnId: string | undefined;
+
+  for (const column of columns) {
+    const foundTask = column.tasks.find(t => t.id === id);
+    if (foundTask) {
+      task = foundTask;
+      columnId = column.id;
+      break;
+    }
+  }
+
+  if (!task || !columnId) return null;
+
+  const updatedTask: Task = {
+    ...task,
+    ...taskData,
+    updatedAt: new Date(),
+  };
+  
+  toast({
+    title: "Task updated",
+    description: `${taskData.title} has been updated successfully.`
+  });
+  
+  return updatedTask;
+};
+
+// Column actions
+export const createColumn = (title: string) => {
+  const newColumn: Column = {
+    id: uuidv4(),
+    title,
+    tasks: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  
+  toast({
+    title: "Column created",
+    description: `${title} column has been created successfully.`
+  });
+  
+  return newColumn;
+};
+
+// Backlog actions
+export const createBacklogItem = (backlogItemData: BacklogItemFormData) => {
+  const newBacklogItem: BacklogItem = {
+    ...backlogItemData,
+    id: uuidv4(),
+    projectId: backlogItemData.projectId || "",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  
+  toast({
+    title: "Backlog item created",
+    description: `${backlogItemData.title} has been created successfully.`
+  });
+  
+  return newBacklogItem;
+};
+
+export const updateBacklogItem = (id: string, backlogItemData: BacklogItemFormData, backlogItems: BacklogItem[]) => {
+  const backlogItem = backlogItems.find(item => item.id === id);
+  if (!backlogItem) return null;
+
+  const updatedBacklogItem: BacklogItem = {
+    ...backlogItem,
+    ...backlogItemData,
+    updatedAt: new Date(),
+  };
+  
+  toast({
+    title: "Backlog item updated",
+    description: `${backlogItemData.title} has been updated successfully.`
+  });
+  
+  return updatedBacklogItem;
 };

@@ -20,6 +20,7 @@ async function createProject(
     title: data.title,
     description: data.description,
     endGoal: data.endGoal,
+    user_id: userId, // Added user_id to satisfy Project interface requirements
     createdAt: new Date(),
     updatedAt: new Date()
   };
