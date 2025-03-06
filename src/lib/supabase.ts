@@ -7,20 +7,27 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIU
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export async function signUp(email: string, password: string) {
+  console.log("Signing up with email:", email);
+  
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      // Set emailRedirectTo to current origin for if email confirmation is enabled
-      emailRedirectTo: `${window.location.origin}/`,
-      // We're not using email confirmation, so we don't need to set this
-      // data: { email_confirm: false } 
+      // Set emailRedirectTo to current origin
+      emailRedirectTo: `${window.location.origin}/sign-in`,
+      // Enable email confirmation
+      data: { 
+        email_confirm: true 
+      }
     }
   });
   
-  // If the signup is successful but email confirmation is required, let the user know
-  if (data?.user && !data.session) {
-    console.log("Email confirmation required. Check your inbox.");
+  if (error) {
+    console.error("Sign up error:", error.message);
+  } else if (data?.user && !data.session) {
+    console.log("Email verification required. Confirmation email sent to:", email);
+  } else if (data?.session) {
+    console.log("Sign up successful with immediate session:", data.user?.email);
   }
   
   return { data, error };

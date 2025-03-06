@@ -14,7 +14,8 @@ const SignUp: React.FC = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const navigate = useNavigate();
 
   // Check if user is already signed in
@@ -31,8 +32,10 @@ const SignUp: React.FC = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
     
     if (!email || !password) {
+      setErrorMessage("Please enter both email and password");
       toast({
         title: "Error",
         description: "Please enter both email and password",
@@ -42,6 +45,7 @@ const SignUp: React.FC = () => {
     }
     
     if (password !== confirmPassword) {
+      setErrorMessage("Passwords don't match");
       toast({
         title: "Error",
         description: "Passwords don't match",
@@ -51,6 +55,7 @@ const SignUp: React.FC = () => {
     }
     
     if (password.length < 6) {
+      setErrorMessage("Password should be at least 6 characters");
       toast({
         title: "Error",
         description: "Password should be at least 6 characters",
@@ -60,22 +65,43 @@ const SignUp: React.FC = () => {
     }
     
     setLoading(true);
-    const { data, error } = await signUp(email, password);
-    setLoading(false);
-    
-    if (error) {
-      toast({
-        title: "Sign up failed",
-        description: error.message,
-        variant: "destructive"
-      });
-    } else {
-      // We've configured Supabase to not require email verification
-      toast({
-        title: "Sign up successful",
-        description: "Your account has been created. You can now sign in."
-      });
-      navigate("/sign-in");
+    try {
+      const { data, error } = await signUp(email, password);
+      
+      if (error) {
+        console.error("Sign up error:", error);
+        
+        // More specific error messages
+        if (error.message.includes("already registered")) {
+          setErrorMessage("This email is already registered. Please use a different email or try signing in.");
+        } else {
+          setErrorMessage(error.message);
+        }
+        
+        toast({
+          title: "Sign up failed",
+          description: error.message,
+          variant: "destructive"
+        });
+      } else if (data?.user && !data.session) {
+        setVerificationSent(true);
+        toast({
+          title: "Verification email sent",
+          description: "Please check your email to verify your account."
+        });
+      } else if (data?.session) {
+        // In case email verification is disabled in Supabase
+        toast({
+          title: "Sign up successful",
+          description: "Your account has been created. You are now signed in."
+        });
+        navigate("/");
+      }
+    } catch (err: any) {
+      console.error("Unexpected error during sign up:", err);
+      setErrorMessage("An unexpected error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -102,52 +128,87 @@ const SignUp: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSignUp} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input 
-                  id="email" 
-                  type="email" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your@email.com" 
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input 
-                  id="password" 
-                  type="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-                <p className="text-xs text-muted-foreground">Must be at least 6 characters</p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <Input 
-                  id="confirmPassword" 
-                  type="password" 
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Signing up...' : 'Sign Up'}
-              </Button>
-
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">
-                  Already have an account?{" "}
-                  <Link to="/sign-in" className="text-primary hover:underline">
-                    Sign in
-                  </Link>
+            {errorMessage && (
+              <Alert className="mb-4 border-destructive/50 text-destructive">
+                <AlertDescription>{errorMessage}</AlertDescription>
+              </Alert>
+            )}
+            
+            {verificationSent ? (
+              <div className="text-center space-y-4">
+                <Alert className="mb-4 border-green-100 bg-green-50 text-green-800">
+                  <AlertDescription>
+                    A verification email has been sent to <strong>{email}</strong>. 
+                    Please check your inbox and click the link to verify your account.
+                  </AlertDescription>
+                </Alert>
+                
+                <p className="text-sm text-muted-foreground mt-4">
+                  Didn't receive the email? Check your spam folder or try again.
                 </p>
+                
+                <div className="flex justify-center mt-4 space-x-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setVerificationSent(false)}
+                  >
+                    Try again
+                  </Button>
+                  <Button 
+                    onClick={() => navigate("/sign-in")}
+                  >
+                    Go to Sign In
+                  </Button>
+                </div>
               </div>
-            </form>
+            ) : (
+              <form onSubmit={handleSignUp} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="your@email.com" 
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input 
+                    id="password" 
+                    type="password" 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">Must be at least 6 characters</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Input 
+                    id="confirmPassword" 
+                    type="password" 
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? 'Signing up...' : 'Sign Up'}
+                </Button>
+
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Already have an account?{" "}
+                    <Link to="/sign-in" className="text-primary hover:underline">
+                      Sign in
+                    </Link>
+                  </p>
+                </div>
+              </form>
+            )}
           </CardContent>
         </Card>
       </main>
