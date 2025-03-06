@@ -1,3 +1,4 @@
+
 import { State, Action } from "./projectTypes";
 import { Task } from "@/types";
 
@@ -187,14 +188,14 @@ export const projectReducer = (state: State, action: Action): State => {
 
       if (!backlogItem) return state;
 
-      // Create a task from backlog item, ensuring optional fields are properly handled
+      // Create a task from backlog item, ensuring proper foreign key relationship
       const newTask: Task = {
         id: backlogItemId,
         title: backlogItem.title,
         description: backlogItem.description,
         priority: backlogItem.priority || "medium",
         storyPoints: backlogItem.storyPoints || 1,
-        sprintId,
+        sprintId, // Ensuring the sprintId foreign key is set correctly
         projectId: backlogItem.projectId, // Use the projectId from the backlog item
         columnId: state.columns[0]?.id || "", // Add to first column
         createdAt: new Date(),
