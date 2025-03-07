@@ -5,6 +5,7 @@ import { useProject } from "@/context/ProjectContext";
 import { supabase } from "@/lib/supabase";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardTabs from "@/components/dashboard/DashboardTabs";
+import { toast } from "@/components/ui/use-toast";
 
 const Dashboard = () => {
   const { projects } = useProject();
@@ -20,15 +21,26 @@ const Dashboard = () => {
   useEffect(() => {
     const getUser = async () => {
       setLoading(true);
-      const { data } = await supabase.auth.getUser();
-      
-      if (!data.user) {
+      try {
+        const { data, error } = await supabase.auth.getUser();
+        
+        if (error || !data.user) {
+          navigate('/sign-in');
+          return;
+        }
+        
+        setUser(data.user);
+      } catch (error) {
+        console.error("Error fetching user:", error);
+        toast({
+          title: "Authentication Error",
+          description: "There was a problem loading your profile",
+          variant: "destructive"
+        });
         navigate('/sign-in');
-        return;
+      } finally {
+        setLoading(false);
       }
-      
-      setUser(data.user);
-      setLoading(false);
     };
     
     getUser();
@@ -37,6 +49,8 @@ const Dashboard = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') {
         navigate('/sign-in');
+      } else if (event === 'SIGNED_IN') {
+        getUser();
       }
     });
     

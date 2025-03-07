@@ -26,7 +26,7 @@ export type Action =
   | { type: "ADD_TASK"; payload: Task }
   | { type: "UPDATE_TASK"; payload: Task }
   | { type: "REMOVE_TASK"; payload: { id: string; columnId: string } }
-  | { type: "MOVE_TASK_TO_COLUMN"; payload: { taskId: string; sourceColumnId: string; targetColumnId: string } }
+  | { type: "MOVE_TASK_TO_COLUMN"; payload: { taskId: string; sourceColumnId: string; targetColumnId: string; timestamp?: Date } }
   | { type: "ADD_COLUMN"; payload: Column }
   | { type: "REMOVE_COLUMN"; payload: string }
   | { type: "ADD_BACKLOG_ITEM"; payload: BacklogItem }

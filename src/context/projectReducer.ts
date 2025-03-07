@@ -1,3 +1,4 @@
+
 import { State, Action } from "./projectTypes";
 import { Task } from "@/types";
 
@@ -122,7 +123,7 @@ export const projectReducer = (state: State, action: Action): State => {
       };
 
     case "MOVE_TASK_TO_COLUMN": {
-      const { taskId, sourceColumnId, targetColumnId } = action.payload;
+      const { taskId, sourceColumnId, targetColumnId, timestamp = new Date() } = action.payload;
 
       // Find the task to move
       const sourceColumn = state.columns.find(
@@ -142,11 +143,15 @@ export const projectReducer = (state: State, action: Action): State => {
               tasks: column.tasks.filter((task) => task.id !== taskId),
             };
           }
-          // Add task to target column
+          // Add task to target column with updated timestamp
           if (column.id === targetColumnId) {
             return {
               ...column,
-              tasks: [...column.tasks, { ...taskToMove, columnId: targetColumnId }],
+              tasks: [...column.tasks, { 
+                ...taskToMove, 
+                columnId: targetColumnId,
+                updatedAt: timestamp
+              }],
             };
           }
           return column;

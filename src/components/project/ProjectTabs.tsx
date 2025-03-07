@@ -7,10 +7,11 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { LayoutDashboardIcon, ListChecksIcon, CalendarIcon } from "lucide-react";
+import { LayoutDashboardIcon, ListChecksIcon, CalendarIcon, ActivityIcon } from "lucide-react";
 import SprintsList from "@/components/project/SprintsList";
 import Backlog from "@/components/Backlog";
 import SprintTimeline from "@/components/sprint/SprintTimeline";
+import BurndownChart from "@/components/project/BurndownChart";
 
 interface ProjectTabsProps {
   projectId: string;
@@ -39,6 +40,9 @@ const ProjectTabs: React.FC<ProjectTabsProps> = ({
         <TabsTrigger value="timeline">
           <CalendarIcon className="h-4 w-4 mr-2" /> Timeline
         </TabsTrigger>
+        <TabsTrigger value="burndown">
+          <ActivityIcon className="h-4 w-4 mr-2" /> Burndown Chart
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="board" className="animate-fade-in">
@@ -60,6 +64,10 @@ const ProjectTabs: React.FC<ProjectTabsProps> = ({
           sprints={sprints} 
           onCreateSprint={onCreateSprint} 
         />
+      </TabsContent>
+
+      <TabsContent value="burndown" className="animate-fade-in">
+        <BurndownChart projectId={projectId} />
       </TabsContent>
     </Tabs>
   );
