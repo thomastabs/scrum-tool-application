@@ -18,24 +18,6 @@ export const projectReducer = (state: State, action: Action): State => {
         projects: action.payload,
       };
       
-    case "SET_SPRINTS":
-      return {
-        ...state,
-        sprints: action.payload,
-      };
-      
-    case "SET_COLUMNS":
-      return {
-        ...state,
-        columns: action.payload,
-      };
-      
-    case "SET_BACKLOG_ITEMS":
-      return {
-        ...state,
-        backlogItems: action.payload,
-      };
-      
     case "LOAD_STATE":
       return action.payload;
 
@@ -65,8 +47,6 @@ export const projectReducer = (state: State, action: Action): State => {
         ...state,
         projects: [],
         sprints: [],
-        columns: [],
-        backlogItems: [],
         selectedProject: null,
       };
 
@@ -94,8 +74,6 @@ export const projectReducer = (state: State, action: Action): State => {
       return {
         ...state,
         sprints: state.sprints.filter((sprint) => sprint.id !== action.payload),
-        // Also remove columns associated with this sprint
-        columns: state.columns.filter((column) => column.sprint_id !== action.payload),
       };
 
     case "MARK_SPRINT_AS_COMPLETE":
@@ -223,13 +201,6 @@ export const projectReducer = (state: State, action: Action): State => {
 
       if (!backlogItem) return state;
 
-      // Find the TO DO column for this sprint
-      const todoColumn = state.columns.find(
-        (column) => column.sprint_id === sprintId && column.title === "TO DO"
-      );
-
-      if (!todoColumn) return state;
-
       // Create a task from backlog item, ensuring optional fields are properly handled
       const newTask: Task = {
         id: backlogItemId,
@@ -238,7 +209,7 @@ export const projectReducer = (state: State, action: Action): State => {
         priority: backlogItem.priority || "medium",
         storyPoints: backlogItem.storyPoints || 1,
         sprintId,
-        columnId: todoColumn.id,
+        columnId: state.columns[0]?.id || "", // Add to first column
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -249,9 +220,9 @@ export const projectReducer = (state: State, action: Action): State => {
         backlogItems: state.backlogItems.filter(
           (item) => item.id !== backlogItemId
         ),
-        // Add task to TO DO column
-        columns: state.columns.map((column) =>
-          column.id === todoColumn.id
+        // Add task to first column
+        columns: state.columns.map((column, index) =>
+          index === 0
             ? { ...column, tasks: [...column.tasks, newTask] }
             : column
         ),

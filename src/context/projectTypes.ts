@@ -13,9 +13,6 @@ import {
 
 export type Action =
   | { type: "SET_PROJECTS"; payload: Project[] }
-  | { type: "SET_SPRINTS"; payload: Sprint[] }
-  | { type: "SET_COLUMNS"; payload: Column[] }
-  | { type: "SET_BACKLOG_ITEMS"; payload: BacklogItem[] }
   | { type: "LOAD_STATE"; payload: State }
   | { type: "ADD_PROJECT"; payload: Project }
   | { type: "UPDATE_PROJECT"; payload: Project }
