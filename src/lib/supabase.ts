@@ -179,7 +179,6 @@ export async function createSprintInDB(data: SprintFormData) {
       description: data.description,
       start_date: data.startDate.toISOString(),
       end_date: data.endDate.toISOString(),
-      status: 'planned'
     })
     .select()
     .single();
