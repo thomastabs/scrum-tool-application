@@ -1,35 +1,28 @@
 
-import React, { useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { useProject } from "@/context/ProjectContext";
+import { supabase } from "@/lib/supabase";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardTabs from "@/components/dashboard/DashboardTabs";
-import { useAuth } from "@/context/AuthContext";
 
 const Dashboard = () => {
   const { projects } = useProject();
-  const { user, loading } = useAuth();
+  const [user, setUser] = useState<any>(null);
   const location = useLocation();
-  const navigate = useNavigate();
 
   // Get the 'tab' query parameter from the URL
   const queryParams = new URLSearchParams(location.search);
   const activeTab = queryParams.get('tab') || 'overview';
 
-  // Redirect to sign-in if not authenticated
   useEffect(() => {
-    if (!loading && !user) {
-      navigate("/sign-in", { replace: true });
-    }
-  }, [user, loading, navigate]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-lg">Loading...</p>
-      </div>
-    );
-  }
+    const getUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data.user);
+    };
+    
+    getUser();
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">

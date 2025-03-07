@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { PlusIcon } from "lucide-react";
 import { Project } from "@/types";
 import ProjectForm from "@/components/ProjectForm";
-import { useAuth } from "@/context/AuthContext";
 
 interface ProjectsListProps {
   projects: Project[];
@@ -15,15 +14,8 @@ interface ProjectsListProps {
 
 const ProjectsList = ({ projects }: ProjectsListProps) => {
   const [showProjectForm, setShowProjectForm] = useState(false);
-  const { user } = useAuth();
 
-  // Filter projects to only show the current user's projects
-  const userProjects = useMemo(() => {
-    if (!user) return [];
-    return projects.filter(project => project.ownerId === user.id);
-  }, [projects, user]);
-
-  if (userProjects.length === 0) {
+  if (projects.length === 0) {
     return (
       <div className="text-center py-12 bg-accent/30 rounded-lg border border-border animate-fade-in">
         <div className="text-center max-w-md mx-auto">
@@ -53,7 +45,7 @@ const ProjectsList = ({ projects }: ProjectsListProps) => {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {userProjects.map((project) => (
+        {projects.map((project) => (
           <Card key={project.id} className="hover:shadow-md transition-shadow">
             <CardHeader className="pb-2">
               <div className="flex justify-between">

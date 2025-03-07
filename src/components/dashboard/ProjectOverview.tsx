@@ -1,29 +1,20 @@
 
-import React, { useMemo } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FolderIcon } from "lucide-react";
 import { Project } from "@/types";
-import { useAuth } from "@/context/AuthContext";
 
 interface ProjectOverviewProps {
   projects: Project[];
 }
 
 const ProjectOverview = ({ projects }: ProjectOverviewProps) => {
-  const { user } = useAuth();
-  
-  // Filter projects to only show the current user's projects
-  const userProjects = useMemo(() => {
-    if (!user) return [];
-    return projects.filter(project => project.ownerId === user.id);
-  }, [projects, user]);
-
   // Display recent projects (limited to 3)
-  const recentProjects = userProjects.slice(0, 3);
+  const recentProjects = projects.slice(0, 3);
 
-  if (userProjects.length === 0) {
+  if (projects.length === 0) {
     return (
       <div className="text-center py-12 bg-accent/30 rounded-lg border border-border">
         <FolderIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -55,7 +46,7 @@ const ProjectOverview = ({ projects }: ProjectOverviewProps) => {
           </CardContent>
         </Card>
       ))}
-      {userProjects.length > 3 && (
+      {projects.length > 3 && (
         <Card className="hover:shadow-md transition-shadow flex items-center justify-center">
           <CardContent className="py-6">
             <Button variant="outline" asChild>
