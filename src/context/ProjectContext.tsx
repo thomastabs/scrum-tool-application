@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useReducer, useEffect } from "react";
 import { ProjectContextType } from "@/types";
 import { projectReducer, initialState } from "./projectReducer";
@@ -18,17 +17,76 @@ import { toast } from "@/components/ui/use-toast";
 import { 
   deleteAllProjectsFromDB,
   deleteProjectFromDB,
-  deleteSprintFromDB
+  deleteSprintFromDB,
+  getProjectsFromDB,
+  createProjectInDB,
+  updateProjectInDB
 } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [state, dispatch] = useReducer(projectReducer, initialState, () => {
-    const localData = localStorage.getItem("projectState");
-    return localData ? JSON.parse(localData) : initialState;
-  });
-
+  const [state, dispatch] = useReducer(projectReducer, initialState);
+  
+  // Load data from Supabase on login/initial load
+  useEffect(() => {
+    const loadProjects = async () => {
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (session.session) {
+        const { data: projectsData, error } = await getProjectsFromDB();
+        
+        if (error) {
+          console.error("Error loading projects:", error);
+          toast({
+            title: "Error loading projects",
+            description: error.message,
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        if (projectsData) {
+          // Transform data from DB format to app format
+          const formattedProjects = projectsData.map(proj => ({
+            id: proj.id,
+            title: proj.title,
+            description: proj.description || "",
+            endGoal: proj.end_goal || "",
+            createdAt: new Date(proj.created_at),
+            updatedAt: new Date(proj.updated_at),
+          }));
+          
+          // Add all projects to state
+          dispatch({ type: "SET_PROJECTS", payload: formattedProjects });
+        }
+      } else {
+        // Use local storage as fallback when not logged in
+        const localData = localStorage.getItem("projectState");
+        if (localData) {
+          dispatch({ type: "LOAD_STATE", payload: JSON.parse(localData) });
+        }
+      }
+    };
+    
+    loadProjects();
+    
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN') {
+        loadProjects();
+      } else if (event === 'SIGNED_OUT') {
+        dispatch({ type: "CLEAR_ALL_PROJECTS" });
+      }
+    });
+    
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+  
+  // Save to localStorage as backup
   useEffect(() => {
     localStorage.setItem("projectState", JSON.stringify(state));
   }, [state]);
@@ -44,15 +102,89 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       dispatch({ type: "SELECT_PROJECT", payload: id });
     },
     
-    createProject: (projectData) => {
-      const newProject = createProject(projectData);
-      dispatch({ type: "ADD_PROJECT", payload: newProject });
+    createProject: async (projectData) => {
+      try {
+        // First create in database
+        const { data: newProjectData, error } = await createProjectInDB(projectData);
+        
+        if (error) {
+          toast({
+            title: "Error creating project",
+            description: error.message,
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        if (newProjectData) {
+          // Transform from DB format to app format
+          const newProject = {
+            id: newProjectData.id,
+            title: newProjectData.title,
+            description: newProjectData.description || "",
+            endGoal: newProjectData.end_goal || "",
+            createdAt: new Date(newProjectData.created_at),
+            updatedAt: new Date(newProjectData.updated_at),
+          };
+          
+          // Then update local state
+          dispatch({ type: "ADD_PROJECT", payload: newProject });
+          
+          toast({
+            title: "Project created",
+            description: `${projectData.title} has been created successfully.`
+          });
+        }
+      } catch (err) {
+        console.error("Error in createProject:", err);
+        toast({
+          title: "Error creating project",
+          description: "An unexpected error occurred.",
+          variant: "destructive"
+        });
+      }
     },
     
-    updateProject: (id, projectData) => {
-      const updatedProject = updateProject(id, projectData, state.projects);
-      if (updatedProject) {
-        dispatch({ type: "UPDATE_PROJECT", payload: updatedProject });
+    updateProject: async (id, projectData) => {
+      try {
+        // First update in database
+        const { data: updatedProjectData, error } = await updateProjectInDB(id, projectData);
+        
+        if (error) {
+          toast({
+            title: "Error updating project",
+            description: error.message,
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        if (updatedProjectData) {
+          // Transform from DB format to app format
+          const updatedProject = {
+            id: updatedProjectData.id,
+            title: updatedProjectData.title,
+            description: updatedProjectData.description || "",
+            endGoal: updatedProjectData.end_goal || "",
+            createdAt: new Date(updatedProjectData.created_at),
+            updatedAt: new Date(updatedProjectData.updated_at),
+          };
+          
+          // Then update local state
+          dispatch({ type: "UPDATE_PROJECT", payload: updatedProject });
+          
+          toast({
+            title: "Project updated",
+            description: `${projectData.title} has been updated successfully.`
+          });
+        }
+      } catch (err) {
+        console.error("Error in updateProject:", err);
+        toast({
+          title: "Error updating project",
+          description: "An unexpected error occurred.",
+          variant: "destructive"
+        });
       }
     },
     

@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { ProjectFormData, SprintFormData } from '@/types';
 
@@ -65,7 +64,7 @@ export async function getSession() {
   return { session: data.session, error };
 }
 
-// Add functions for project management
+// Project management functions
 export async function createProjectInDB(data: ProjectFormData) {
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) {
@@ -75,7 +74,7 @@ export async function createProjectInDB(data: ProjectFormData) {
   const { data: newProject, error } = await supabase
     .from('projects')
     .insert({
-      owner_id: userData.user.id, // Using auth.users.id
+      owner_id: userData.user.id, // This links the project to the user
       title: data.title,
       description: data.description,
       end_goal: data.endGoal
@@ -102,6 +101,11 @@ export async function getProjectsFromDB() {
 }
 
 export async function updateProjectInDB(id: string, data: ProjectFormData) {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) {
+    return { data: null, error: new Error('User not authenticated') };
+  }
+
   const { data: updatedProject, error } = await supabase
     .from('projects')
     .update({
@@ -110,6 +114,7 @@ export async function updateProjectInDB(id: string, data: ProjectFormData) {
       end_goal: data.endGoal
     })
     .eq('id', id)
+    .eq('owner_id', userData.user.id) // Ensure user can only update their own projects
     .select()
     .single();
   

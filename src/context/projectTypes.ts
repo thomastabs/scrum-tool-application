@@ -12,6 +12,8 @@ import {
 } from "@/types";
 
 export type Action =
+  | { type: "SET_PROJECTS"; payload: Project[] }
+  | { type: "LOAD_STATE"; payload: State }
   | { type: "ADD_PROJECT"; payload: Project }
   | { type: "UPDATE_PROJECT"; payload: Project }
   | { type: "REMOVE_PROJECT"; payload: string }

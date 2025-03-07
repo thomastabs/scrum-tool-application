@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useProject } from "@/context/ProjectContext";
 import { supabase } from "@/lib/supabase";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
@@ -9,7 +9,9 @@ import DashboardTabs from "@/components/dashboard/DashboardTabs";
 const Dashboard = () => {
   const { projects } = useProject();
   const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Get the 'tab' query parameter from the URL
   const queryParams = new URLSearchParams(location.search);
@@ -17,12 +19,39 @@ const Dashboard = () => {
 
   useEffect(() => {
     const getUser = async () => {
+      setLoading(true);
       const { data } = await supabase.auth.getUser();
+      
+      if (!data.user) {
+        navigate('/sign-in');
+        return;
+      }
+      
       setUser(data.user);
+      setLoading(false);
     };
     
     getUser();
-  }, []);
+    
+    // Subscribe to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        navigate('/sign-in');
+      }
+    });
+    
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
