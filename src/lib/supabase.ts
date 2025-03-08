@@ -10,13 +10,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 export async function signUp(email: string, password: string, username: string) {
   try {
     // Check if user already exists
-    const { data: existingUser, error: checkError } = await supabase
+    const { data: existingUsers, error: checkError } = await supabase
       .from('users')
       .select('id')
-      .or(`email.eq.${email},username.eq.${username}`)
-      .single();
+      .or(`email.eq.${email},username.eq.${username}`);
     
-    if (existingUser) {
+    if (existingUsers && existingUsers.length > 0) {
       return { 
         data: null, 
         error: { 
