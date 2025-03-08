@@ -7,7 +7,7 @@ export const initialState: State = {
   columns: [],
   backlogItems: [],
   selectedProject: null,
-  currentUser: null,
+  currentUser: null, // Make sure this is initialized as null
 };
 
 export const projectReducer = (state: State, action: Action): State => {

@@ -97,6 +97,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     columns: state.columns,
     backlogItems: state.backlogItems,
     selectedProject: state.selectedProject,
+    currentUser: state.currentUser,
     
     selectProject: (id: string) => {
       dispatch({ type: "SELECT_PROJECT", payload: id });
