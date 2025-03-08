@@ -10,7 +10,7 @@ import { signIn, getSession } from "@/lib/supabase";
 import { toast } from "@/components/ui/use-toast";
 
 const SignIn: React.FC = () => {
-  const [email, setEmail] = useState("");
+  const [emailOrUsername, setEmailOrUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,18 +32,18 @@ const SignIn: React.FC = () => {
     e.preventDefault();
     setError(null);
     
-    if (!email || !password) {
-      setError("Please enter both email and password");
+    if (!emailOrUsername || !password) {
+      setError("Please enter both email/username and password");
       toast({
         title: "Error",
-        description: "Please enter both email and password",
+        description: "Please enter both email/username and password",
         variant: "destructive"
       });
       return;
     }
     
     setLoading(true);
-    const { data, error } = await signIn(email, password);
+    const { data, error } = await signIn(emailOrUsername, password);
     setLoading(false);
     
     if (error) {
@@ -92,12 +92,12 @@ const SignIn: React.FC = () => {
                 </Alert>
               )}
               <div className="space-y-2">
-                <Label htmlFor="email">Email or Username</Label>
+                <Label htmlFor="emailOrUsername">Email or Username</Label>
                 <Input 
-                  id="email" 
+                  id="emailOrUsername" 
                   type="text" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={emailOrUsername}
+                  onChange={(e) => setEmailOrUsername(e.target.value)}
                   placeholder="your@email.com or username" 
                   required
                 />

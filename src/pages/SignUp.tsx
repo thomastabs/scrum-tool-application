@@ -15,7 +15,7 @@ const SignUp: React.FC = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
@@ -99,11 +99,15 @@ const SignUp: React.FC = () => {
         });
       } else {
         console.log("Signup completed successfully");
-        setEmailSent(true);
+        setSuccess(true);
         toast({
           title: "Sign up successful",
-          description: "Please check your email to verify your account"
+          description: "Your account has been created successfully!"
         });
+        // Navigate to dashboard after successful signup
+        setTimeout(() => {
+          navigate("/");
+        }, 2000);
       }
     } catch (err: any) {
       console.error("Unexpected client-side error during signup:", err);
@@ -142,18 +146,11 @@ const SignUp: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {emailSent ? (
+            {success ? (
               <Alert>
                 <AlertDescription className="text-center py-4">
-                  <p className="mb-4">Verification email sent to <strong>{email}</strong></p>
-                  <p>Please check your inbox and click the link to verify your email address.</p>
-                  <Button 
-                    variant="outline" 
-                    className="mt-4"
-                    onClick={() => navigate("/sign-in")}
-                  >
-                    Go to Sign In
-                  </Button>
+                  <p className="mb-4">Account created successfully!</p>
+                  <p>Redirecting you to the dashboard...</p>
                 </AlertDescription>
               </Alert>
             ) : (

@@ -7,6 +7,9 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIU
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// Session management
+let currentUser: { id: string; username: string; email: string } | null = null;
+
 // Custom authentication functions
 export async function signUp(email: string, password: string, username: string) {
   try {
@@ -26,35 +29,9 @@ export async function signUp(email: string, password: string, username: string) 
       };
     }
     
-    if (checkError && checkError.code !== 'PGRST116') {
+    if (checkError) {
       console.error("Error checking for existing user:", checkError);
       return { data: null, error: checkError };
-    }
-    
-    // Create authentication account first
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          username: username
-        }
-      }
-    });
-    
-    if (authError) {
-      console.error("Error creating auth user:", authError);
-      return { data: null, error: authError };
-    }
-    
-    if (!authData.user) {
-      return { 
-        data: null, 
-        error: { 
-          message: "Failed to create user account",
-          status: 500
-        } 
-      };
     }
     
     // Hash password using our custom function
@@ -72,7 +49,6 @@ export async function signUp(email: string, password: string, username: string) 
     const { data: newUser, error: insertError } = await supabase
       .from('users')
       .insert({
-        id: authData.user.id, // Use the auth user's ID
         username,
         email,
         password: hashedPassword
@@ -85,7 +61,18 @@ export async function signUp(email: string, password: string, username: string) 
       return { data: null, error: insertError };
     }
     
-    return { data: authData, error: null };
+    // Set the current user in the session
+    currentUser = newUser;
+    
+    // Save user data to localStorage
+    localStorage.setItem('currentUser', JSON.stringify(newUser));
+    
+    return { 
+      data: { 
+        user: newUser
+      }, 
+      error: null 
+    };
   } catch (err: any) {
     console.error("Unexpected error in signUp function:", err);
     const errorMessage = err?.message || "An unexpected error occurred during sign up.";
@@ -99,46 +86,47 @@ export async function signUp(email: string, password: string, username: string) 
   }
 }
 
-export async function signIn(email: string, password: string) {
+export async function signIn(emailOrUsername: string, password: string) {
   try {
-    // Sign in using Supabase Auth to get a session
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    // Verify password and get user data
+    const { data: userData, error: verifyError } = await supabase.rpc(
+      'verify_password',
+      { login_credential: emailOrUsername, input_password: password }
+    );
     
-    if (error) {
-      console.error("Error signing in with Supabase:", error);
-      return { data: null, error };
+    if (verifyError) {
+      console.error("Error verifying password:", verifyError);
+      return { 
+        data: null, 
+        error: { 
+          message: "Invalid email/username or password",
+          status: 401
+        } 
+      };
     }
     
-    // Get user data from our users table
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id, username, email')
-      .eq('id', data.user.id)
-      .single();
-    
-    if (userError) {
-      console.error("Error fetching user data:", userError);
-      // Still return auth data even if we can't get our custom user data
-      return { data, error: null };
+    if (!userData || userData.length === 0) {
+      return { 
+        data: null, 
+        error: { 
+          message: "Invalid email/username or password",
+          status: 401
+        } 
+      };
     }
     
-    // Add custom user data to the session
-    const enhancedData = {
-      ...data,
-      user: {
-        ...data.user,
-        user_metadata: {
-          ...data.user?.user_metadata,
-          username: userData.username,
-          user_id: userData.id
-        }
-      }
+    // Set the current user in the session
+    currentUser = userData[0];
+    
+    // Save user data to localStorage
+    localStorage.setItem('currentUser', JSON.stringify(userData[0]));
+    
+    return { 
+      data: { 
+        user: userData[0]
+      }, 
+      error: null 
     };
-    
-    return { data: enhancedData, error: null };
   } catch (err: any) {
     console.error("Unexpected error in signIn function:", err);
     const errorMessage = err?.message || "An unexpected error occurred during sign in.";
@@ -153,13 +141,52 @@ export async function signIn(email: string, password: string) {
 }
 
 export async function signOut() {
-  const { error } = await supabase.auth.signOut();
-  return { error };
+  try {
+    // Clear current user
+    currentUser = null;
+    
+    // Remove user data from localStorage
+    localStorage.removeItem('currentUser');
+    
+    return { error: null };
+  } catch (err: any) {
+    console.error("Error signing out:", err);
+    return { 
+      error: { 
+        message: "Error signing out", 
+        status: 500 
+      } 
+    };
+  }
 }
 
 export async function getSession() {
-  const { data, error } = await supabase.auth.getSession();
-  return { session: data.session, error };
+  try {
+    // Check if we have a current user
+    if (currentUser) {
+      return { session: { user: currentUser }, error: null };
+    }
+    
+    // Check if we have a user in localStorage
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      currentUser = user;
+      return { session: { user }, error: null };
+    }
+    
+    // No session found
+    return { session: null, error: null };
+  } catch (err: any) {
+    console.error("Error getting session:", err);
+    return { 
+      session: null, 
+      error: { 
+        message: "Error retrieving session", 
+        status: 500 
+      } 
+    };
+  }
 }
 
 // Project management functions

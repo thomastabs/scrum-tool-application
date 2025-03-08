@@ -13,7 +13,7 @@ import NotFound from "./pages/NotFound";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import { useState, useEffect } from "react";
-import { getSession, supabase } from "./lib/supabase";
+import { getSession } from "./lib/supabase";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,13 +37,25 @@ const App = () => {
 
     loadSession();
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
+    // Function to check for session changes (e.g., localStorage updates)
+    const checkSessionInterval = setInterval(async () => {
+      const { session: newSession } = await getSession();
+      if (JSON.stringify(newSession) !== JSON.stringify(session)) {
+        setSession(newSession);
+      }
+    }, 5000); // Check every 5 seconds
+
+    // Set up event listener for storage changes (for multi-tab support)
+    const handleStorageChange = async () => {
+      const { session: newSession } = await getSession();
+      setSession(newSession);
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
 
     return () => {
-      subscription.unsubscribe();
+      clearInterval(checkSessionInterval);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
 
