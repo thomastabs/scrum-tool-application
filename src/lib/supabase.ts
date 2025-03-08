@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { ProjectFormData, SprintFormData } from '@/types';
 
@@ -30,6 +31,32 @@ export async function signUp(email: string, password: string, username: string) 
       return { data: null, error: checkError };
     }
     
+    // Create authentication account first
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          username: username
+        }
+      }
+    });
+    
+    if (authError) {
+      console.error("Error creating auth user:", authError);
+      return { data: null, error: authError };
+    }
+    
+    if (!authData.user) {
+      return { 
+        data: null, 
+        error: { 
+          message: "Failed to create user account",
+          status: 500
+        } 
+      };
+    }
+    
     // Hash password using our custom function
     const { data: hashedPassword, error: hashError } = await supabase.rpc(
       'hash_password',
@@ -41,10 +68,11 @@ export async function signUp(email: string, password: string, username: string) 
       return { data: null, error: hashError };
     }
     
-    // Insert new user
+    // Insert the user into our users table
     const { data: newUser, error: insertError } = await supabase
       .from('users')
       .insert({
+        id: authData.user.id, // Use the auth user's ID
         username,
         email,
         password: hashedPassword
@@ -53,23 +81,11 @@ export async function signUp(email: string, password: string, username: string) 
       .single();
     
     if (insertError) {
-      console.error("Error creating user:", insertError);
+      console.error("Error creating user in users table:", insertError);
       return { data: null, error: insertError };
     }
     
-    // Create a session using Supabase Auth
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          user_id: newUser.id,
-          username: username
-        }
-      }
-    });
-    
-    return { data, error };
+    return { data: authData, error: null };
   } catch (err: any) {
     console.error("Unexpected error in signUp function:", err);
     const errorMessage = err?.message || "An unexpected error occurred during sign up.";
@@ -85,26 +101,6 @@ export async function signUp(email: string, password: string, username: string) 
 
 export async function signIn(email: string, password: string) {
   try {
-    // Verify credentials using our custom function
-    const { data: userData, error: verifyError } = await supabase.rpc(
-      'verify_password',
-      { 
-        login_credential: email, 
-        input_password: password 
-      }
-    );
-    
-    if (verifyError || !userData) {
-      console.error("Error verifying credentials:", verifyError);
-      return { 
-        data: null, 
-        error: { 
-          message: "Invalid email or password", 
-          status: 401 
-        } 
-      };
-    }
-    
     // Sign in using Supabase Auth to get a session
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -114,6 +110,19 @@ export async function signIn(email: string, password: string) {
     if (error) {
       console.error("Error signing in with Supabase:", error);
       return { data: null, error };
+    }
+    
+    // Get user data from our users table
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id, username, email')
+      .eq('id', data.user.id)
+      .single();
+    
+    if (userError) {
+      console.error("Error fetching user data:", userError);
+      // Still return auth data even if we can't get our custom user data
+      return { data, error: null };
     }
     
     // Add custom user data to the session
