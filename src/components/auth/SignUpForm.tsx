@@ -129,7 +129,7 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ onSuccess }) => {
       )}
       
       {dbStatus && (
-        <Alert variant="warning">
+        <Alert variant="destructive">
           <AlertDescription>{dbStatus}</AlertDescription>
         </Alert>
       )}
