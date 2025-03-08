@@ -84,12 +84,19 @@ export interface CollaboratorFormData {
   role: 'admin' | 'editor' | 'viewer';
 }
 
+export interface User {
+  id: string;
+  email: string;
+  username: string;
+}
+
 export interface ProjectContextType {
   projects: Project[];
   sprints: Sprint[];
   columns: Column[];
   backlogItems: BacklogItem[];
   selectedProject: Project | null;
+  currentUser: User | null;
   
   selectProject: (id: string) => void;
   createProject: (projectData: ProjectFormData) => void;

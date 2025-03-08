@@ -6,39 +6,78 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIU
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export async function signUp(email: string, password: string) {
+// Custom authentication functions
+export async function signUp(email: string, password: string, username: string) {
   try {
-    // Log the signup attempt for debugging
-    console.log(`Attempting to sign up user with email: ${email}`);
+    // Check if user already exists
+    const { data: existingUser, error: checkError } = await supabase
+      .from('users')
+      .select('id')
+      .or(`email.eq.${email},username.eq.${username}`)
+      .single();
     
+    if (existingUser) {
+      return { 
+        data: null, 
+        error: { 
+          message: "A user with this email or username already exists",
+          status: 409
+        } 
+      };
+    }
+    
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error("Error checking for existing user:", checkError);
+      return { data: null, error: checkError };
+    }
+    
+    // Hash password using our custom function
+    const { data: hashedPassword, error: hashError } = await supabase.rpc(
+      'hash_password',
+      { password }
+    );
+    
+    if (hashError) {
+      console.error("Error hashing password:", hashError);
+      return { data: null, error: hashError };
+    }
+    
+    // Insert new user
+    const { data: newUser, error: insertError } = await supabase
+      .from('users')
+      .insert({
+        username,
+        email,
+        password: hashedPassword
+      })
+      .select('id, username, email')
+      .single();
+    
+    if (insertError) {
+      console.error("Error creating user:", insertError);
+      return { data: null, error: insertError };
+    }
+    
+    // Create a session using Supabase Auth
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/`,
+        data: {
+          user_id: newUser.id,
+          username: username
+        }
       }
     });
     
-    if (error) {
-      console.error("Supabase signup error:", error);
-      // Return the specific error from Supabase
-      return { data: null, error };
-    }
-    
-    console.log("Signup successful, response data:", data);
-    return { data, error: null };
+    return { data, error };
   } catch (err: any) {
-    // Log the full error object for debugging
     console.error("Unexpected error in signUp function:", err);
-    
-    // Try to extract useful info from the error
     const errorMessage = err?.message || "An unexpected error occurred during sign up.";
-    const errorDetails = err?.details || err?.error_description || "";
-    
     return { 
       data: null, 
       error: { 
-        message: `${errorMessage}${errorDetails ? `: ${errorDetails}` : ""}`,
+        message: errorMessage,
         status: err?.status || 500
       } 
     };
@@ -46,12 +85,63 @@ export async function signUp(email: string, password: string) {
 }
 
 export async function signIn(email: string, password: string) {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-  
-  return { data, error };
+  try {
+    // Verify credentials using our custom function
+    const { data: userData, error: verifyError } = await supabase.rpc(
+      'verify_password',
+      { 
+        login_credential: email, 
+        input_password: password 
+      }
+    );
+    
+    if (verifyError || !userData) {
+      console.error("Error verifying credentials:", verifyError);
+      return { 
+        data: null, 
+        error: { 
+          message: "Invalid email or password", 
+          status: 401 
+        } 
+      };
+    }
+    
+    // Sign in using Supabase Auth to get a session
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    
+    if (error) {
+      console.error("Error signing in with Supabase:", error);
+      return { data: null, error };
+    }
+    
+    // Add custom user data to the session
+    const enhancedData = {
+      ...data,
+      user: {
+        ...data.user,
+        user_metadata: {
+          ...data.user?.user_metadata,
+          username: userData.username,
+          user_id: userData.id
+        }
+      }
+    };
+    
+    return { data: enhancedData, error: null };
+  } catch (err: any) {
+    console.error("Unexpected error in signIn function:", err);
+    const errorMessage = err?.message || "An unexpected error occurred during sign in.";
+    return { 
+      data: null, 
+      error: { 
+        message: errorMessage, 
+        status: err?.status || 500 
+      } 
+    };
+  }
 }
 
 export async function signOut() {
@@ -74,7 +164,7 @@ export async function createProjectInDB(data: ProjectFormData) {
   const { data: newProject, error } = await supabase
     .from('projects')
     .insert({
-      owner_id: userData.user.id, // This links the project to the user
+      owner_id: userData.user.id, // Updated from user_id to owner_id
       title: data.title,
       description: data.description,
       end_goal: data.endGoal
@@ -94,7 +184,7 @@ export async function getProjectsFromDB() {
   const { data, error } = await supabase
     .from('projects')
     .select('*')
-    .eq('owner_id', userData.user.id) // Filter by the user's ID
+    .eq('owner_id', userData.user.id) // Updated from user_id to owner_id
     .order('created_at', { ascending: false });
   
   return { data, error };
@@ -114,7 +204,7 @@ export async function updateProjectInDB(id: string, data: ProjectFormData) {
       end_goal: data.endGoal
     })
     .eq('id', id)
-    .eq('owner_id', userData.user.id) // Ensure user can only update their own projects
+    .eq('owner_id', userData.user.id) // Updated from user_id to owner_id
     .select()
     .single();
   

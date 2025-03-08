@@ -50,27 +50,27 @@ export type Database = {
           description: string | null
           end_goal: string | null
           id: string
+          owner_id: string
           title: string
           updated_at: string
-          user_id: string
         }
         Insert: {
           created_at?: string
           description?: string | null
           end_goal?: string | null
           id?: string
+          owner_id: string
           title: string
           updated_at?: string
-          user_id: string
         }
         Update: {
           created_at?: string
           description?: string | null
           end_goal?: string | null
           id?: string
+          owner_id?: string
           title?: string
           updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }
@@ -86,6 +86,7 @@ export type Database = {
           status: Database["public"]["Enums"]["sprint_status"]
           title: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -98,6 +99,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["sprint_status"]
           title: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -110,6 +112,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["sprint_status"]
           title?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -188,12 +191,52 @@ export type Database = {
           },
         ]
       }
+      users: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          password: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          password: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          password?: string
+          username?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      hash_password: {
+        Args: {
+          password: string
+        }
+        Returns: string
+      }
+      verify_password: {
+        Args: {
+          login_credential: string
+          input_password: string
+        }
+        Returns: {
+          id: string
+          username: string
+          email: string
+        }[]
+      }
     }
     Enums: {
       sprint_status: "active" | "completed" | "planned"

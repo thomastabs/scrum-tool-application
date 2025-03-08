@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { signIn, getSession } from "@/lib/supabase";
 import { toast } from "@/components/ui/use-toast";
 
@@ -12,6 +13,7 @@ const SignIn: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   // Check if user is already signed in
@@ -28,8 +30,10 @@ const SignIn: React.FC = () => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     
     if (!email || !password) {
+      setError("Please enter both email and password");
       toast({
         title: "Error",
         description: "Please enter both email and password",
@@ -43,6 +47,7 @@ const SignIn: React.FC = () => {
     setLoading(false);
     
     if (error) {
+      setError(error.message);
       toast({
         title: "Sign in failed",
         description: error.message,
@@ -81,14 +86,19 @@ const SignIn: React.FC = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSignIn} className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email or Username</Label>
                 <Input 
                   id="email" 
-                  type="email" 
+                  type="text" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your@email.com" 
+                  placeholder="your@email.com or username" 
                   required
                 />
               </div>

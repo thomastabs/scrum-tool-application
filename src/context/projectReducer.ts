@@ -1,4 +1,3 @@
-
 import { State, Action } from "./projectTypes";
 import { Task } from "@/types";
 
@@ -8,6 +7,7 @@ export const initialState: State = {
   columns: [],
   backlogItems: [],
   selectedProject: null,
+  currentUser: null,
 };
 
 export const projectReducer = (state: State, action: Action): State => {
@@ -54,6 +54,12 @@ export const projectReducer = (state: State, action: Action): State => {
       return {
         ...state,
         selectedProject: state.projects.find((project) => project.id === action.payload) || null,
+      };
+    
+    case "SET_USER":
+      return {
+        ...state,
+        currentUser: action.payload,
       };
 
     case "ADD_SPRINT":
