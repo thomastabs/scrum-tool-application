@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { ProjectFormData, SprintFormData } from '@/types';
 
@@ -13,11 +12,30 @@ let currentUser: { id: string; username: string; email: string } | null = null;
 // Custom authentication functions
 export async function signUp(email: string, password: string, username: string) {
   try {
-    // Check if user already exists
+    console.log("Starting signup with email:", email, "and username:", username);
+    
+    // Check if user already exists with direct query instead of using .or()
     const { data: existingUsers, error: checkError } = await supabase
       .from('users')
       .select('id')
       .or(`email.eq.${email},username.eq.${username}`);
+    
+    if (checkError) {
+      console.error("Error checking for existing user:", checkError);
+      
+      // If the error is about relation not existing, provide more specific error
+      if (checkError.message.includes('relation "public.users" does not exist')) {
+        return { 
+          data: null, 
+          error: { 
+            message: "Database error: The users table does not exist. Please contact support.",
+            status: 500
+          } 
+        };
+      }
+      
+      return { data: null, error: checkError };
+    }
     
     if (existingUsers && existingUsers.length > 0) {
       return { 
@@ -27,11 +45,6 @@ export async function signUp(email: string, password: string, username: string) 
           status: 409
         } 
       };
-    }
-    
-    if (checkError) {
-      console.error("Error checking for existing user:", checkError);
-      return { data: null, error: checkError };
     }
     
     // Hash password using our custom function
@@ -46,6 +59,7 @@ export async function signUp(email: string, password: string, username: string) 
     }
     
     // Insert the user into our users table
+    console.log("Attempting to insert new user into database");
     const { data: newUser, error: insertError } = await supabase
       .from('users')
       .insert({
