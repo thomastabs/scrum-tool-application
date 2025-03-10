@@ -231,11 +231,10 @@ const SprintBoard: React.FC = () => {
     <div className="container mx-auto pb-20 px-4">
       <SprintHeader 
         sprint={sprint}
-        onStartSprint={() => navigate(`/projects/${sprint.projectId}/sprint/${sprint.id}/edit`)}
         onCompleteSprint={handleCompleteSprint}
       />
       
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 mt-8">
         <h3 className="text-lg font-medium">Sprint Board</h3>
         
         <div className="flex items-center gap-2">
@@ -378,13 +377,11 @@ interface SprintHeaderProps {
     endDate: string;
     status: 'planned' | 'in-progress' | 'completed';
   };
-  onStartSprint: () => void;
   onCompleteSprint: () => void;
 }
 
 const SprintHeader: React.FC<SprintHeaderProps> = ({ 
   sprint, 
-  onStartSprint, 
   onCompleteSprint 
 }) => {
   const formatDateRange = (start: string, end: string) => {
@@ -404,16 +401,6 @@ const SprintHeader: React.FC<SprintHeaderProps> = ({
       </div>
       
       <div>
-        {sprint.status === "planned" && (
-          <button
-            onClick={onStartSprint}
-            className="scrum-button flex items-center gap-1"
-          >
-            <Play className="h-4 w-4" />
-            <span>Start Sprint</span>
-          </button>
-        )}
-        
         {sprint.status === "in-progress" && (
           <button
             onClick={onCompleteSprint}
