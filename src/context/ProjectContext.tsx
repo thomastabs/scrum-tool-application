@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { Project, Sprint, Task, BurndownData } from "@/types";
 import { useAuth } from "./AuthContext";
@@ -544,6 +543,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       throw error;
     }
   };
+
+  const getTask = (id: string) => tasks.find((t) => t.id === id);
 
   const updateTask = async (id: string, task: Partial<Omit<Task, "id">>) => {
     if (!user) throw new Error('User not authenticated');

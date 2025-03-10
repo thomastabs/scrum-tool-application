@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
@@ -304,7 +303,7 @@ const SprintBoard: React.FC = () => {
     if (!sprint) return;
     
     try {
-      if (sprint && (sprint.status as string) === "completed") {
+      if (sprint.status === "completed") {
         toast.info("Sprint is already completed");
         return;
       }
