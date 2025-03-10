@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
@@ -10,13 +11,16 @@ import AddColumnModal from "@/components/sprints/AddColumnModal";
 import { Sprint } from "@/types";
 import { Project } from "@/types";
 import { Task } from "@/types";
+import { useAuth } from "@/context/AuthContext";
+import { fetchSprintColumns, createDefaultColumn, addCustomColumn, deleteColumn } from "@/lib/supabase";
 
 const SprintBoard: React.FC = () => {
   const { sprintId, projectId } = useParams<{ sprintId: string, projectId?: string }>();
   const { getSprint, getTasksBySprint, updateSprint, updateTask, getProject } = useProjects();
+  const { user } = useAuth();
   const navigate = useNavigate();
   
-  const [columns, setColumns] = useState<{[key: string]: {title: string, taskIds: string[]}}>(
+  const [columns, setColumns] = useState<{[key: string]: {title: string, taskIds: string[], id?: string}}>(
     {
       "todo": { title: "TO DO", taskIds: [] },
       "in-progress": { title: "IN PROGRESS", taskIds: [] },
@@ -27,60 +31,119 @@ const SprintBoard: React.FC = () => {
   const [editingTask, setEditingTask] = useState<string | null>(null);
   const [isAddColumnModalOpen, setIsAddColumnModalOpen] = useState(false);
   const [creatingTaskInColumn, setCreatingTaskInColumn] = useState<string | null>(null);
+  const [isLoadingColumns, setIsLoadingColumns] = useState(true);
   
   const sprint = getSprint(sprintId || "");
   const tasks = getTasksBySprint(sprintId || "");
   const project = projectId ? getProject(projectId) : (sprint ? getProject(sprint.projectId) : null);
   
+  // Fetch custom columns from the database
   useEffect(() => {
-    if (!sprint) return;
+    if (!sprint || !user) return;
     
-    const initialColumns: {[key: string]: {title: string, taskIds: string[]}} = {};
+    const loadColumns = async () => {
+      setIsLoadingColumns(true);
+      
+      try {
+        // Fetch existing columns from database
+        const customColumns = await fetchSprintColumns(sprint.id, user.id);
+        
+        // If no columns found, create default ones
+        if (customColumns.length === 0) {
+          await Promise.all([
+            createDefaultColumn(sprint.id, user.id, "TO DO", 0),
+            createDefaultColumn(sprint.id, user.id, "IN PROGRESS", 1),
+            createDefaultColumn(sprint.id, user.id, "DONE", 2)
+          ]);
+          
+          // Fetch columns again after creating defaults
+          const newColumns = await fetchSprintColumns(sprint.id, user.id);
+          
+          if (newColumns.length > 0) {
+            const columnsObj: {[key: string]: {title: string, taskIds: string[], id: string}} = {};
+            const colOrder: string[] = [];
+            
+            newColumns.forEach((col) => {
+              const colKey = col.title.toLowerCase().replace(/\s+/g, '-');
+              columnsObj[colKey] = {
+                title: col.title,
+                taskIds: [],
+                id: col.id
+              };
+              colOrder.push(colKey);
+            });
+            
+            setColumns(columnsObj);
+            setColumnOrder(colOrder);
+          }
+        } else {
+          // Map database columns to state
+          const columnsObj: {[key: string]: {title: string, taskIds: string[], id: string}} = {};
+          const colOrder: string[] = [];
+          
+          customColumns.forEach((col) => {
+            const colKey = col.title.toLowerCase().replace(/\s+/g, '-');
+            columnsObj[colKey] = {
+              title: col.title,
+              taskIds: [],
+              id: col.id
+            };
+            colOrder.push(colKey);
+          });
+          
+          setColumns(columnsObj);
+          setColumnOrder(colOrder);
+        }
+      } catch (error) {
+        console.error("Error loading columns:", error);
+        toast.error("Failed to load board columns");
+      } finally {
+        setIsLoadingColumns(false);
+      }
+    };
     
-    ["todo", "in-progress", "done"].forEach(colId => {
-      initialColumns[colId] = {
-        title: colId === "todo" ? "TO DO" : 
-               colId === "in-progress" ? "IN PROGRESS" : 
-               "DONE",
-        taskIds: []
-      };
+    loadColumns();
+  }, [sprint, user]);
+  
+  // Map tasks to columns
+  useEffect(() => {
+    if (isLoadingColumns || !sprint || tasks.length === 0) return;
+    
+    const updatedColumns = { ...columns };
+    
+    // Reset task IDs in all columns
+    Object.keys(updatedColumns).forEach(colId => {
+      updatedColumns[colId].taskIds = [];
     });
     
-    const customStatuses = new Set<string>();
+    // Distribute tasks to columns
     tasks.forEach(task => {
-      if (!["todo", "in-progress", "done"].includes(task.status)) {
-        customStatuses.add(task.status);
+      const taskStatus = task.status;
+      
+      // Check if the column exists, otherwise create it
+      if (!updatedColumns[taskStatus]) {
+        // If this is a custom status (not one of our defaults), add it to columns
+        if (!["todo", "in-progress", "done"].includes(taskStatus)) {
+          updatedColumns[taskStatus] = {
+            title: taskStatus.toUpperCase().replace(/-/g, ' '),
+            taskIds: []
+          };
+          
+          if (!columnOrder.includes(taskStatus)) {
+            setColumnOrder(prev => [...prev, taskStatus]);
+          }
+        } else {
+          // If it's a default status but the column doesn't exist, skip this task
+          return;
+        }
       }
+      
+      // Add task to appropriate column
+      updatedColumns[taskStatus].taskIds.push(task.id);
     });
     
-    customStatuses.forEach(status => {
-      initialColumns[status] = {
-        title: status.toUpperCase().replace(/-/g, ' '),
-        taskIds: []
-      };
-    });
-    
-    tasks.forEach(task => {
-      if (initialColumns[task.status]) {
-        initialColumns[task.status].taskIds.push(task.id);
-      } else {
-        initialColumns[task.status] = {
-          title: task.status.toUpperCase().replace(/-/g, ' '),
-          taskIds: [task.id]
-        };
-      }
-    });
-    
-    const newColumnOrder = [...columnOrder];
-    Object.keys(initialColumns).forEach(colId => {
-      if (!newColumnOrder.includes(colId)) {
-        newColumnOrder.push(colId);
-      }
-    });
-    
-    setColumns(initialColumns);
-    setColumnOrder(newColumnOrder);
-  }, [sprint, tasks]);
+    setColumns(updatedColumns);
+  }, [tasks, columns, isLoadingColumns, sprint]);
   
   const handleDragEnd = async (result: any) => {
     const { destination, source, draggableId } = result;
@@ -156,8 +219,8 @@ const SprintBoard: React.FC = () => {
     }
   };
   
-  const handleAddColumn = (columnName: string) => {
-    if (!columnName.trim()) return;
+  const handleAddColumn = async (columnName: string) => {
+    if (!columnName.trim() || !user || !sprint) return;
     
     const columnId = columnName.toLowerCase().replace(/\s+/g, '-');
     
@@ -166,20 +229,37 @@ const SprintBoard: React.FC = () => {
       return;
     }
     
-    setColumns(prev => ({
-      ...prev,
-      [columnId]: {
-        title: columnName,
-        taskIds: []
+    try {
+      const newColumn = await addCustomColumn(
+        sprint.id, 
+        user.id,
+        columnName,
+        columnOrder.length
+      );
+      
+      if (newColumn) {
+        setColumns(prev => ({
+          ...prev,
+          [columnId]: {
+            title: columnName,
+            taskIds: [],
+            id: newColumn.id
+          }
+        }));
+        
+        setColumnOrder(prev => [...prev, columnId]);
+        setIsAddColumnModalOpen(false);
+        toast.success(`Column "${columnName}" added`);
+      } else {
+        toast.error("Failed to add column");
       }
-    }));
-    
-    setColumnOrder(prev => [...prev, columnId]);
-    setIsAddColumnModalOpen(false);
-    toast.success(`Column "${columnName}" added`);
+    } catch (error) {
+      console.error("Error adding column:", error);
+      toast.error("Failed to add column");
+    }
   };
   
-  const handleRemoveColumn = (columnId: string) => {
+  const handleRemoveColumn = async (columnId: string) => {
     if (["todo", "in-progress", "done"].includes(columnId)) {
       toast.error("Cannot remove default columns");
       return;
@@ -190,12 +270,30 @@ const SprintBoard: React.FC = () => {
       return;
     }
     
-    const newColumns = { ...columns };
-    delete newColumns[columnId];
+    // Get the column DB id
+    const dbColumnId = columns[columnId]?.id;
+    if (!dbColumnId) {
+      toast.error("Column not found");
+      return;
+    }
     
-    setColumns(newColumns);
-    setColumnOrder(columnOrder.filter(id => id !== columnId));
-    toast.success("Column removed");
+    try {
+      const success = await deleteColumn(dbColumnId);
+      
+      if (success) {
+        const newColumns = { ...columns };
+        delete newColumns[columnId];
+        
+        setColumns(newColumns);
+        setColumnOrder(columnOrder.filter(id => id !== columnId));
+        toast.success("Column removed");
+      } else {
+        toast.error("Failed to remove column");
+      }
+    } catch (error) {
+      console.error("Error removing column:", error);
+      toast.error("Failed to remove column");
+    }
   };
   
   const handleCreateTaskInColumn = (columnId: string) => {
@@ -246,6 +344,14 @@ const SprintBoard: React.FC = () => {
       navigate(`/projects/${sprint.projectId}/sprint/${sprint.id}/edit`);
     }
   };
+  
+  if (isLoadingColumns) {
+    return (
+      <div className="container mx-auto py-12 text-center">
+        <h2 className="text-xl font-bold mb-4">Loading Sprint Board...</h2>
+      </div>
+    );
+  }
   
   return (
     <div className="container mx-auto pb-20 px-4">
@@ -402,7 +508,7 @@ const SprintBoard: React.FC = () => {
           <div className="bg-scrum-card border border-scrum-border rounded-lg p-6 w-full max-w-lg animate-fade-up">
             <NewTaskForm 
               sprintId={sprint.id}
-              projectId={sprint.projectId} // Pass the project ID from the sprint
+              projectId={sprint.projectId}
               initialStatus={creatingTaskInColumn}
               onClose={() => setCreatingTaskInColumn(null)}
             />
@@ -415,7 +521,7 @@ const SprintBoard: React.FC = () => {
 
 const NewTaskForm: React.FC<{
   sprintId: string;
-  projectId: string; // Add projectId as a required prop
+  projectId: string;
   initialStatus: string;
   onClose: () => void;
 }> = ({ sprintId, projectId, initialStatus, onClose }) => {
