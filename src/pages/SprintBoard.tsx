@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
-import { Plus, Edit, Trash, Play, CheckCircle } from "lucide-react";
-import { toast } from "sonner";
+import { Plus, Edit, Trash, Play, CheckCircle, AlertTriangle } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import TaskCard from "@/components/tasks/TaskCard";
 import EditTaskModal from "@/components/tasks/EditTaskModal";
 import AddColumnModal from "@/components/sprints/AddColumnModal";
@@ -24,6 +25,7 @@ const SprintBoard: React.FC = () => {
   const [editingTask, setEditingTask] = useState<string | null>(null);
   const [isAddColumnModalOpen, setIsAddColumnModalOpen] = useState(false);
   const [creatingTaskInColumn, setCreatingTaskInColumn] = useState<string | null>(null);
+  const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
   
   const sprint = getSprint(sprintId || "");
   const tasks = getTasksBySprint(sprintId || "");
@@ -195,6 +197,48 @@ const SprintBoard: React.FC = () => {
     setCreatingTaskInColumn(columnId);
   };
   
+  const allTasksCompleted = tasks.length > 0 && tasks.every(task => task.status === "done");
+  
+  const handleCompleteSprint = async () => {
+    if (!allTasksCompleted) {
+      setIsCompleteDialogOpen(true);
+      return;
+    }
+    
+    try {
+      await updateSprint(sprint.id, { status: "completed" });
+      toast({
+        title: "Success",
+        description: "Sprint marked as completed!",
+      });
+    } catch (error) {
+      console.error("Error completing sprint:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to complete sprint",
+      });
+    }
+  };
+  
+  const confirmCompleteSprint = async () => {
+    try {
+      await updateSprint(sprint.id, { status: "completed" });
+      toast({
+        title: "Success",
+        description: "Sprint marked as completed!",
+      });
+      setIsCompleteDialogOpen(false);
+    } catch (error) {
+      console.error("Error completing sprint:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to complete sprint",
+      });
+    }
+  };
+  
   if (!sprint) {
     return (
       <div className="text-center py-12">
@@ -209,29 +253,12 @@ const SprintBoard: React.FC = () => {
     );
   }
   
-  const allTasksCompleted = tasks.length > 0 && tasks.every(task => task.status === "done");
-  
-  const handleCompleteSprint = async () => {
-    if (!allTasksCompleted) {
-      if (!window.confirm("Not all tasks are completed. Are you sure you want to complete this sprint?")) {
-        return;
-      }
-    }
-    
-    try {
-      await updateSprint(sprint.id, { status: "completed" });
-      toast.success("Sprint marked as completed!");
-    } catch (error) {
-      console.error("Error completing sprint:", error);
-      toast.error("Failed to complete sprint");
-    }
-  };
-  
   return (
     <div className="container mx-auto pb-20 px-4">
       <SprintHeader 
         sprint={sprint}
         onCompleteSprint={handleCompleteSprint}
+        allTasksCompleted={allTasksCompleted}
       />
       
       <div className="flex items-center justify-between mb-4 mt-8">
@@ -363,6 +390,37 @@ const SprintBoard: React.FC = () => {
           </div>
         </div>
       )}
+      
+      {isCompleteDialogOpen && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 animate-fade-in">
+          <div className="bg-scrum-card border border-scrum-border rounded-lg p-6 w-full max-w-md animate-fade-up">
+            <div className="mb-6 flex items-start gap-3">
+              <AlertTriangle className="text-yellow-500 h-5 w-5 mt-0.5" />
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Complete Sprint</h3>
+                <p className="text-scrum-text-secondary">
+                  Not all tasks are in the "DONE" column. Do you still want to complete this sprint?
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setIsCompleteDialogOpen(false)}
+                className="scrum-button-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmCompleteSprint}
+                className="scrum-button-warning"
+              >
+                Complete Anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -378,11 +436,13 @@ interface SprintHeaderProps {
     status: 'planned' | 'in-progress' | 'completed';
   };
   onCompleteSprint: () => void;
+  allTasksCompleted: boolean;
 }
 
 const SprintHeader: React.FC<SprintHeaderProps> = ({ 
   sprint, 
-  onCompleteSprint 
+  onCompleteSprint,
+  allTasksCompleted
 }) => {
   const formatDateRange = (start: string, end: string) => {
     const startDate = new Date(start);
@@ -401,10 +461,10 @@ const SprintHeader: React.FC<SprintHeaderProps> = ({
       </div>
       
       <div>
-        {sprint.status === "in-progress" && (
+        {sprint.status !== "completed" && (
           <button
             onClick={onCompleteSprint}
-            className="scrum-button-success flex items-center gap-1"
+            className={`flex items-center gap-1 ${allTasksCompleted ? 'scrum-button-success' : 'scrum-button-warning'}`}
           >
             <CheckCircle className="h-4 w-4" />
             <span>Complete Sprint</span>
