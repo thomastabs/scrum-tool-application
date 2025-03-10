@@ -11,7 +11,7 @@ export type Database = {
     Tables: {
       board_columns: {
         Row: {
-          created_at: string
+          created_at: string | null
           id: string
           order_index: number
           sprint_id: string
@@ -19,7 +19,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           id?: string
           order_index: number
           sprint_id: string
@@ -27,7 +27,7 @@ export type Database = {
           user_id: string
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           id?: string
           order_index?: number
           sprint_id?: string
@@ -49,42 +49,35 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "board_columns_user_id_fkey1"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
         ]
       }
       projects: {
         Row: {
-          created_at: string
+          created_at: string | null
           description: string | null
           end_goal: string | null
           id: string
           owner_id: string
           title: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           description?: string | null
           end_goal?: string | null
           id?: string
           owner_id: string
           title: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           description?: string | null
           end_goal?: string | null
           id?: string
           owner_id?: string
           title?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -98,43 +91,43 @@ export type Database = {
       }
       sprints: {
         Row: {
-          created_at: string
+          created_at: string | null
           description: string | null
           end_date: string
           goal: string | null
           id: string
           project_id: string
           start_date: string
-          status: Database["public"]["Enums"]["sprint_status"]
+          status: string
           title: string
-          updated_at: string
-          user_id: string | null
+          updated_at: string | null
+          user_id: string
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           description?: string | null
           end_date: string
           goal?: string | null
           id?: string
           project_id: string
           start_date: string
-          status?: Database["public"]["Enums"]["sprint_status"]
+          status?: string
           title: string
-          updated_at?: string
-          user_id?: string | null
+          updated_at?: string | null
+          user_id: string
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           description?: string | null
           end_date?: string
           goal?: string | null
           id?: string
           project_id?: string
           start_date?: string
-          status?: Database["public"]["Enums"]["sprint_status"]
+          status?: string
           title?: string
-          updated_at?: string
-          user_id?: string | null
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -155,55 +148,48 @@ export type Database = {
       }
       tasks: {
         Row: {
-          assignee: string | null
+          assign_to: string | null
           column_id: string | null
-          created_at: string
+          created_at: string | null
           description: string | null
           id: string
-          priority: Database["public"]["Enums"]["task_priority"]
+          priority: string | null
           project_id: string
-          sprint_id: string
-          status: Database["public"]["Enums"]["task_status"]
+          sprint_id: string | null
+          status: string
           story_points: number | null
           title: string
           user_id: string
         }
         Insert: {
-          assignee?: string | null
+          assign_to?: string | null
           column_id?: string | null
-          created_at?: string
+          created_at?: string | null
           description?: string | null
           id?: string
-          priority?: Database["public"]["Enums"]["task_priority"]
+          priority?: string | null
           project_id: string
-          sprint_id: string
-          status?: Database["public"]["Enums"]["task_status"]
+          sprint_id?: string | null
+          status?: string
           story_points?: number | null
           title: string
           user_id: string
         }
         Update: {
-          assignee?: string | null
+          assign_to?: string | null
           column_id?: string | null
-          created_at?: string
+          created_at?: string | null
           description?: string | null
           id?: string
-          priority?: Database["public"]["Enums"]["task_priority"]
+          priority?: string | null
           project_id?: string
-          sprint_id?: string
-          status?: Database["public"]["Enums"]["task_status"]
+          sprint_id?: string | null
+          status?: string
           story_points?: number | null
           title?: string
           user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "tasks_column_id_fkey"
-            columns: ["column_id"]
-            isOneToOne: false
-            referencedRelation: "board_columns"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "tasks_project_id_fkey"
             columns: ["project_id"]
@@ -225,32 +211,25 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "tasks_user_id_fkey1"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
         ]
       }
       users: {
         Row: {
-          created_at: string
+          created_at: string | null
           email: string
           id: string
           password: string
           username: string
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           email: string
           id?: string
           password: string
           username: string
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           email?: string
           id?: string
           password?: string
@@ -263,28 +242,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      hash_password: {
-        Args: {
-          password: string
-        }
-        Returns: string
-      }
-      verify_password: {
-        Args: {
-          login_credential: string
-          input_password: string
-        }
-        Returns: {
-          id: string
-          username: string
-          email: string
-        }[]
-      }
+      [_ in never]: never
     }
     Enums: {
-      sprint_status: "active" | "completed" | "planned"
-      task_priority: "low" | "medium" | "high"
-      task_status: "to_do" | "in_progress" | "done"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
