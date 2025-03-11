@@ -125,8 +125,8 @@ export const fetchProjectCollaborators = async (projectId: string) => {
     const collaborators: Collaborator[] = (data || []).map(item => ({
       id: item.id,
       userId: item.user_id,
-      username: item.users?.username || '',
-      email: item.users?.email || '',
+      username: item.users ? (item.users as any).username || '' : '',
+      email: item.users ? (item.users as any).email || '' : '',
       role: item.role,
       createdAt: item.created_at
     }));
@@ -192,12 +192,21 @@ export const fetchCollaborativeProjects = async (userId: string) => {
     if (error) throw error;
     
     // Transform the data to include role information
-    return (data || []).map(item => ({
-      ...item.projects,
-      role: item.role,
-      ownerName: item.projects?.owner?.username || '',
-      isCollaboration: true
-    }));
+    return (data || []).map(item => {
+      const project = item.projects as any;
+      return {
+        id: project.id,
+        title: project.title,
+        description: project.description || '',
+        endGoal: project.end_goal,
+        createdAt: project.created_at,
+        updatedAt: project.updated_at,
+        ownerId: project.owner_id,
+        ownerName: project.owner ? project.owner.username || '' : '',
+        isCollaboration: true,
+        role: item.role
+      };
+    });
   } catch (error) {
     console.error('Error fetching collaborative projects:', error);
     return [];

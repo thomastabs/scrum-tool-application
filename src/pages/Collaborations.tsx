@@ -18,7 +18,20 @@ const Collaborations: React.FC = () => {
       
       try {
         const projects = await fetchCollaborativeProjects(user.id);
-        setCollaborativeProjects(projects);
+        // Ensure projects have all required fields from CollaborativeProject type
+        const typedProjects: CollaborativeProject[] = projects.map(project => ({
+          id: project.id,
+          title: project.title,
+          description: project.description || '',
+          endGoal: project.endGoal,
+          createdAt: project.createdAt,
+          updatedAt: project.updatedAt,
+          ownerId: project.ownerId,
+          ownerName: project.ownerName || '',
+          isCollaboration: true,
+          role: project.role
+        }));
+        setCollaborativeProjects(typedProjects);
       } catch (error) {
         console.error("Error loading collaborative projects:", error);
       } finally {

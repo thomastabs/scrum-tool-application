@@ -736,7 +736,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const collaborativeProjects = data
           .filter(item => item.projects)
           .map(item => {
-            const project = item.projects;
+            const project = item.projects as any;
             return {
               id: project.id,
               title: project.title,
@@ -746,7 +746,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
               updatedAt: project.updated_at,
               ownerId: project.owner_id,
               ownerName: project.owner?.username || '',
-              isCollaboration: true
+              isCollaboration: true,
+              role: item.role
             };
           });
 
