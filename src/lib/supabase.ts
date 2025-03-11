@@ -46,28 +46,6 @@ export const createDefaultColumn = async (sprintId: string, userId: string, titl
   }
 };
 
-// Helper function to add a custom column
-export const addCustomColumn = async (sprintId: string, userId: string, title: string, orderIndex: number) => {
-  try {
-    const { data, error } = await supabase
-      .from('board_columns')
-      .insert({
-        sprint_id: sprintId,
-        user_id: userId,
-        title: title,
-        order_index: orderIndex
-      })
-      .select()
-      .single();
-      
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error adding custom column:', error);
-    return null;
-  }
-};
-
 // Helper function to delete a column
 export const deleteColumn = async (columnId: string) => {
   try {
