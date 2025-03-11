@@ -24,6 +24,7 @@ interface ProjectContextType {
   getTasksBySprint: (sprintId: string) => Task[];
   getBacklogTasks: (projectId: string) => Task[];
   getBurndownData: (projectId: string) => BurndownData[];
+  fetchCollaborativeProjects: () => Promise<void>;
 }
 
 const ProjectContext = createContext<ProjectContextType>({
@@ -47,6 +48,7 @@ const ProjectContext = createContext<ProjectContextType>({
   getTasksBySprint: () => [],
   getBacklogTasks: () => [],
   getBurndownData: () => [],
+  fetchCollaborativeProjects: async () => {},
 });
 
 export const useProjects = () => useContext(ProjectContext);
@@ -61,6 +63,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     if (user) {
       fetchProjects();
+      fetchCollaborativeProjects();
     } else {
       setProjects([]);
       setSprints([]);
@@ -75,7 +78,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       const { data, error } = await supabase
         .from('projects')
-        .select('*')
+        .select(`*, owner:owner_id (username, email)`)
         .eq('owner_id', user.id);
 
       if (error) {
@@ -90,7 +93,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           description: project.description || '',
           endGoal: project.end_goal,
           createdAt: project.created_at,
-          updatedAt: project.updated_at
+          updatedAt: project.updated_at,
+          ownerId: project.owner_id,
+          ownerName: project.owner?.username || '',
+          isCollaboration: false
         }));
 
         setProjects(formattedProjects);
@@ -248,7 +254,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           end_goal: project.endGoal,
           owner_id: user.id
         }])
-        .select()
+        .select(`*, owner:owner_id (username, email)`)
         .single();
 
       if (error) throw error;
@@ -261,7 +267,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         description: data.description || '',
         endGoal: data.end_goal,
         createdAt: data.created_at,
-        updatedAt: data.updated_at
+        updatedAt: data.updated_at,
+        ownerId: data.owner_id,
+        ownerName: data.owner?.username || '',
+        isCollaboration: false
       };
 
       setProjects(prev => [...prev, newProject]);
@@ -696,6 +705,70 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const getBurndownData = (projectId: string) => 
     burndownData[projectId] || generateDefaultBurndownData();
 
+  const fetchCollaborativeProjects = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('collaborators')
+        .select(`
+          role,
+          projects:project_id (
+            id, 
+            title, 
+            description, 
+            end_goal, 
+            created_at, 
+            updated_at,
+            owner_id,
+            owner:owner_id (username, email)
+          )
+        `)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error fetching collaborative projects:', error);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        // Extract the collaborative projects and format them
+        const collaborativeProjects = data
+          .filter(item => item.projects)
+          .map(item => {
+            const project = item.projects;
+            return {
+              id: project.id,
+              title: project.title,
+              description: project.description || '',
+              endGoal: project.end_goal,
+              createdAt: project.created_at,
+              updatedAt: project.updated_at,
+              ownerId: project.owner_id,
+              ownerName: project.owner?.username || '',
+              isCollaboration: true
+            };
+          });
+
+        // Add collaborative projects to the projects state
+        setProjects(prev => {
+          // Filter out any duplicates (in case user is both owner and collaborator)
+          const existingIds = prev.map(p => p.id);
+          const newCollaborativeProjects = collaborativeProjects.filter(p => !existingIds.includes(p.id));
+          return [...prev, ...newCollaborativeProjects];
+        });
+
+        // Fetch sprints and backlog tasks for collaborative projects
+        collaborativeProjects.forEach(project => {
+          fetchSprints(project.id);
+          fetchBacklogTasks(project.id);
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching collaborative projects:', error);
+    }
+  };
+
   return (
     <ProjectContext.Provider
       value={{
@@ -719,6 +792,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         getTasksBySprint,
         getBacklogTasks,
         getBurndownData,
+        fetchCollaborativeProjects,
       }}
     >
       {children}

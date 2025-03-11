@@ -12,6 +12,7 @@ import Login from "./pages/Auth/Login";
 import Register from "./pages/Auth/Register";
 import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
+import Collaborations from "./pages/Collaborations";
 import ProjectLayout from "./components/layout/ProjectLayout";
 import ProjectDetail from "./pages/ProjectDetail";
 import BurndownChart from "./pages/BurndownChart";
@@ -20,6 +21,7 @@ import EditSprint from "./pages/EditSprint";
 import ProjectTimeline from "./pages/ProjectTimeline";
 import NotFound from "./pages/NotFound";
 import ProductBacklog from "./pages/ProductBacklog";
+import ProjectCollaborators from "./pages/ProjectCollaborators";
 
 const queryClient = new QueryClient();
 
@@ -77,7 +79,7 @@ const App = () => (
               {/* Protected routes */}
               <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/projects" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
-              <Route path="/collaborations" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
+              <Route path="/collaborations" element={<ProtectedRoute><Collaborations /></ProtectedRoute>} />
               
               {/* Project routes */}
               <Route path="/projects/:projectId" element={<ProtectedRoute><ProjectLayout /></ProtectedRoute>}>
@@ -85,6 +87,7 @@ const App = () => (
                 <Route path="backlog" element={<ProductBacklog />} />
                 <Route path="timeline" element={<ProjectTimeline />} />
                 <Route path="burndown" element={<BurndownChart />} />
+                <Route path="collaborators" element={<ProjectCollaborators />} />
                 <Route path="sprint/:sprintId" element={<SprintBoard />} />
                 <Route path="sprint/:sprintId/edit" element={<EditSprint />} />
               </Route>
