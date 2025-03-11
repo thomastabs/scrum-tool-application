@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 const formSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -88,21 +88,20 @@ const BacklogItemForm: React.FC<BacklogItemFormProps> = ({ taskId, onClose, proj
           return;
         }
         
-        console.log('Creating new backlog item with project ID:', projectId);
+        console.log('Creating new backlog item with project ID:', projectId); // Add logging to help debug
         
         await addTask({
           title: data.title,
           description: data.description,
-          status: "backlog", 
-          projectId: projectId,
-          priority: data.priority,
+          status: "backlog", // Use status instead of sprintId for backlog items
+          projectId: projectId, // Set projectId for the task
+          priority: data.priority, // Making sure priority is passed correctly
           storyPoints: data.storyPoints,
-          sprintId: "",
+          sprintId: "", // Add the missing sprintId property with an empty string for backlog items
         });
         toast.success("Backlog item created successfully");
       }
       
-      // Always close the form and trigger refresh
       onClose();
     } catch (error) {
       console.error("Error creating/updating backlog item:", error);
@@ -126,7 +125,6 @@ const BacklogItemForm: React.FC<BacklogItemFormProps> = ({ taskId, onClose, proj
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* ...keep existing form fields... */}
             <FormField
               control={form.control}
               name="title"

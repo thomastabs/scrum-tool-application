@@ -161,11 +161,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
 
       if (data) {
+        // Map the database status values to ensure they are consistent
         const formattedTasks: Task[] = data.map(task => ({
           id: task.id,
           title: task.title,
           description: task.description,
           sprintId: task.sprint_id || '',
+          // Ensure we preserve the exact status from the database
           status: task.status,
           assignedTo: task.assign_to,
           storyPoints: task.story_points,
@@ -174,6 +176,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           updatedAt: task.created_at,
           projectId: task.project_id
         }));
+
+        console.log('Fetched tasks with statuses:', formattedTasks.map(t => ({ id: t.id, status: t.status })));
 
         setTasks(prev => {
           const filtered = prev.filter(t => t.sprintId !== sprintId);
@@ -203,6 +207,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
 
       if (data) {
+        console.log('Fetched backlog tasks:', data);
         const formattedTasks: Task[] = data.map(task => ({
           id: task.id,
           title: task.title,
@@ -525,9 +530,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setTasks(prev => [...prev, newTask]);
       
       if (!isBacklogTask && projectId && task.storyPoints) {
-        await updateBurndownDataInDb(
+        updateBurndownData(
           projectId,
-          user.id,
           task.storyPoints,
           "add"
         );
@@ -584,9 +588,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ) {
         const sprint = getSprint(existingTask.sprintId);
         if (sprint) {
-          await updateBurndownDataInDb(
+          updateBurndownData(
             sprint.projectId,
-            user.id,
             existingTask.storyPoints,
             "complete"
           );
@@ -619,11 +622,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       
       const sprint = getSprint(taskToDelete.sprintId);
       if (sprint && taskToDelete.storyPoints) {
-        await updateBurndownDataInDb(
+        updateBurndownData(
           sprint.projectId,
-          user.id,
           taskToDelete.storyPoints,
-          taskToDelete.status === "done" ? "remove_completed" : "remove"
+          taskToDelete.status === "done" ? "complete" : "add"
         );
       }
     } catch (error) {
@@ -691,125 +693,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
-  const fetchBurndownData = async (projectId: string) => {
-    if (!user) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('burndown_data')
-        .select('*')
-        .eq('project_id', projectId)
-        .eq('user_id', user.id)
-        .order('date', { ascending: true });
-        
-      if (error) throw error;
-      
-      if (data && data.length > 0) {
-        const formattedData: BurndownData[] = data.map(item => ({
-          date: item.date,
-          ideal: item.ideal_points,
-          actual: item.actual_points
-        }));
-        
-        setBurndownData(prev => ({
-          ...prev,
-          [projectId]: formattedData
-        }));
-      }
-    } catch (error) {
-      console.error('Error fetching burndown data:', error);
-    }
-  };
-
-  const updateBurndownDataInDb = async (
-    projectId: string,
-    userId: string,
-    points: number,
-    action: "add" | "complete" | "remove" | "remove_completed"
-  ) => {
-    if (!projectId || !points) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('burndown_data')
-        .select('*')
-        .eq('project_id', projectId)
-        .eq('user_id', userId)
-        .order('date', { ascending: true });
-        
-      if (error) throw error;
-      
-      if (!data || data.length === 0) {
-        await createDefaultBurndownData(projectId, userId);
-        return updateBurndownDataInDb(projectId, userId, points, action);
-      }
-      
-      const today = new Date().toISOString().split('T')[0];
-      
-      for (const item of data) {
-        let idealUpdate = 0;
-        let actualUpdate = 0;
-        
-        if (item.date >= today) {
-          if (action === "add") {
-            idealUpdate = points;
-          } else if (action === "remove" || action === "remove_completed") {
-            idealUpdate = -points;
-          }
-        }
-        
-        if (item.date === today) {
-          if (action === "complete") {
-            actualUpdate = points;
-          } else if (action === "remove_completed") {
-            actualUpdate = -points;
-          }
-        }
-        
-        if (idealUpdate !== 0 || actualUpdate !== 0) {
-          await supabase
-            .from('burndown_data')
-            .update({
-              ideal_points: Math.max(0, item.ideal_points + idealUpdate),
-              actual_points: Math.max(0, item.actual_points + actualUpdate),
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', item.id);
-        }
-      }
-      
-      fetchBurndownData(projectId);
-    } catch (error) {
-      console.error('Error updating burndown data:', error);
-    }
-  };
-
-  const createDefaultBurndownData = async (projectId: string, userId: string) => {
-    try {
-      const today = new Date();
-      
-      for (let i = 0; i < 21; i++) {
-        const date = new Date(today);
-        date.setDate(date.getDate() + i);
-        const dateStr = date.toISOString().split('T')[0];
-        
-        await supabase
-          .from('burndown_data')
-          .insert({
-            project_id: projectId,
-            user_id: userId,
-            date: dateStr,
-            ideal_points: 0,
-            actual_points: 0
-          });
-      }
-    } catch (error) {
-      console.error('Error creating default burndown data:', error);
-    }
-  };
-
   const getBurndownData = (projectId: string) => 
-    burndownData[projectId] || [];
+    burndownData[projectId] || generateDefaultBurndownData();
 
   return (
     <ProjectContext.Provider

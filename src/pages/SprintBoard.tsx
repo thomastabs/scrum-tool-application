@@ -1,22 +1,20 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
-import { useAuth } from "@/context/AuthContext";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
-import { Plus, Edit, Trash, Play, CheckCircle } from "lucide-react";
-import { toast } from "sonner";
+import { Plus, Edit, Trash, Play, CheckCircle, AlertTriangle } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import TaskCard from "@/components/tasks/TaskCard";
 import EditTaskModal from "@/components/tasks/EditTaskModal";
 import AddColumnModal from "@/components/sprints/AddColumnModal";
-import { fetchSprintColumns, addCustomColumn, createDefaultColumn, deleteColumn } from "@/lib/supabase";
 
 const SprintBoard: React.FC = () => {
   const { sprintId } = useParams<{ sprintId: string }>();
   const { getSprint, getTasksBySprint, updateSprint, updateTask } = useProjects();
-  const { user } = useAuth();
   const navigate = useNavigate();
   
-  const [columns, setColumns] = useState<{[key: string]: {title: string, taskIds: string[], id?: string}}>(
+  const [columns, setColumns] = useState<{[key: string]: {title: string, taskIds: string[]}}>(
     {
       "todo": { title: "TO DO", taskIds: [] },
       "in-progress": { title: "IN PROGRESS", taskIds: [] },
@@ -27,95 +25,57 @@ const SprintBoard: React.FC = () => {
   const [editingTask, setEditingTask] = useState<string | null>(null);
   const [isAddColumnModalOpen, setIsAddColumnModalOpen] = useState(false);
   const [creatingTaskInColumn, setCreatingTaskInColumn] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [taskRefreshTrigger, setTaskRefreshTrigger] = useState(0); // Add refresh trigger
+  const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
   
   const sprint = getSprint(sprintId || "");
   const tasks = getTasksBySprint(sprintId || "");
   
-  // Force refresh of tasks
-  const refreshTasks = () => {
-    console.log("Refreshing tasks...");
-    setTaskRefreshTrigger(prev => prev + 1);
-  };
-  
   useEffect(() => {
-    const loadCustomColumns = async () => {
-      if (!sprint || !user) return;
-      
-      setIsLoading(true);
-      try {
-        const customColumns = await fetchSprintColumns(sprint.id, user.id);
-        
-        if (customColumns.length === 0) {
-          const defaultColumnTitles = ["TO DO", "IN PROGRESS", "DONE"];
-          const defaultStatuses = ["todo", "in-progress", "done"];
-          
-          const createdColumns = [];
-          for (let i = 0; i < defaultColumnTitles.length; i++) {
-            const column = await createDefaultColumn(
-              sprint.id,
-              user.id,
-              defaultColumnTitles[i],
-              i
-            );
-            if (column) {
-              createdColumns.push({
-                id: column.id,
-                status: defaultStatuses[i],
-                title: column.title,
-                orderIndex: column.order_index
-              });
-            }
-          }
-          
-          initializeColumns(createdColumns);
-        } else {
-          initializeColumns(customColumns.map(col => ({
-            id: col.id,
-            status: col.title.toLowerCase().replace(/\s+/g, '-'),
-            title: col.title,
-            orderIndex: col.order_index
-          })));
-        }
-      } catch (error) {
-        console.error("Error loading columns:", error);
-        toast.error("Failed to load board columns");
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    if (!sprint) return;
     
-    loadCustomColumns();
-  }, [sprint, user, taskRefreshTrigger]); // Add taskRefreshTrigger as dependency
-  
-  const initializeColumns = (columnsData: any[]) => {
-    const initialColumns: {[key: string]: {title: string, taskIds: string[], id?: string}} = {};
-    const newColumnOrder: string[] = [];
+    const initialColumns: {[key: string]: {title: string, taskIds: string[]}} = {};
     
-    columnsData.sort((a, b) => a.orderIndex - b.orderIndex);
-    
-    columnsData.forEach(col => {
-      const colId = col.status;
+    ["todo", "in-progress", "done"].forEach(colId => {
       initialColumns[colId] = {
-        title: col.title,
-        taskIds: [],
-        id: col.id
+        title: colId === "todo" ? "TO DO" : 
+               colId === "in-progress" ? "IN PROGRESS" : 
+               "DONE",
+        taskIds: []
       };
-      newColumnOrder.push(colId);
+    });
+    
+    const customStatuses = new Set<string>();
+    tasks.forEach(task => {
+      if (!["todo", "in-progress", "done"].includes(task.status)) {
+        customStatuses.add(task.status);
+      }
+    });
+    
+    customStatuses.forEach(status => {
+      initialColumns[status] = {
+        title: status.toUpperCase().replace(/-/g, ' '),
+        taskIds: []
+      };
     });
     
     tasks.forEach(task => {
       if (initialColumns[task.status]) {
         initialColumns[task.status].taskIds.push(task.id);
-      } else if (initialColumns["todo"]) {
+      } else {
         initialColumns["todo"].taskIds.push(task.id);
+      }
+    });
+    
+    const newColumnOrder = [...columnOrder];
+    Object.keys(initialColumns).forEach(colId => {
+      if (!newColumnOrder.includes(colId)) {
+        newColumnOrder.push(colId);
       }
     });
     
     setColumns(initialColumns);
     setColumnOrder(newColumnOrder);
-  };
+  }, [sprint, tasks]);
   
   const handleDragEnd = async (result: any) => {
     const { destination, source, draggableId } = result;
@@ -191,8 +151,8 @@ const SprintBoard: React.FC = () => {
     }
   };
   
-  const handleAddColumn = async (columnName: string) => {
-    if (!columnName.trim() || !user) return;
+  const handleAddColumn = (columnName: string) => {
+    if (!columnName.trim()) return;
     
     const columnId = columnName.toLowerCase().replace(/\s+/g, '-');
     
@@ -201,37 +161,20 @@ const SprintBoard: React.FC = () => {
       return;
     }
     
-    try {
-      const newColumn = await addCustomColumn(
-        sprint?.id || "",
-        user.id,
-        columnName,
-        columnOrder.length
-      );
-      
-      if (!newColumn) {
-        throw new Error("Failed to create column");
+    setColumns(prev => ({
+      ...prev,
+      [columnId]: {
+        title: columnName,
+        taskIds: []
       }
-      
-      setColumns(prev => ({
-        ...prev,
-        [columnId]: {
-          title: columnName,
-          taskIds: [],
-          id: newColumn.id
-        }
-      }));
-      
-      setColumnOrder(prev => [...prev, columnId]);
-      setIsAddColumnModalOpen(false);
-      toast.success(`Column "${columnName}" added`);
-    } catch (error) {
-      console.error("Error adding column:", error);
-      toast.error("Failed to add column");
-    }
+    }));
+    
+    setColumnOrder(prev => [...prev, columnId]);
+    setIsAddColumnModalOpen(false);
+    toast.success(`Column "${columnName}" added`);
   };
   
-  const handleRemoveColumn = async (columnId: string) => {
+  const handleRemoveColumn = (columnId: string) => {
     if (["todo", "in-progress", "done"].includes(columnId)) {
       toast.error("Cannot remove default columns");
       return;
@@ -242,42 +185,57 @@ const SprintBoard: React.FC = () => {
       return;
     }
     
-    try {
-      const columnDbId = columns[columnId]?.id;
-      
-      if (columnDbId) {
-        await deleteColumn(columnDbId);
-      }
-      
-      const newColumns = { ...columns };
-      delete newColumns[columnId];
-      
-      setColumns(newColumns);
-      setColumnOrder(columnOrder.filter(id => id !== columnId));
-      toast.success("Column removed");
-    } catch (error) {
-      console.error("Error removing column:", error);
-      toast.error("Failed to remove column");
-    }
+    const newColumns = { ...columns };
+    delete newColumns[columnId];
+    
+    setColumns(newColumns);
+    setColumnOrder(columnOrder.filter(id => id !== columnId));
+    toast.success("Column removed");
   };
   
   const handleCreateTaskInColumn = (columnId: string) => {
     setCreatingTaskInColumn(columnId);
   };
   
+  const allTasksCompleted = tasks.length > 0 && tasks.every(task => task.status === "done");
+  
   const handleCompleteSprint = async () => {
     if (!allTasksCompleted) {
-      if (!window.confirm("Not all tasks are completed. Are you sure you want to complete this sprint?")) {
-        return;
-      }
+      setIsCompleteDialogOpen(true);
+      return;
     }
     
     try {
       await updateSprint(sprint.id, { status: "completed" });
-      toast.success("Sprint marked as completed!");
+      toast({
+        title: "Success",
+        description: "Sprint marked as completed!",
+      });
     } catch (error) {
       console.error("Error completing sprint:", error);
-      toast.error("Failed to complete sprint");
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to complete sprint",
+      });
+    }
+  };
+  
+  const confirmCompleteSprint = async () => {
+    try {
+      await updateSprint(sprint.id, { status: "completed" });
+      toast({
+        title: "Success",
+        description: "Sprint marked as completed!",
+      });
+      setIsCompleteDialogOpen(false);
+    } catch (error) {
+      console.error("Error completing sprint:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to complete sprint",
+      });
     }
   };
   
@@ -295,13 +253,12 @@ const SprintBoard: React.FC = () => {
     );
   }
   
-  const allTasksCompleted = tasks.length > 0 && tasks.every(task => task.status === "done");
-  
   return (
     <div className="container mx-auto pb-20 px-4">
       <SprintHeader 
         sprint={sprint}
         onCompleteSprint={handleCompleteSprint}
+        allTasksCompleted={allTasksCompleted}
       />
       
       <div className="flex items-center justify-between mb-4 mt-8">
@@ -319,108 +276,99 @@ const SprintBoard: React.FC = () => {
         </div>
       </div>
       
-      {isLoading ? (
-        <div className="text-center py-8">
-          <p>Loading board...</p>
-        </div>
-      ) : (
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="flex gap-4 pb-4 overflow-x-auto">
-            {columnOrder.map((columnId) => {
-              const column = columns[columnId];
-              
-              if (!column) return null;
-              
-              const columnTasks = column.taskIds.map(taskId => 
-                tasks.find(task => task.id === taskId)
-              ).filter(Boolean);
-              
-              return (
-                <div key={columnId} className="min-w-[270px] max-w-[270px] flex-shrink-0">
-                  <div className="bg-scrum-card border border-scrum-border rounded-md h-full flex flex-col">
-                    <div className="flex items-center justify-between p-3 border-b border-scrum-border">
-                      <h4 className="font-medium text-sm">{column.title}</h4>
-                      <div className="flex items-center">
-                        {sprint.status !== "completed" && (
-                          <button
-                            onClick={() => handleCreateTaskInColumn(columnId)}
-                            className="text-scrum-text-secondary hover:text-white transition-colors mr-2"
-                            title={`Add task to ${column.title}`}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </button>
-                        )}
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <div className="flex gap-4 pb-4 overflow-x-auto">
+          {columnOrder.map((columnId) => {
+            const column = columns[columnId];
+            
+            if (!column) return null;
+            
+            const columnTasks = column.taskIds.map(taskId => 
+              tasks.find(task => task.id === taskId)
+            ).filter(Boolean);
+            
+            return (
+              <div key={columnId} className="min-w-[270px] max-w-[270px] flex-shrink-0">
+                <div className="bg-scrum-card border border-scrum-border rounded-md h-full flex flex-col">
+                  <div className="flex items-center justify-between p-3 border-b border-scrum-border">
+                    <h4 className="font-medium text-sm">{column.title}</h4>
+                    <div className="flex items-center">
+                      {sprint.status !== "completed" && (
+                        <button
+                          onClick={() => handleCreateTaskInColumn(columnId)}
+                          className="text-scrum-text-secondary hover:text-white transition-colors mr-2"
+                          title={`Add task to ${column.title}`}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      )}
+                      
+                      {!["todo", "in-progress", "done"].includes(columnId) && (
+                        <button
+                          onClick={() => handleRemoveColumn(columnId)}
+                          className="text-scrum-text-secondary hover:text-destructive transition-colors"
+                          disabled={sprint.status === "completed"}
+                          title="Remove column"
+                        >
+                          <Trash className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <Droppable droppableId={columnId} isDropDisabled={sprint.status === "completed"}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className={`p-2 flex-1 min-h-[300px] overflow-y-auto ${snapshot.isDraggingOver ? "bg-scrum-accent/10" : ""}`}
+                      >
+                        {columnTasks.map((task, index) => (
+                          task && (
+                            <Draggable
+                              key={task.id}
+                              draggableId={task.id}
+                              index={index}
+                              isDragDisabled={sprint.status === "completed"}
+                            >
+                              {(provided, snapshot) => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                  className={`mb-2 transition-transform duration-200 ${snapshot.isDragging ? "scale-105 shadow-lg opacity-90 z-10" : ""}`}
+                                >
+                                  <TaskCard
+                                    task={task}
+                                    onEdit={() => setEditingTask(task.id)}
+                                    isSprintCompleted={sprint.status === "completed"}
+                                  />
+                                </div>
+                              )}
+                            </Draggable>
+                          )
+                        ))}
+                        {provided.placeholder}
                         
-                        {!["todo", "in-progress", "done"].includes(columnId) && (
-                          <button
-                            onClick={() => handleRemoveColumn(columnId)}
-                            className="text-scrum-text-secondary hover:text-destructive transition-colors"
-                            disabled={sprint.status === "completed"}
-                            title="Remove column"
-                          >
-                            <Trash className="h-4 w-4" />
-                          </button>
+                        {columnTasks.length === 0 && (
+                          <div className="text-center py-4 text-scrum-text-secondary text-sm italic">
+                            No tasks
+                          </div>
                         )}
                       </div>
-                    </div>
-                    
-                    <Droppable droppableId={columnId} isDropDisabled={sprint.status === "completed"}>
-                      {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.droppableProps}
-                          className={`p-2 flex-1 min-h-[300px] overflow-y-auto ${snapshot.isDraggingOver ? "bg-scrum-accent/10" : ""}`}
-                        >
-                          {columnTasks.map((task, index) => (
-                            task && (
-                              <Draggable
-                                key={task.id}
-                                draggableId={task.id}
-                                index={index}
-                                isDragDisabled={sprint.status === "completed"}
-                              >
-                                {(provided, snapshot) => (
-                                  <div
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    {...provided.dragHandleProps}
-                                    className={`mb-2 transition-transform duration-200 ${snapshot.isDragging ? "scale-105 shadow-lg opacity-90 z-10" : ""}`}
-                                  >
-                                    <TaskCard
-                                      task={task}
-                                      onEdit={() => setEditingTask(task.id)}
-                                      isSprintCompleted={sprint.status === "completed"}
-                                    />
-                                  </div>
-                                )}
-                              </Draggable>
-                            )
-                          ))}
-                          {provided.placeholder}
-                          
-                          {columnTasks.length === 0 && (
-                            <div className="text-center py-4 text-scrum-text-secondary text-sm italic">
-                              No tasks
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </Droppable>
-                  </div>
+                    )}
+                  </Droppable>
                 </div>
-              );
-            })}
-          </div>
-        </DragDropContext>
-      )}
+              </div>
+            );
+          })}
+        </div>
+      </DragDropContext>
       
       {editingTask && (
         <EditTaskModal
           taskId={editingTask}
-          onClose={() => {
-            setEditingTask(null);
-            refreshTasks(); // Refresh tasks after editing
-          }}
+          onClose={() => setEditingTask(null)}
         />
       )}
       
@@ -438,8 +386,38 @@ const SprintBoard: React.FC = () => {
               sprintId={sprint.id}
               initialStatus={creatingTaskInColumn}
               onClose={() => setCreatingTaskInColumn(null)}
-              onTaskCreated={refreshTasks} // Add callback for task creation
             />
+          </div>
+        </div>
+      )}
+      
+      {isCompleteDialogOpen && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 animate-fade-in">
+          <div className="bg-scrum-card border border-scrum-border rounded-lg p-6 w-full max-w-md animate-fade-up">
+            <div className="mb-6 flex items-start gap-3">
+              <AlertTriangle className="text-yellow-500 h-5 w-5 mt-0.5" />
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Complete Sprint</h3>
+                <p className="text-scrum-text-secondary">
+                  Not all tasks are in the "DONE" column. Do you still want to complete this sprint?
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setIsCompleteDialogOpen(false)}
+                className="scrum-button-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmCompleteSprint}
+                className="scrum-button-warning"
+              >
+                Complete Anyway
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -458,11 +436,13 @@ interface SprintHeaderProps {
     status: 'planned' | 'in-progress' | 'completed';
   };
   onCompleteSprint: () => void;
+  allTasksCompleted: boolean;
 }
 
 const SprintHeader: React.FC<SprintHeaderProps> = ({ 
   sprint, 
-  onCompleteSprint 
+  onCompleteSprint,
+  allTasksCompleted
 }) => {
   const formatDateRange = (start: string, end: string) => {
     const startDate = new Date(start);
@@ -481,10 +461,10 @@ const SprintHeader: React.FC<SprintHeaderProps> = ({
       </div>
       
       <div>
-        {sprint.status === "in-progress" && (
+        {sprint.status !== "completed" && (
           <button
             onClick={onCompleteSprint}
-            className="scrum-button-success flex items-center gap-1"
+            className={`flex items-center gap-1 ${allTasksCompleted ? 'scrum-button-success' : 'scrum-button-warning'}`}
           >
             <CheckCircle className="h-4 w-4" />
             <span>Complete Sprint</span>
@@ -499,8 +479,7 @@ const NewTaskForm: React.FC<{
   sprintId: string;
   initialStatus: string;
   onClose: () => void;
-  onTaskCreated: () => void; // Add callback
-}> = ({ sprintId, initialStatus, onClose, onTaskCreated }) => {
+}> = ({ sprintId, initialStatus, onClose }) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<"low" | "medium" | "high" | "">("");
@@ -536,8 +515,7 @@ const NewTaskForm: React.FC<{
       });
       
       toast.success("Task created successfully");
-      onTaskCreated(); // Call the callback to refresh tasks
-      onClose(); // Close the form
+      onClose();
     } catch (error) {
       console.error("Error creating task:", error);
       toast.error("Failed to create task");

@@ -169,12 +169,12 @@ function toast({ ...props }: Toast) {
   }
 }
 
-// Add convenience methods for different toast variants
+// Add convenience methods
 toast.success = (message: string) => {
   return toast({
     title: "Success",
     description: message,
-    variant: "success" as any, // Using 'as any' temporarily for backward compatibility
+    variant: "default",
   })
 }
 
@@ -188,16 +188,19 @@ toast.error = (message: string) => {
 
 toast.warning = (message: string) => {
   return toast({
-    title: "Warning", 
+    title: "Warning",
     description: message,
-    variant: "warning" as any, // Using 'as any' temporarily for backward compatibility
+    variant: "default",
+    className: "bg-yellow-500 text-white",
   })
 }
 
 toast.info = (message: string) => {
   return toast({
-    title: "Information",
+    title: "Info",
     description: message,
+    variant: "default",
+    className: "bg-blue-500 text-white",
   })
 }
 
