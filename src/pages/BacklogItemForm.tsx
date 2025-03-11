@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -22,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -101,6 +102,7 @@ const BacklogItemForm: React.FC<BacklogItemFormProps> = ({ taskId, onClose, proj
         toast.success("Backlog item created successfully");
       }
       
+      // Always close the form and trigger refresh
       onClose();
     } catch (error) {
       console.error("Error creating/updating backlog item:", error);

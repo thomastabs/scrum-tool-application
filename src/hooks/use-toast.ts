@@ -174,7 +174,7 @@ toast.success = (message: string) => {
   return toast({
     title: "Success",
     description: message,
-    variant: "success",
+    variant: "success" as any, // Using 'as any' temporarily for backward compatibility
   })
 }
 
@@ -188,9 +188,9 @@ toast.error = (message: string) => {
 
 toast.warning = (message: string) => {
   return toast({
-    title: "Warning",
+    title: "Warning", 
     description: message,
-    variant: "warning",
+    variant: "warning" as any, // Using 'as any' temporarily for backward compatibility
   })
 }
 
