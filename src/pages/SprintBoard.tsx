@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
 import { useAuth } from "@/context/AuthContext";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { Plus, Edit, Trash, Play, CheckCircle } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import TaskCard from "@/components/tasks/TaskCard";
 import EditTaskModal from "@/components/tasks/EditTaskModal";
 import AddColumnModal from "@/components/sprints/AddColumnModal";
@@ -12,7 +13,7 @@ import { fetchSprintColumns, addCustomColumn, createDefaultColumn, deleteColumn 
 
 const SprintBoard: React.FC = () => {
   const { sprintId } = useParams<{ sprintId: string }>();
-  const { getSprint, getTasksBySprint, updateSprint, updateTask } = useProjects();
+  const { getSprint, getTasksBySprint, updateSprint, updateTask, addTask } = useProjects();
   const { user } = useAuth();
   const navigate = useNavigate();
   
@@ -28,9 +29,15 @@ const SprintBoard: React.FC = () => {
   const [isAddColumnModalOpen, setIsAddColumnModalOpen] = useState(false);
   const [creatingTaskInColumn, setCreatingTaskInColumn] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [taskRefreshTrigger, setTaskRefreshTrigger] = useState(0);
   
   const sprint = getSprint(sprintId || "");
   const tasks = getTasksBySprint(sprintId || "");
+  
+  // Function to refresh tasks
+  const refreshTasks = () => {
+    setTaskRefreshTrigger(prev => prev + 1);
+  };
   
   useEffect(() => {
     const loadCustomColumns = async () => {
@@ -80,7 +87,37 @@ const SprintBoard: React.FC = () => {
     };
     
     loadCustomColumns();
-  }, [sprint, user]);
+  }, [sprint, user, taskRefreshTrigger]);
+  
+  // Update this function to also be triggered when refreshTrigger changes
+  useEffect(() => {
+    if (tasks && columnOrder.length > 0) {
+      updateTasksInColumns();
+    }
+  }, [tasks, columnOrder, taskRefreshTrigger]);
+  
+  // Add this function to update tasks in columns
+  const updateTasksInColumns = () => {
+    const updatedColumns = { ...columns };
+    
+    // Reset all taskIds arrays
+    columnOrder.forEach(colId => {
+      if (updatedColumns[colId]) {
+        updatedColumns[colId].taskIds = [];
+      }
+    });
+    
+    // Distribute tasks to their respective columns
+    tasks.forEach(task => {
+      if (updatedColumns[task.status]) {
+        updatedColumns[task.status].taskIds.push(task.id);
+      } else if (updatedColumns["todo"]) {
+        updatedColumns["todo"].taskIds.push(task.id);
+      }
+    });
+    
+    setColumns(updatedColumns);
+  };
   
   const initializeColumns = (columnsData: any[]) => {
     const initialColumns: {[key: string]: {title: string, taskIds: string[], id?: string}} = {};
@@ -428,6 +465,7 @@ const SprintBoard: React.FC = () => {
               sprintId={sprint.id}
               initialStatus={creatingTaskInColumn}
               onClose={() => setCreatingTaskInColumn(null)}
+              onTaskCreated={refreshTasks}
             />
           </div>
         </div>
@@ -488,7 +526,8 @@ const NewTaskForm: React.FC<{
   sprintId: string;
   initialStatus: string;
   onClose: () => void;
-}> = ({ sprintId, initialStatus, onClose }) => {
+  onTaskCreated: () => void;
+}> = ({ sprintId, initialStatus, onClose, onTaskCreated }) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<"low" | "medium" | "high" | "">("");
@@ -524,6 +563,7 @@ const NewTaskForm: React.FC<{
       });
       
       toast.success("Task created successfully");
+      onTaskCreated(); // Call the refresh function
       onClose();
     } catch (error) {
       console.error("Error creating task:", error);
