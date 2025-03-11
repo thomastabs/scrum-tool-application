@@ -9,14 +9,23 @@ interface AddColumnModalProps {
 
 const AddColumnModal: React.FC<AddColumnModalProps> = ({ onClose, onAdd }) => {
   const [columnName, setColumnName] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (columnName.trim()) {
-      onAdd(columnName.trim());
-      setColumnName("");
+    const trimmedName = columnName.trim();
+    if (!trimmedName) {
+      setErrorMessage("Column name cannot be empty");
+      return;
     }
+    
+    onAdd(trimmedName);
+  };
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setColumnName(e.target.value);
+    setErrorMessage("");
   };
   
   return (
@@ -40,12 +49,15 @@ const AddColumnModal: React.FC<AddColumnModalProps> = ({ onClose, onAdd }) => {
             <input
               type="text"
               value={columnName}
-              onChange={(e) => setColumnName(e.target.value)}
+              onChange={handleInputChange}
               className="scrum-input"
               placeholder="e.g. Review"
               required
               autoFocus
             />
+            {errorMessage && (
+              <p className="text-destructive text-sm mt-1">{errorMessage}</p>
+            )}
           </div>
           
           <div className="flex justify-end gap-2">

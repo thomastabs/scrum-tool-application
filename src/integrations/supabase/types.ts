@@ -51,6 +51,47 @@ export type Database = {
           },
         ]
       }
+      burndown_data: {
+        Row: {
+          actual_points: number
+          created_at: string | null
+          date: string
+          id: string
+          ideal_points: number
+          project_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          actual_points?: number
+          created_at?: string | null
+          date: string
+          id?: string
+          ideal_points?: number
+          project_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          actual_points?: number
+          created_at?: string | null
+          date?: string
+          id?: string
+          ideal_points?: number
+          project_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "burndown_data_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           created_at: string | null

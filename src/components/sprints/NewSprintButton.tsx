@@ -41,7 +41,7 @@ const NewSprintButton: React.FC<NewSprintButtonProps> = ({ projectId }) => {
         projectId,
         startDate,
         endDate,
-        status: "in-progress", // Always set to in-progress
+        status: "planned",
       });
       
       toast.success("Sprint created successfully");

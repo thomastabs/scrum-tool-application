@@ -1,4 +1,3 @@
-
 import * as React from "react"
 
 import type {
@@ -167,41 +166,6 @@ function toast({ ...props }: Toast) {
     dismiss,
     update,
   }
-}
-
-// Add convenience methods
-toast.success = (message: string) => {
-  return toast({
-    title: "Success",
-    description: message,
-    variant: "default",
-  })
-}
-
-toast.error = (message: string) => {
-  return toast({
-    title: "Error",
-    description: message,
-    variant: "destructive",
-  })
-}
-
-toast.warning = (message: string) => {
-  return toast({
-    title: "Warning",
-    description: message,
-    variant: "default",
-    className: "bg-yellow-500 text-white",
-  })
-}
-
-toast.info = (message: string) => {
-  return toast({
-    title: "Info",
-    description: message,
-    variant: "default",
-    className: "bg-blue-500 text-white",
-  })
 }
 
 function useToast() {
