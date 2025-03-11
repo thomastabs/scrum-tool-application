@@ -7,6 +7,11 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
+// Helper function to get authenticated client
+export const getAuthenticatedClient = () => {
+  return supabase;
+};
+
 // Helper function to fetch columns for a sprint
 export const fetchSprintColumns = async (sprintId: string, userId: string) => {
   try {
@@ -14,7 +19,6 @@ export const fetchSprintColumns = async (sprintId: string, userId: string) => {
       .from('board_columns')
       .select('*')
       .eq('sprint_id', sprintId)
-      .eq('user_id', userId)
       .order('order_index', { ascending: true });
       
     if (error) throw error;
@@ -209,6 +213,84 @@ export const fetchCollaborativeProjects = async (userId: string) => {
     });
   } catch (error) {
     console.error('Error fetching collaborative projects:', error);
+    return [];
+  }
+};
+
+// New helper to check if a user is a collaborator on a project
+export const checkProjectCollaborator = async (projectId: string, userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('collaborators')
+      .select('role')
+      .eq('project_id', projectId)
+      .eq('user_id', userId)
+      .single();
+      
+    if (error) {
+      if (error.code === 'PGRST116') { // No rows found error code
+        return null;
+      }
+      throw error;
+    }
+    
+    return data?.role || null;
+  } catch (error) {
+    console.error('Error checking collaborator status:', error);
+    return null;
+  }
+};
+
+// New helper to fetch sprints for a project as a collaborator
+export const fetchCollaborativeProjectSprints = async (projectId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('sprints')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: false });
+      
+    if (error) throw error;
+    
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching collaborative project sprints:', error);
+    return [];
+  }
+};
+
+// New helper to fetch tasks for a sprint as a collaborator
+export const fetchCollaborativeSprintTasks = async (sprintId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('sprint_id', sprintId);
+      
+    if (error) throw error;
+    
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching collaborative sprint tasks:', error);
+    return [];
+  }
+};
+
+// New helper to fetch backlog tasks for a project as a collaborator
+export const fetchCollaborativeBacklogTasks = async (projectId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('project_id', projectId)
+      .is('sprint_id', null)
+      .eq('status', 'backlog');
+      
+    if (error) throw error;
+    
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching collaborative backlog tasks:', error);
     return [];
   }
 };

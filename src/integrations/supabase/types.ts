@@ -322,6 +322,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_id_from_email: {
+        Args: {
+          user_email: string
+        }
+        Returns: string
+      }
       user_has_project_access: {
         Args: {
           project_id: string
