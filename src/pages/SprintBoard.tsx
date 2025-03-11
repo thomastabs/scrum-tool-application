@@ -1,18 +1,20 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
-import { Edit, Trash, Play, CheckCircle, AlertTriangle, Plus } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { Edit, Trash, CheckCircle, AlertTriangle, Plus } from "lucide-react";
+import { toast } from "sonner";
 import TaskCard from "@/components/tasks/TaskCard";
 import EditTaskModal from "@/components/tasks/EditTaskModal";
+import { supabase } from "@/lib/supabase";
 
 const SprintBoard: React.FC = () => {
   const { sprintId } = useParams<{ sprintId: string }>();
-  const { getSprint, getTasksBySprint, updateSprint, updateTask } = useProjects();
+  const { updateSprint, updateTask } = useProjects();
   const navigate = useNavigate();
   
+  const [sprint, setSprint] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [columns, setColumns] = useState<{[key: string]: {title: string, taskIds: string[]}}>(
     {
       "todo": { title: "TO DO", taskIds: [] },
@@ -24,36 +26,61 @@ const SprintBoard: React.FC = () => {
   const [editingTask, setEditingTask] = useState<string | null>(null);
   const [creatingTaskInColumn, setCreatingTaskInColumn] = useState<string | null>(null);
   const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
+  const [tasks, setTasks] = useState<any[]>([]);
   
-  const sprint = getSprint(sprintId || "");
-  const tasks = getTasksBySprint(sprintId || "");
-  
+  // Fetch sprint data
   useEffect(() => {
-    if (!sprint) return;
-    
-    const initialColumns: {[key: string]: {title: string, taskIds: string[]}} = {};
-    
-    ["todo", "in-progress", "done"].forEach(colId => {
-      initialColumns[colId] = {
-        title: colId === "todo" ? "TO DO" : 
-               colId === "in-progress" ? "IN PROGRESS" : 
-               "DONE",
-        taskIds: []
-      };
-    });
-    
-    tasks.forEach(task => {
-      if (initialColumns[task.status]) {
-        initialColumns[task.status].taskIds.push(task.id);
-      } else {
-        initialColumns["todo"].taskIds.push(task.id);
+    const fetchSprintData = async () => {
+      if (!sprintId) return;
+      
+      try {
+        const { data: sprintData, error: sprintError } = await supabase
+          .from('sprints')
+          .select('*')
+          .eq('id', sprintId)
+          .single();
+          
+        if (sprintError) throw sprintError;
+        if (!sprintData) throw new Error('Sprint not found');
+        
+        setSprint(sprintData);
+        
+        // Fetch tasks for this sprint
+        const { data: tasksData, error: tasksError } = await supabase
+          .from('tasks')
+          .select('*')
+          .eq('sprint_id', sprintId);
+          
+        if (tasksError) throw tasksError;
+        
+        setTasks(tasksData || []);
+        
+        // Initialize columns with tasks
+        const initialColumns: {[key: string]: {title: string, taskIds: string[]}} = {
+          "todo": { title: "TO DO", taskIds: [] },
+          "in-progress": { title: "IN PROGRESS", taskIds: [] },
+          "done": { title: "DONE", taskIds: [] }
+        };
+        
+        tasksData?.forEach(task => {
+          if (initialColumns[task.status]) {
+            initialColumns[task.status].taskIds.push(task.id);
+          } else {
+            initialColumns.todo.taskIds.push(task.id);
+          }
+        });
+        
+        setColumns(initialColumns);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error fetching sprint data:', error);
+        setIsLoading(false);
       }
-    });
+    };
     
-    setColumns(initialColumns);
-    setColumnOrder(["todo", "in-progress", "done"]);
-  }, [sprint, tasks]);
-  
+    fetchSprintData();
+  }, [sprintId]);
+
   const handleDragEnd = async (result: any) => {
     const { destination, source, draggableId } = result;
     
@@ -117,20 +144,13 @@ const SprintBoard: React.FC = () => {
           if (remainingTasks.length === 0 && sprint?.status === "in-progress") {
             if (window.confirm("All tasks are completed! Would you like to mark this sprint as completed?")) {
               await updateSprint(sprint.id, { status: "completed" });
-              toast({
-                title: "Success",
-                description: "Sprint marked as completed!",
-              });
+              toast.success("Sprint marked as completed!");
             }
           }
         }
       } catch (error) {
         console.error("Error updating task status:", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to update task status",
-        });
+        toast.error("Failed to update task status");
       }
     }
   };
@@ -139,8 +159,6 @@ const SprintBoard: React.FC = () => {
     setCreatingTaskInColumn(columnId);
   };
   
-  const allTasksCompleted = tasks.length > 0 && tasks.every(task => task.status === "done");
-  
   const handleCompleteSprint = async () => {
     if (!allTasksCompleted) {
       setIsCompleteDialogOpen(true);
@@ -148,38 +166,46 @@ const SprintBoard: React.FC = () => {
     }
     
     try {
-      await updateSprint(sprint.id, { status: "completed" });
-      toast({
-        title: "Success",
-        description: "Sprint marked as completed!",
-      });
+      const { error } = await supabase
+        .from('sprints')
+        .update({ status: 'completed' })
+        .eq('id', sprint.id);
+        
+      if (error) throw error;
+      
+      setSprint({ ...sprint, status: 'completed' });
+      toast.success("Sprint marked as completed!");
     } catch (error) {
       console.error("Error completing sprint:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to complete sprint",
-      });
+      toast.error("Failed to complete sprint");
     }
   };
   
   const confirmCompleteSprint = async () => {
     try {
-      await updateSprint(sprint.id, { status: "completed" });
-      toast({
-        title: "Success",
-        description: "Sprint marked as completed!",
-      });
+      const { error } = await supabase
+        .from('sprints')
+        .update({ status: 'completed' })
+        .eq('id', sprint.id);
+        
+      if (error) throw error;
+      
+      setSprint({ ...sprint, status: 'completed' });
+      toast.success("Sprint marked as completed!");
       setIsCompleteDialogOpen(false);
     } catch (error) {
       console.error("Error completing sprint:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to complete sprint",
-      });
+      toast.error("Failed to complete sprint");
     }
   };
+  
+  if (isLoading) {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-pulse">Loading sprint...</div>
+      </div>
+    );
+  }
   
   if (!sprint) {
     return (
@@ -194,7 +220,9 @@ const SprintBoard: React.FC = () => {
       </div>
     );
   }
-  
+
+  const allTasksCompleted = tasks.length > 0 && tasks.every(task => task.status === "done");
+
   return (
     <div className="container mx-auto pb-20 px-4">
       <SprintHeader 

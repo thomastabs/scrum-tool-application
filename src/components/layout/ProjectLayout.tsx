@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Outlet, useParams, useNavigate, useLocation } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
@@ -6,7 +7,7 @@ import NavLink from "@/components/ui/NavLink";
 import { ArrowLeft, LayoutGrid, List, LineChart, Edit, Trash, Package, Users } from "lucide-react";
 import { toast } from "sonner";
 import { fetchProjectCollaborators } from "@/lib/supabase";
-import { Collaborator } from "@/types";
+import { Collaborator, ProjectRole } from "@/types";
 
 const ProjectLayout: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -15,17 +16,23 @@ const ProjectLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isOwner, setIsOwner] = useState(false);
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<ProjectRole | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   const project = getProject(projectId || "");
   
   useEffect(() => {
     const checkProjectAccess = async () => {
-      if (!project || !user) return;
+      if (!project || !user) {
+        setIsLoading(false);
+        return;
+      }
       
       // Check if user is owner
       if (project.ownerId === user.id) {
         setIsOwner(true);
+        setUserRole('admin'); // Owner has admin privileges
+        setIsLoading(false);
         return;
       }
       
@@ -37,13 +44,23 @@ const ProjectLayout: React.FC = () => {
         if (userCollaboration) {
           setUserRole(userCollaboration.role);
         }
+        setIsLoading(false);
       } catch (error) {
         console.error("Error checking project access:", error);
+        setIsLoading(false);
       }
     };
     
     checkProjectAccess();
   }, [project, user]);
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse">Loading project details...</div>
+      </div>
+    );
+  }
   
   if (!project) {
     return (
@@ -66,7 +83,7 @@ const ProjectLayout: React.FC = () => {
       try {
         await deleteProject(project.id);
         toast.success("Project deleted successfully");
-        navigate("/projects");
+        navigate("/");
       } catch (error) {
         toast.error("Failed to delete project");
         console.error(error);
@@ -74,17 +91,30 @@ const ProjectLayout: React.FC = () => {
     }
   };
   
-  // Check if the user can edit the project
+  // Check if the user can edit the project (admin or owner)
   const canEditProject = isOwner || userRole === 'admin';
   
-  // Check if the user can access backlog
+  // Check if the user can access backlog (admin or owner only)
   const canAccessBacklog = isOwner || userRole === 'admin';
+  
+  // Check if user can create/edit sprints (member, admin or owner)
+  const canModifySprints = isOwner || userRole === 'admin' || userRole === 'member';
+  
+  // Handle navigation back to the projects tab
+  const handleBackToProjects = () => {
+    // Navigate to the dashboard with the 'projects' tab active
+    if (project.isCollaboration) {
+      navigate("/", { state: { activeTab: "collaborations" } });
+    } else {
+      navigate("/", { state: { activeTab: "projects" } });
+    }
+  };
   
   return (
     <div className="pt-16 min-h-screen animate-fade-in">
       <div className="px-6 py-4">
         <button 
-          onClick={() => navigate("/projects")}
+          onClick={handleBackToProjects}
           className="flex items-center gap-1 text-scrum-text-secondary hover:text-white transition-colors mb-4"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -154,7 +184,7 @@ const ProjectLayout: React.FC = () => {
           )}
         </div>
         
-        {userRole && (
+        {userRole && !isOwner && (
           <div className="text-xs text-scrum-text-secondary mb-2">
             You have {userRole} access to this project
           </div>

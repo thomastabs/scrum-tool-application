@@ -1,6 +1,5 @@
-
 import { createClient } from '@supabase/supabase-js';
-import { Collaborator } from '@/types';
+import { Collaborator, BurndownData as BurndownDataType } from '@/types';
 
 const supabaseUrl = 'https://wslflobdapmebkjnaqld.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndzbGZsb2JkYXBtZWJram5hcWxkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE0NDc2ODQsImV4cCI6MjA1NzAyMzY4NH0.lNk_nX9S7KMjSYnR1JpFns7biqXvq0Ln2Z6pAYGi9aQ';
@@ -292,5 +291,59 @@ export const fetchCollaborativeBacklogTasks = async (projectId: string) => {
   } catch (error) {
     console.error('Error fetching collaborative backlog tasks:', error);
     return [];
+  }
+};
+
+// New helper to fetch burndown data for a project
+export const fetchBurndownData = async (projectId: string, userId: string): Promise<BurndownDataType[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('burndown_data')
+      .select('date, ideal_points, actual_points')
+      .eq('project_id', projectId)
+      .order('date', { ascending: true });
+      
+    if (error) throw error;
+    
+    // Map the database format to our app format
+    return (data || []).map(item => ({
+      date: item.date,
+      ideal: item.ideal_points,
+      actual: item.actual_points
+    }));
+  } catch (error) {
+    console.error('Error fetching burndown data:', error);
+    return [];
+  }
+};
+
+// New helper to upsert burndown data for a project
+export const upsertBurndownData = async (
+  projectId: string, 
+  userId: string,
+  burndownData: BurndownDataType[]
+): Promise<boolean> => {
+  try {
+    // Convert our app format to database format
+    const dbData = burndownData.map(item => ({
+      project_id: projectId,
+      user_id: userId,
+      date: item.date,
+      ideal_points: item.ideal,
+      actual_points: item.actual
+    }));
+    
+    const { error } = await supabase
+      .from('burndown_data')
+      .upsert(dbData, { 
+        onConflict: 'project_id,date',
+        ignoreDuplicates: false 
+      });
+      
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error upserting burndown data:', error);
+    return false;
   }
 };
