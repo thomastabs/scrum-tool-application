@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -88,16 +87,16 @@ const BacklogItemForm: React.FC<BacklogItemFormProps> = ({ taskId, onClose, proj
           return;
         }
         
-        console.log('Creating new backlog item with project ID:', projectId); // Add logging to help debug
+        console.log('Creating new backlog item with project ID:', projectId);
         
         await addTask({
           title: data.title,
           description: data.description,
-          status: "backlog", // Use status instead of sprintId for backlog items
-          projectId: projectId, // Set projectId for the task
-          priority: data.priority, // Making sure priority is passed correctly
+          status: "backlog", 
+          projectId: projectId,
+          priority: data.priority,
           storyPoints: data.storyPoints,
-          sprintId: "", // Add the missing sprintId property with an empty string for backlog items
+          sprintId: "",
         });
         toast.success("Backlog item created successfully");
       }
@@ -125,6 +124,7 @@ const BacklogItemForm: React.FC<BacklogItemFormProps> = ({ taskId, onClose, proj
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* ...keep existing form fields... */}
             <FormField
               control={form.control}
               name="title"

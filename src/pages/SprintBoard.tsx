@@ -28,9 +28,16 @@ const SprintBoard: React.FC = () => {
   const [isAddColumnModalOpen, setIsAddColumnModalOpen] = useState(false);
   const [creatingTaskInColumn, setCreatingTaskInColumn] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [taskRefreshTrigger, setTaskRefreshTrigger] = useState(0); // Add refresh trigger
   
   const sprint = getSprint(sprintId || "");
   const tasks = getTasksBySprint(sprintId || "");
+  
+  // Force refresh of tasks
+  const refreshTasks = () => {
+    console.log("Refreshing tasks...");
+    setTaskRefreshTrigger(prev => prev + 1);
+  };
   
   useEffect(() => {
     const loadCustomColumns = async () => {
@@ -80,7 +87,7 @@ const SprintBoard: React.FC = () => {
     };
     
     loadCustomColumns();
-  }, [sprint, user]);
+  }, [sprint, user, taskRefreshTrigger]); // Add taskRefreshTrigger as dependency
   
   const initializeColumns = (columnsData: any[]) => {
     const initialColumns: {[key: string]: {title: string, taskIds: string[], id?: string}} = {};
@@ -258,22 +265,6 @@ const SprintBoard: React.FC = () => {
     setCreatingTaskInColumn(columnId);
   };
   
-  if (!sprint) {
-    return (
-      <div className="text-center py-12">
-        <h2 className="text-xl font-bold mb-4">Sprint not found</h2>
-        <button
-          onClick={() => navigate(-1)}
-          className="scrum-button"
-        >
-          Go Back
-        </button>
-      </div>
-    );
-  }
-  
-  const allTasksCompleted = tasks.length > 0 && tasks.every(task => task.status === "done");
-  
   const handleCompleteSprint = async () => {
     if (!allTasksCompleted) {
       if (!window.confirm("Not all tasks are completed. Are you sure you want to complete this sprint?")) {
@@ -289,6 +280,22 @@ const SprintBoard: React.FC = () => {
       toast.error("Failed to complete sprint");
     }
   };
+  
+  if (!sprint) {
+    return (
+      <div className="text-center py-12">
+        <h2 className="text-xl font-bold mb-4">Sprint not found</h2>
+        <button
+          onClick={() => navigate(-1)}
+          className="scrum-button"
+        >
+          Go Back
+        </button>
+      </div>
+    );
+  }
+  
+  const allTasksCompleted = tasks.length > 0 && tasks.every(task => task.status === "done");
   
   return (
     <div className="container mx-auto pb-20 px-4">
@@ -410,7 +417,10 @@ const SprintBoard: React.FC = () => {
       {editingTask && (
         <EditTaskModal
           taskId={editingTask}
-          onClose={() => setEditingTask(null)}
+          onClose={() => {
+            setEditingTask(null);
+            refreshTasks(); // Refresh tasks after editing
+          }}
         />
       )}
       
@@ -428,6 +438,7 @@ const SprintBoard: React.FC = () => {
               sprintId={sprint.id}
               initialStatus={creatingTaskInColumn}
               onClose={() => setCreatingTaskInColumn(null)}
+              onTaskCreated={refreshTasks} // Add callback for task creation
             />
           </div>
         </div>
@@ -488,7 +499,8 @@ const NewTaskForm: React.FC<{
   sprintId: string;
   initialStatus: string;
   onClose: () => void;
-}> = ({ sprintId, initialStatus, onClose }) => {
+  onTaskCreated: () => void; // Add callback
+}> = ({ sprintId, initialStatus, onClose, onTaskCreated }) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<"low" | "medium" | "high" | "">("");
@@ -524,7 +536,8 @@ const NewTaskForm: React.FC<{
       });
       
       toast.success("Task created successfully");
-      onClose();
+      onTaskCreated(); // Call the callback to refresh tasks
+      onClose(); // Close the form
     } catch (error) {
       console.error("Error creating task:", error);
       toast.error("Failed to create task");

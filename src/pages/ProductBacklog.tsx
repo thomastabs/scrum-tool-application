@@ -53,6 +53,7 @@ const ProductBacklog: React.FC = () => {
   const [movingTask, setMovingTask] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // Add refresh trigger
   
   const project = projectId ? getProject(projectId) : undefined;
   const sprints = projectId ? getSprintsByProject(projectId) : [];
@@ -62,11 +63,11 @@ const ProductBacklog: React.FC = () => {
   useEffect(() => {
     if (!projectId) return;
     
-    console.log('Fetching backlog tasks for project ID:', projectId); // Add logging to help debug
+    console.log('Fetching backlog tasks for project ID:', projectId);
     const tasks = getBacklogTasks(projectId);
-    console.log('Retrieved backlog tasks:', tasks); // Add logging to help debug
+    console.log('Retrieved backlog tasks:', tasks);
     setBacklogTasks(tasks);
-  }, [projectId, getBacklogTasks]);
+  }, [projectId, getBacklogTasks, refreshTrigger]); // Add refresh trigger dependency
   
   const handleDragEnd = async (result: any) => {
     const { destination, source, draggableId } = result;
@@ -100,6 +101,7 @@ const ProductBacklog: React.FC = () => {
     if (!taskId || !sprintId) return;
     
     try {
+      console.log('Moving task to sprint:', { taskId, sprintId });
       await updateTask(taskId, {
         sprintId,
         status: "todo"  // Default to todo when moving to a sprint
@@ -110,8 +112,7 @@ const ProductBacklog: React.FC = () => {
       
       // Refresh backlog tasks
       if (projectId) {
-        const tasks = getBacklogTasks(projectId);
-        setBacklogTasks(tasks);
+        setRefreshTrigger(prev => prev + 1); // Trigger refresh
       }
     } catch (error) {
       console.error("Error moving task to sprint:", error);
@@ -126,8 +127,7 @@ const ProductBacklog: React.FC = () => {
       
       // Refresh backlog tasks
       if (projectId) {
-        const tasks = getBacklogTasks(projectId);
-        setBacklogTasks(tasks);
+        setRefreshTrigger(prev => prev + 1); // Trigger refresh
       }
     } catch (error) {
       console.error("Error deleting task:", error);
@@ -135,7 +135,6 @@ const ProductBacklog: React.FC = () => {
     }
   };
 
-  // Filter backlog tasks by search query and priority
   const filteredBacklogTasks = backlogTasks
     .filter(task => 
       task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -359,7 +358,10 @@ const ProductBacklog: React.FC = () => {
       {editingTask && (
         <BacklogItemForm
           taskId={editingTask}
-          onClose={() => setEditingTask(null)}
+          onClose={() => {
+            setEditingTask(null);
+            setRefreshTrigger(prev => prev + 1); // Trigger refresh
+          }}
           projectId={projectId}
         />
       )}
@@ -367,7 +369,10 @@ const ProductBacklog: React.FC = () => {
       {/* Add New Task Modal */}
       {isAddingTask && (
         <BacklogItemForm 
-          onClose={() => setIsAddingTask(false)}
+          onClose={() => {
+            setIsAddingTask(false);
+            setRefreshTrigger(prev => prev + 1); // Trigger refresh
+          }}
           projectId={projectId}
         />
       )}
