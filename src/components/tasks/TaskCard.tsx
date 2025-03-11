@@ -3,7 +3,7 @@ import React from "react";
 import { useProjects } from "@/context/ProjectContext";
 import { Edit, Trash, AlertTriangle, Star } from "lucide-react";
 import { Task } from "@/types";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 
 interface TaskCardProps {
   task: Task;
