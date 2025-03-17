@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -31,7 +30,7 @@ const formSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
   priority: z.enum(["low", "medium", "high"]),
-  storyPoints: z.coerce.number().min(1).max(100),
+  storyPoints: z.coerce.number().min(1, "At least 1 story point is required").max(100),
 });
 
 interface BacklogItemFormProps {
@@ -162,7 +161,7 @@ const BacklogItemForm: React.FC<BacklogItemFormProps> = ({ taskId, onClose, proj
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Title</FormLabel>
+                  <FormLabel>Title <span className="text-destructive">*</span></FormLabel>
                   <FormControl>
                     <Input placeholder="Enter item title" {...field} />
                   </FormControl>
@@ -176,7 +175,7 @@ const BacklogItemForm: React.FC<BacklogItemFormProps> = ({ taskId, onClose, proj
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>Description <span className="text-destructive">*</span></FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="Enter item description"
@@ -195,7 +194,7 @@ const BacklogItemForm: React.FC<BacklogItemFormProps> = ({ taskId, onClose, proj
                 name="priority"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Priority</FormLabel>
+                    <FormLabel>Priority <span className="text-destructive">*</span></FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
@@ -221,7 +220,7 @@ const BacklogItemForm: React.FC<BacklogItemFormProps> = ({ taskId, onClose, proj
                 name="storyPoints"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Story Points</FormLabel>
+                    <FormLabel>Story Points <span className="text-destructive">*</span></FormLabel>
                     <FormControl>
                       <Input
                         type="number"

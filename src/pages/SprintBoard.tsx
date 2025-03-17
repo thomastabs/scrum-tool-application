@@ -514,9 +514,9 @@ const NewTaskForm: React.FC<{
 }> = ({ sprintId, projectId, initialStatus, onClose }) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState<"low" | "medium" | "high" | "">("");
+  const [priority, setPriority] = useState<"low" | "medium" | "high">("medium");
   const [assignedTo, setAssignedTo] = useState("");
-  const [storyPoints, setStoryPoints] = useState<number | "">("");
+  const [storyPoints, setStoryPoints] = useState<number>(1);
   
   const { addTask, getSprint } = useProjects();
   const sprint = getSprint(sprintId);
@@ -529,22 +529,50 @@ const NewTaskForm: React.FC<{
       return;
     }
     
+    if (!description.trim()) {
+      toast.error("Task description is required");
+      return;
+    }
+    
+    if (!storyPoints || storyPoints < 1) {
+      toast.error("Task must have at least 1 story point");
+      return;
+    }
+    
     if (!sprint) {
       toast.error("Sprint not found");
       return;
     }
     
     try {
-      await addTask({
+      const newTask = await addTask({
         title,
         description,
         sprintId,
         projectId: sprint.projectId,
         status: initialStatus as any,
-        assignedTo: assignedTo || undefined,
-        priority: priority || undefined,
-        storyPoints: typeof storyPoints === 'number' ? storyPoints : undefined
+        assignedTo: assignedTo,
+        priority: priority,
+        storyPoints: storyPoints
       });
+      
+      // After successful creation, update the columns state to include the new task
+      setColumns(prevColumns => {
+        const column = prevColumns[initialStatus];
+        if (column) {
+          return {
+            ...prevColumns,
+            [initialStatus]: {
+              ...column,
+              taskIds: [...column.taskIds, newTask.id]
+            }
+          };
+        }
+        return prevColumns;
+      });
+      
+      // Update tasks state to include the new task
+      setTasks(prevTasks => [...prevTasks, newTask]);
       
       toast.success("Task created successfully");
       onClose();
@@ -584,7 +612,7 @@ const NewTaskForm: React.FC<{
         
         <div className="mb-4">
           <label className="block mb-2 text-sm">
-            Description
+            Description <span className="text-destructive">*</span>
           </label>
           <textarea
             value={description}
@@ -592,20 +620,21 @@ const NewTaskForm: React.FC<{
             className="scrum-input"
             placeholder="Task details and requirements"
             rows={3}
+            required
           />
         </div>
         
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
             <label className="block mb-2 text-sm">
-              Priority
+              Priority <span className="text-destructive">*</span>
             </label>
             <select
               value={priority}
               onChange={(e) => setPriority(e.target.value as any)}
               className="scrum-input"
+              required
             >
-              <option value="">None</option>
               <option value="low">Low</option>
               <option value="medium">Medium</option>
               <option value="high">High</option>
@@ -614,26 +643,27 @@ const NewTaskForm: React.FC<{
           
           <div>
             <label className="block mb-2 text-sm">
-              Story Points
+              Story Points <span className="text-destructive">*</span>
             </label>
             <input
               type="number"
-              min="0"
+              min="1"
               max="100"
               value={storyPoints}
               onChange={(e) => {
-                const value = e.target.value;
-                setStoryPoints(value === "" ? "" : parseInt(value));
+                const value = parseInt(e.target.value);
+                setStoryPoints(value < 1 ? 1 : value);
               }}
               className="scrum-input"
               placeholder="e.g. 5"
+              required
             />
           </div>
         </div>
         
         <div className="mb-6">
           <label className="block mb-2 text-sm">
-            Assigned To
+            Assigned To <span className="text-destructive">*</span>
           </label>
           <input
             type="text"
@@ -641,6 +671,7 @@ const NewTaskForm: React.FC<{
             onChange={(e) => setAssignedTo(e.target.value)}
             className="scrum-input"
             placeholder="e.g. John Doe"
+            required
           />
         </div>
         

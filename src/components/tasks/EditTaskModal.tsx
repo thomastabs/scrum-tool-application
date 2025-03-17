@@ -15,9 +15,9 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
 }) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState<"low" | "medium" | "high" | "">("");
+  const [priority, setPriority] = useState<"low" | "medium" | "high">("medium");
   const [assignedTo, setAssignedTo] = useState("");
-  const [storyPoints, setStoryPoints] = useState<number | "">("");
+  const [storyPoints, setStoryPoints] = useState<number>(1);
   
   const { getTask, updateTask } = useProjects();
   
@@ -27,9 +27,9 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
     if (task) {
       setTitle(task.title);
       setDescription(task.description || "");
-      setPriority(task.priority || "");
+      setPriority(task.priority || "medium");
       setAssignedTo(task.assignedTo || "");
-      setStoryPoints(task.storyPoints || "");
+      setStoryPoints(task.storyPoints || 1);
     }
   }, [taskId, getTask]);
   
@@ -41,13 +41,23 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
       return;
     }
     
+    if (!description.trim()) {
+      toast.error("Task description is required");
+      return;
+    }
+    
+    if (!storyPoints || storyPoints < 1) {
+      toast.error("Task must have at least 1 story point");
+      return;
+    }
+    
     try {
       await updateTask(taskId, {
         title,
         description,
-        priority: priority || undefined,
-        assignedTo: assignedTo || undefined,
-        storyPoints: typeof storyPoints === 'number' ? storyPoints : undefined
+        priority,
+        assignedTo,
+        storyPoints
       });
       
       toast.success("Task updated successfully");
@@ -91,27 +101,28 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
           
           <div className="mb-4">
             <label className="block mb-2 text-sm">
-              Description
+              Description <span className="text-destructive">*</span>
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="scrum-input"
               rows={3}
+              required
             />
           </div>
           
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block mb-2 text-sm">
-                Priority
+                Priority <span className="text-destructive">*</span>
               </label>
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as any)}
                 className="scrum-input"
+                required
               >
-                <option value="">None</option>
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
                 <option value="high">High</option>
@@ -120,31 +131,33 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
             
             <div>
               <label className="block mb-2 text-sm">
-                Story Points
+                Story Points <span className="text-destructive">*</span>
               </label>
               <input
                 type="number"
-                min="0"
+                min="1"
                 max="100"
                 value={storyPoints}
                 onChange={(e) => {
-                  const value = e.target.value;
-                  setStoryPoints(value === "" ? "" : parseInt(value));
+                  const value = parseInt(e.target.value);
+                  setStoryPoints(value < 1 ? 1 : value);
                 }}
                 className="scrum-input"
+                required
               />
             </div>
           </div>
           
           <div className="mb-6">
             <label className="block mb-2 text-sm">
-              Assigned To
+              Assigned To <span className="text-destructive">*</span>
             </label>
             <input
               type="text"
               value={assignedTo}
               onChange={(e) => setAssignedTo(e.target.value)}
               className="scrum-input"
+              required
             />
           </div>
           
