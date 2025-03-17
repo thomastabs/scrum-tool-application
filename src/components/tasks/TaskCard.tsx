@@ -1,7 +1,7 @@
 
 import React from "react";
 import { useProjects } from "@/context/ProjectContext";
-import { Edit, Trash, AlertTriangle, Star } from "lucide-react";
+import { Edit, Trash, AlertTriangle, Star, Hash } from "lucide-react";
 import { Task } from "@/types";
 import { toast } from "sonner";
 
@@ -88,8 +88,9 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit, isSprintCompleted = f
       <div className="flex flex-wrap items-center gap-2 mt-2">
         {getPriorityBadge()}
         
-        {task.storyPoints && (
-          <span className="bg-scrum-accent/30 text-xs px-2 py-0.5 rounded-full">
+        {(task.storyPoints !== undefined && task.storyPoints !== null) && (
+          <span className="bg-scrum-accent/30 text-xs px-2 py-0.5 rounded-full flex items-center gap-1">
+            <Hash className="h-3 w-3" />
             {task.storyPoints} {task.storyPoints === 1 ? "point" : "points"}
           </span>
         )}
