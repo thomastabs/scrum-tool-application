@@ -9,9 +9,15 @@ interface TaskCardProps {
   task: Task;
   onEdit: () => void;
   isSprintCompleted?: boolean;
+  onTaskDeleted?: (taskId: string) => void;
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit, isSprintCompleted = false }) => {
+const TaskCard: React.FC<TaskCardProps> = ({ 
+  task, 
+  onEdit, 
+  isSprintCompleted = false, 
+  onTaskDeleted 
+}) => {
   const { deleteTask } = useProjects();
 
   const getPriorityBadge = () => {
@@ -48,6 +54,12 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit, isSprintCompleted = f
     if (window.confirm("Are you sure you want to delete this task?")) {
       try {
         await deleteTask(task.id);
+        
+        // Notify parent component that task has been deleted
+        if (onTaskDeleted) {
+          onTaskDeleted(task.id);
+        }
+        
         toast.success("Task deleted successfully");
       } catch (error) {
         console.error("Error deleting task:", error);

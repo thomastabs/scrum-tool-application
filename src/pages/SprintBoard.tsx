@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
@@ -238,6 +237,32 @@ const SprintBoard: React.FC = () => {
     setCreatingTaskInColumn(columnId);
   };
   
+  const handleTaskDeleted = (taskId: string) => {
+    // Update columns state by removing the deleted task
+    setColumns(prevColumns => {
+      const newColumns = { ...prevColumns };
+      
+      // Find which column contains the task and remove it
+      Object.keys(newColumns).forEach(columnId => {
+        const column = newColumns[columnId];
+        const taskIndex = column.taskIds.indexOf(taskId);
+        
+        if (taskIndex !== -1) {
+          // Remove the task from that column
+          newColumns[columnId] = {
+            ...column,
+            taskIds: column.taskIds.filter(id => id !== taskId)
+          };
+        }
+      });
+      
+      return newColumns;
+    });
+    
+    // Update tasks state by removing the deleted task
+    setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+  };
+  
   const handleCompleteSprint = async () => {
     if (!isOwner && userRole !== 'admin') {
       toast.error("Only project owners and admins can complete sprints");
@@ -378,6 +403,7 @@ const SprintBoard: React.FC = () => {
                                     task={task}
                                     onEdit={canAddTasks ? () => setEditingTask(task.id) : undefined}
                                     isSprintCompleted={sprint.status === "completed"}
+                                    onTaskDeleted={handleTaskDeleted}
                                   />
                                 </div>
                               )}
