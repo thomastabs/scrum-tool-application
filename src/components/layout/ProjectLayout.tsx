@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Outlet, useParams, useNavigate, useLocation } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
@@ -54,6 +53,15 @@ const ProjectLayout: React.FC = () => {
     checkProjectAccess();
   }, [project, user]);
   
+  const { setIsOwner: setAuthIsOwner, setUserRole: setAuthUserRole } = useAuth() as any;
+  
+  useEffect(() => {
+    if (setAuthIsOwner && setAuthUserRole) {
+      setAuthIsOwner(isOwner);
+      setAuthUserRole(userRole);
+    }
+  }, [isOwner, userRole, setAuthIsOwner, setAuthUserRole]);
+  
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -91,18 +99,13 @@ const ProjectLayout: React.FC = () => {
     }
   };
   
-  // Check if the user can edit the project (admin or owner)
   const canEditProject = isOwner || userRole === 'admin';
   
-  // Check if the user can access backlog (admin or owner only)
-  const canAccessBacklog = isOwner || userRole === 'admin';
+  const canAccessBacklog = isOwner || userRole === 'admin' || userRole === 'member';
   
-  // Check if user can create/edit sprints (member, admin or owner)
   const canModifySprints = isOwner || userRole === 'admin' || userRole === 'member';
   
-  // Handle navigation back to the projects tab
   const handleBackToProjects = () => {
-    // Navigate to the dashboard with the 'projects' tab active
     if (project.isCollaboration) {
       navigate("/", { state: { activeTab: "collaborations" } });
     } else {

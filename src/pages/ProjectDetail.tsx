@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
@@ -160,8 +161,30 @@ const ProjectDetail: React.FC = () => {
     navigate(`/projects/${project.id}/sprint/${sprintId}`);
   };
   
+  // Refresh sprints after creating a new one
+  const handleSprintsRefresh = async () => {
+    if (!projectId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('sprints')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      
+      if (data) {
+        setSprints(data);
+      }
+    } catch (error) {
+      console.error("Error refreshing sprints:", error);
+    }
+  };
+  
   // Check if user can modify sprints (member, admin or owner)
   const canModifySprints = isOwner || userRole === 'admin' || userRole === 'member';
+  const isOwnerOrAdmin = isOwner || userRole === 'admin';
   
   if (isLoading) {
     return (
@@ -190,13 +213,19 @@ const ProjectDetail: React.FC = () => {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold">Sprints</h2>
-        {projectId && canModifySprints && <NewSprintButton projectId={projectId} />}
+        {projectId && canModifySprints && (
+          <NewSprintButton projectId={projectId} />
+        )}
       </div>
 
       {sprints.length === 0 ? (
         <div className="text-center py-12 bg-scrum-card border border-scrum-border rounded-lg">
           <p className="text-scrum-text-secondary mb-4">No sprints created yet</p>
-          {projectId && canModifySprints && <div className="flex justify-center"><NewSprintButton projectId={projectId} /></div>}
+          {projectId && canModifySprints && (
+            <div className="flex justify-center">
+              <NewSprintButton projectId={projectId} />
+            </div>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -214,6 +243,8 @@ const ProjectDetail: React.FC = () => {
               }}
               onEdit={canModifySprints ? () => handleEditClick(sprint.id) : undefined}
               onViewBoard={() => handleViewSprintBoard(sprint.id)}
+              isOwnerOrAdmin={isOwnerOrAdmin}
+              canEdit={canModifySprints}
             />
           ))}
         </div>

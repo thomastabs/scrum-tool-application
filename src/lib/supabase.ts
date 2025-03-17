@@ -1,27 +1,84 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { Collaborator, BurndownData as BurndownDataType } from '@/types';
 
 const supabaseUrl = 'https://wslflobdapmebkjnaqld.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndzbGZsb2JkYXBtZWJram5hcWxkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE0NDc2ODQsImV4cCI6MjA1NzAyMzY4NH0.lNk_nX9S7KMjSYnR1JpFns7biqXvq0Ln2Z6pAYGi9aQ';
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// Configure client with retry and timeout options
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: true
+  },
+  global: {
+    headers: {
+      'Cache-Control': 'no-cache',
+    },
+    fetch: (url, options) => {
+      const controller = new AbortController();
+      const { signal } = controller;
+      
+      // Set a timeout to abort long-running requests
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
+      return fetch(url, { 
+        ...options, 
+        signal,
+        // Ensure we get fresh data
+        cache: 'no-cache'
+      }).finally(() => clearTimeout(timeoutId));
+    }
+  }
+});
 
 // Helper function to get authenticated client
 export const getAuthenticatedClient = () => {
   return supabase;
 };
 
+// Add a retry wrapper for Supabase requests
+export const withRetry = async <T>(
+  operation: () => Promise<T>,
+  retries = 3,
+  delay = 1000,
+  backoffFactor = 2
+): Promise<T> => {
+  let lastError: any;
+  
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      console.log(`Attempt ${attempt + 1} failed:`, error);
+      lastError = error;
+      
+      // Only retry on network errors
+      if (!(error instanceof Error) || !(error.message?.includes('Failed to fetch') || error.message?.includes('Network error'))) {
+        throw error;
+      }
+      
+      // Wait with exponential backoff before retrying
+      const waitTime = delay * Math.pow(backoffFactor, attempt);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+  }
+  
+  throw lastError;
+};
+
 // Helper function to fetch columns for a sprint
 export const fetchSprintColumns = async (sprintId: string, userId: string) => {
   try {
-    const { data, error } = await supabase
-      .from('board_columns')
-      .select('*')
-      .eq('sprint_id', sprintId)
-      .order('order_index', { ascending: true });
-      
-    if (error) throw error;
-    return data || [];
+    return await withRetry(async () => {
+      const { data, error } = await supabase
+        .from('board_columns')
+        .select('*')
+        .eq('sprint_id', sprintId)
+        .order('order_index', { ascending: true });
+        
+      if (error) throw error;
+      return data || [];
+    });
   } catch (error) {
     console.error('Error fetching sprint columns:', error);
     return [];
@@ -278,6 +335,7 @@ export const fetchCollaborativeSprintTasks = async (sprintId: string) => {
 // New helper to fetch backlog tasks for a project as a collaborator
 export const fetchCollaborativeBacklogTasks = async (projectId: string) => {
   try {
+    console.log('Fetching collaborative backlog tasks for project:', projectId);
     const { data, error } = await supabase
       .from('tasks')
       .select('*')
@@ -285,8 +343,12 @@ export const fetchCollaborativeBacklogTasks = async (projectId: string) => {
       .is('sprint_id', null)
       .eq('status', 'backlog');
       
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching backlog tasks:', error);
+      throw error;
+    }
     
+    console.log('Backlog tasks fetched:', data);
     return data || [];
   } catch (error) {
     console.error('Error fetching collaborative backlog tasks:', error);
