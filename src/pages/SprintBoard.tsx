@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
@@ -415,6 +416,8 @@ const SprintBoard: React.FC = () => {
               projectId={projectId || ''}
               initialStatus={creatingTaskInColumn}
               onClose={() => setCreatingTaskInColumn(null)}
+              setColumns={setColumns}
+              setTasks={setTasks}
             />
           </div>
         </div>
@@ -511,7 +514,9 @@ const NewTaskForm: React.FC<{
   projectId: string;
   initialStatus: string;
   onClose: () => void;
-}> = ({ sprintId, projectId, initialStatus, onClose }) => {
+  setColumns: React.Dispatch<React.SetStateAction<{[key: string]: {title: string, taskIds: string[]}}>>;
+  setTasks: React.Dispatch<React.SetStateAction<any[]>>;
+}> = ({ sprintId, projectId, initialStatus, onClose, setColumns, setTasks }) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<"low" | "medium" | "high">("medium");
