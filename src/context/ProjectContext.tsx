@@ -541,19 +541,46 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!user) throw new Error('User not authenticated');
 
     try {
+      // First, fetch all tasks associated with this sprint
+      const sprintTasks = tasks.filter(t => t.sprintId === id);
+      
+      // If there are tasks in this sprint, we need to delete them first
+      if (sprintTasks.length > 0) {
+        console.log(`Deleting ${sprintTasks.length} tasks before deleting sprint`);
+        
+        // Delete all tasks associated with this sprint from the database
+        const { error: tasksError } = await supabase
+          .from('tasks')
+          .delete()
+          .eq('sprint_id', id);
+          
+        if (tasksError) {
+          console.error('Error deleting sprint tasks:', tasksError);
+          throw tasksError;
+        }
+        
+        // Also update local state by removing these tasks
+        setTasks(prev => prev.filter(t => t.sprintId !== id));
+      }
+
+      // Now we can safely delete the sprint
       const { error } = await supabase
         .from('sprints')
         .delete()
-        .eq('id', id)
-        .eq('user_id', user.id);
+        .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error deleting sprint:', error);
+        throw error;
+      }
 
+      // Update local state after successful deletion
       setSprints(prev => prev.filter(s => s.id !== id));
+      toast.success("Sprint deleted successfully");
       
-      setTasks(prev => prev.filter(t => t.sprintId !== id));
     } catch (error) {
       console.error('Error deleting sprint:', error);
+      toast.error("Failed to delete sprint");
       throw error;
     }
   };
