@@ -2,12 +2,25 @@
 import React from "react";
 import { format } from "date-fns";
 import { Sprint } from "@/types";
-import { CalendarDays, Edit } from "lucide-react";
+import { CalendarDays, Edit, Trash } from "lucide-react";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 interface SprintCardProps {
   sprint: Sprint;
   onEdit?: () => void;
   onViewBoard?: () => void;
+  onDelete?: () => void;
   isOwnerOrAdmin?: boolean;
   canEdit?: boolean;
 }
@@ -16,6 +29,7 @@ const SprintCard: React.FC<SprintCardProps> = ({
   sprint, 
   onEdit = () => {}, 
   onViewBoard = () => {},
+  onDelete = () => {},
   isOwnerOrAdmin = false,
   canEdit = false 
 }) => {
@@ -52,13 +66,42 @@ const SprintCard: React.FC<SprintCardProps> = ({
       
       <div className="flex items-center justify-between gap-2 mt-4">
         {canEdit && (
-          <button
-            onClick={onEdit}
-            className="scrum-button-secondary flex items-center gap-1"
-          >
-            <Edit className="h-4 w-4" />
-            <span>Edit</span>
-          </button>
+          <>
+            <button
+              onClick={onEdit}
+              className="scrum-button-secondary flex items-center gap-1"
+            >
+              <Edit className="h-4 w-4" />
+              <span>Edit</span>
+            </button>
+            
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button className="scrum-button-secondary bg-red-100 text-red-600 hover:bg-red-200 flex items-center gap-1">
+                  <Trash className="h-4 w-4" />
+                  <span>Delete</span>
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete the sprint "{sprint.title}" and all of its associated tasks.
+                    This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={onDelete}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </>
         )}
         
         <button

@@ -12,3 +12,4 @@ enable_row_level_security = true
 # Set up foreign key cascades for the tasks table when related sprints are deleted
 [db]
 allow_cascade_delete = true
+
