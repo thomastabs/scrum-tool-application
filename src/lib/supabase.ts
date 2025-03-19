@@ -144,7 +144,7 @@ export const findUserByEmailOrUsername = async (emailOrUsername: string) => {
 };
 
 // Helper function to add a collaborator to a project
-export const addCollaborator = async (projectId: string, userId: string, role: 'viewer' | 'member' | 'admin') => {
+export const addCollaborator = async (projectId: string, userId: string, role: 'product_owner' | 'worker' | 'scrum_master') => {
   try {
     const { data, error } = await supabase
       .from('collaborators')
@@ -214,7 +214,7 @@ export const removeCollaborator = async (collaboratorId: string) => {
 };
 
 // Helper function to update a collaborator's role
-export const updateCollaboratorRole = async (collaboratorId: string, role: 'viewer' | 'member' | 'admin') => {
+export const updateCollaboratorRole = async (collaboratorId: string, role: 'product_owner' | 'worker' | 'scrum_master') => {
   try {
     const { error } = await supabase
       .from('collaborators')

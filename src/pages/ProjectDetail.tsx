@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
@@ -75,7 +74,7 @@ const ProjectDetail: React.FC = () => {
       // Check if user is owner
       if (project.ownerId === user.id) {
         setIsOwner(true);
-        setUserRole('admin'); // Owner has admin privileges
+        setUserRole('scrum_master'); // Owner has scrum master privileges
         return;
       }
       
@@ -182,9 +181,9 @@ const ProjectDetail: React.FC = () => {
     }
   };
   
-  // Check if user can modify sprints (member, admin or owner)
-  const canModifySprints = isOwner || userRole === 'admin' || userRole === 'member';
-  const isOwnerOrAdmin = isOwner || userRole === 'admin';
+  // Check if user can modify sprints (scrum_master or owner)
+  const canModifySprints = isOwner || userRole === 'scrum_master';
+  const isOwnerOrAdmin = isOwner || userRole === 'scrum_master';
   
   if (isLoading) {
     return (

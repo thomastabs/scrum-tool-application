@@ -106,7 +106,7 @@ const SprintBoard: React.FC = () => {
           } else if (projectData && projectData.owner_id === user.id) {
             console.log("User is project owner");
             setIsOwner(true);
-            setUserRole('admin');
+            setUserRole('scrum_master');
           } else {
             const { data: collaboratorData, error: collaboratorError } = await supabase
               .from('collaborators')
@@ -264,7 +264,7 @@ const SprintBoard: React.FC = () => {
   };
   
   const handleCompleteSprint = async () => {
-    if (!isOwner && userRole !== 'admin') {
+    if (!isOwner && userRole !== 'scrum_master') {
       toast.error("Only project owners and admins can complete sprints");
       return;
     }
@@ -308,7 +308,7 @@ const SprintBoard: React.FC = () => {
     }
   };
   
-  const canAddTasks = isOwner || userRole === 'admin' || userRole === 'member';
+  const canAddTasks = isOwner || userRole === 'scrum_master' || userRole === 'worker';
   
   if (isLoading) {
     return (
@@ -343,7 +343,7 @@ const SprintBoard: React.FC = () => {
         sprint={sprint}
         onCompleteSprint={handleCompleteSprint}
         allTasksCompleted={allTasksCompleted}
-        canComplete={isOwner || userRole === 'admin'}
+        canComplete={isOwner || userRole === 'scrum_master'}
       />
       
       <div className="flex items-center justify-between mb-4 mt-8">
@@ -377,7 +377,7 @@ const SprintBoard: React.FC = () => {
                     )}
                   </div>
                   
-                  <Droppable droppableId={columnId} isDropDisabled={sprint.status === "completed" || userRole === 'viewer'}>
+                  <Droppable droppableId={columnId} isDropDisabled={sprint.status === "completed" || userRole === 'product_owner'}>
                     {(provided, snapshot) => (
                       <div
                         ref={provided.innerRef}
@@ -390,7 +390,7 @@ const SprintBoard: React.FC = () => {
                               key={task.id}
                               draggableId={task.id}
                               index={index}
-                              isDragDisabled={sprint.status === "completed" || userRole === 'viewer'}
+                              isDragDisabled={sprint.status === "completed" || userRole === 'product_owner'}
                             >
                               {(provided, snapshot) => (
                                 <div
