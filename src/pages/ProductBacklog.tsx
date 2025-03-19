@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
@@ -58,7 +59,7 @@ const ProductBacklog: React.FC = () => {
   // Product owners and project owners can add items to backlog
   const canAddToBacklog = isOwner || userRole === 'product_owner';
   
-  // Only scrum masters can move items from backlog to sprint
+  // Scrum masters can move items from backlog to sprint
   const canMoveToSprint = isOwner || userRole === 'scrum_master';
   
   useEffect(() => {
@@ -452,7 +453,7 @@ const ProductBacklog: React.FC = () => {
                                   )}
                                 </div>
                                 
-                                {/* Only show move to sprint if user is scrum master */}
+                                {/* Show move to sprint if user is scrum master */}
                                 {canMoveToSprint && availableSprints.length > 0 && (
                                   <Dialog>
                                     <DialogTrigger asChild>
