@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
@@ -205,21 +206,22 @@ const SprintBoard: React.FC = () => {
           console.log("Context update failed but Supabase update succeeded:", contextError);
         }
       
-    } catch (error) {
-      console.error("Error updating task status:", error);
-      toast.error("Failed to update task status");
-      
-      setColumns({
-        ...columns,
-        [source.droppableId]: {
-          ...sourceColumn,
-          taskIds: Array.from(sourceColumn.taskIds),
-        },
-        [destination.droppableId]: {
-          ...destColumn,
-          taskIds: Array.from(destColumn.taskIds).filter(id => id !== draggableId),
-        },
-      });
+      } catch (error) {
+        console.error("Error updating task status:", error);
+        toast.error("Failed to update task status");
+        
+        setColumns({
+          ...columns,
+          [source.droppableId]: {
+            ...sourceColumn,
+            taskIds: Array.from(sourceColumn.taskIds),
+          },
+          [destination.droppableId]: {
+            ...destColumn,
+            taskIds: Array.from(destColumn.taskIds).filter(id => id !== draggableId),
+          },
+        });
+      }
     }
   };
   
