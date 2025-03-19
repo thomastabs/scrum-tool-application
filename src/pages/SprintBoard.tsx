@@ -204,36 +204,22 @@ const SprintBoard: React.FC = () => {
         } catch (contextError) {
           console.log("Context update failed but Supabase update succeeded:", contextError);
         }
-        
-        if (destination.droppableId === "done") {
-          const allTasks = tasks;
-          const remainingTasks = allTasks.filter(
-            task => task.id !== draggableId && task.status !== "done"
-          );
-          
-          if (remainingTasks.length === 0 && sprint?.status === "in-progress") {
-            if (window.confirm("All tasks are completed! Would you like to mark this sprint as completed?")) {
-              await updateSprint(sprint.id, { status: "completed" });
-              toast.success("Sprint marked as completed!");
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error updating task status:", error);
-        toast.error("Failed to update task status");
-        
-        setColumns({
-          ...columns,
-          [source.droppableId]: {
-            ...sourceColumn,
-            taskIds: Array.from(sourceColumn.taskIds),
-          },
-          [destination.droppableId]: {
-            ...destColumn,
-            taskIds: Array.from(destColumn.taskIds).filter(id => id !== draggableId),
-          },
-        });
-      }
+      
+    } catch (error) {
+      console.error("Error updating task status:", error);
+      toast.error("Failed to update task status");
+      
+      setColumns({
+        ...columns,
+        [source.droppableId]: {
+          ...sourceColumn,
+          taskIds: Array.from(sourceColumn.taskIds),
+        },
+        [destination.droppableId]: {
+          ...destColumn,
+          taskIds: Array.from(destColumn.taskIds).filter(id => id !== draggableId),
+        },
+      });
     }
   };
   
@@ -269,11 +255,6 @@ const SprintBoard: React.FC = () => {
       return;
     }
 
-    if (!allTasksCompleted) {
-      setIsCompleteDialogOpen(true);
-      return;
-    }
-    
     try {
       const { error } = await supabase
         .from('sprints')
@@ -290,23 +271,6 @@ const SprintBoard: React.FC = () => {
     }
   };
   
-  const confirmCompleteSprint = async () => {
-    try {
-      const { error } = await supabase
-        .from('sprints')
-        .update({ status: 'completed' })
-        .eq('id', sprint.id);
-        
-      if (error) throw error;
-      
-      setSprint({ ...sprint, status: 'completed' });
-      toast.success("Sprint marked as completed!");
-      setIsCompleteDialogOpen(false);
-    } catch (error) {
-      console.error("Error completing sprint:", error);
-      toast.error("Failed to complete sprint");
-    }
-  };
   
   const canAddTasks = isOwner || userRole === 'scrum_master' || userRole === 'worker';
   
@@ -449,36 +413,6 @@ const SprintBoard: React.FC = () => {
         </div>
       )}
       
-      {isCompleteDialogOpen && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 animate-fade-in">
-          <div className="bg-scrum-card border border-scrum-border rounded-lg p-6 w-full max-w-md animate-fade-up">
-            <div className="mb-6 flex items-start gap-3">
-              <AlertTriangle className="text-yellow-500 h-5 w-5 mt-0.5" />
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Complete Sprint</h3>
-                <p className="text-scrum-text-secondary">
-                  Not all tasks are in the "DONE" column. Do you still want to complete this sprint?
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setIsCompleteDialogOpen(false)}
-                className="scrum-button-secondary"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmCompleteSprint}
-                className="scrum-button-warning"
-              >
-                Complete Anyway
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

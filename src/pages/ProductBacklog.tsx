@@ -179,12 +179,6 @@ const ProductBacklog: React.FC = () => {
   const handleMoveToSprint = async (taskId: string, sprintId: string) => {
     if (!taskId || !sprintId || !user) return;
     
-    // Check if user has permission to move tasks to sprint
-    if (!canMoveToSprint) {
-      toast.error("Only Scrum Masters can move tasks to sprints");
-      return;
-    }
-    
     try {
       const { error } = await supabase
         .from('tasks')
