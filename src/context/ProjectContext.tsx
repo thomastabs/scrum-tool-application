@@ -402,27 +402,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const projectSprints = sprints.filter(s => s.projectId === id);
       const sprintIds = projectSprints.map(s => s.id);
       
-      if (sprintIds.length > 0) {
-        const { error: tasksError } = await supabase
-          .from('tasks')
-          .delete()
-          .in('sprint_id', sprintIds)
-          .eq('user_id', user.id);
-          
-        if (tasksError) {
-          console.error('Error deleting tasks:', tasksError);
-          throw tasksError;
-        }
-        
-        const { error: sprintsError } = await supabase
-          .from('sprints')
-          .delete()
-          .eq('project_id', id)
-          .eq('user_id', user.id);
-          
-        if (sprintsError) {
-          console.error('Error deleting sprints:', sprintsError);
-          throw sprintsError;
+      console.log(`Attempting to delete project ${id} with ${sprintIds.length} sprints`);
+      
+      for (const sprintId of sprintIds) {
+        try {
+          await deleteSprint(sprintId);
+        } catch (error) {
+          console.error(`Error deleting sprint ${sprintId}:`, error);
+          throw error;
         }
       }
       
@@ -430,8 +417,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         .from('tasks')
         .delete()
         .is('sprint_id', null)
-        .eq('project_id', id)
-        .eq('user_id', user.id);
+        .eq('project_id', id);
         
       if (backlogTasksError) {
         console.error('Error deleting backlog tasks:', backlogTasksError);
@@ -455,8 +441,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         delete newData[id];
         return newData;
       });
+      
+      toast.success("Project deleted successfully");
     } catch (error) {
       console.error('Error deleting project:', error);
+      toast.error("Failed to delete project");
       throw error;
     }
   };
@@ -541,29 +530,49 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!user) throw new Error('User not authenticated');
 
     try {
-      // First, fetch all tasks associated with this sprint
-      const sprintTasks = tasks.filter(t => t.sprintId === id);
+      console.log(`Attempting to delete sprint ${id}`);
       
-      // If there are tasks in this sprint, we need to delete them first
-      if (sprintTasks.length > 0) {
-        console.log(`Deleting ${sprintTasks.length} tasks before deleting sprint`);
+      console.log("Deleting board columns for sprint:", id);
+      const { data: columnsData, error: columnsQueryError } = await supabase
+        .from('board_columns')
+        .select('id')
+        .eq('sprint_id', id);
         
-        // Delete all tasks associated with this sprint from the database
-        const { error: tasksError } = await supabase
-          .from('tasks')
-          .delete()
-          .eq('sprint_id', id);
-          
-        if (tasksError) {
-          console.error('Error deleting sprint tasks:', tasksError);
-          throw tasksError;
+      if (columnsQueryError) {
+        console.error('Error querying sprint board columns:', columnsQueryError);
+        throw columnsQueryError;
+      }
+      
+      if (columnsData && columnsData.length > 0) {
+        console.log(`Found ${columnsData.length} board columns to delete`);
+        
+        for (const column of columnsData) {
+          const { error: columnDeleteError } = await supabase
+            .from('board_columns')
+            .delete()
+            .eq('id', column.id);
+            
+          if (columnDeleteError) {
+            console.error(`Error deleting column ${column.id}:`, columnDeleteError);
+            throw columnDeleteError;
+          }
         }
-        
-        // Also update local state by removing these tasks
-        setTasks(prev => prev.filter(t => t.sprintId !== id));
+      } else {
+        console.log("No board columns found for this sprint");
       }
 
-      // Now we can safely delete the sprint
+      console.log("Deleting tasks for sprint:", id);
+      const { error: tasksError } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('sprint_id', id);
+        
+      if (tasksError) {
+        console.error('Error deleting sprint tasks:', tasksError);
+        throw tasksError;
+      }
+
+      console.log("Deleting sprint:", id);
       const { error } = await supabase
         .from('sprints')
         .delete()
@@ -574,8 +583,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         throw error;
       }
 
-      // Update local state after successful deletion
       setSprints(prev => prev.filter(s => s.id !== id));
+      setTasks(prev => prev.filter(t => t.sprintId !== id));
       toast.success("Sprint deleted successfully");
       
     } catch (error) {
@@ -663,7 +672,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const existingTask = tasks.find(t => t.id === id);
       if (!existingTask) throw new Error('Task not found');
 
-      console.log('Updating task status from:', existingTask.status, 'to:', task.status);
+      console.log('Updating task with data:', { id, ...task });
 
       const { error } = await supabase
         .from('tasks')
@@ -675,8 +684,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           story_points: task.storyPoints,
           sprint_id: task.sprintId
         })
-        .eq('id', id)
-        .eq('user_id', user.id);
+        .eq('id', id);
 
       if (error) {
         console.error('Supabase update error:', error);

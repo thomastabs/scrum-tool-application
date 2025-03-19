@@ -2,13 +2,20 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
-import { Edit, Trash, CheckCircle, AlertTriangle, Plus } from "lucide-react";
+import { Edit, Trash, CheckCircle, AlertTriangle, Plus, User } from "lucide-react";
 import { toast } from "sonner";
 import TaskCard from "@/components/tasks/TaskCard";
 import EditTaskModal from "@/components/tasks/EditTaskModal";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
-import { ProjectRole } from "@/types";
+import { ProjectRole, Collaborator } from "@/types";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 
 const SprintBoard: React.FC = () => {
   const { sprintId } = useParams<{ sprintId: string }>();
@@ -88,7 +95,6 @@ const SprintBoard: React.FC = () => {
         setColumns(initialColumns);
         
         if (user) {
-          // Check if user is the project owner
           const { data: projectData, error: projectError } = await supabase
             .from('projects')
             .select('owner_id')
@@ -102,8 +108,6 @@ const SprintBoard: React.FC = () => {
             setIsOwner(true);
             setUserRole('admin');
           } else {
-            // Check if user is a collaborator
-            console.log("Checking if user is a collaborator");
             const { data: collaboratorData, error: collaboratorError } = await supabase
               .from('collaborators')
               .select('role')
@@ -238,17 +242,14 @@ const SprintBoard: React.FC = () => {
   };
   
   const handleTaskDeleted = (taskId: string) => {
-    // Update columns state by removing the deleted task
     setColumns(prevColumns => {
       const newColumns = { ...prevColumns };
       
-      // Find which column contains the task and remove it
       Object.keys(newColumns).forEach(columnId => {
         const column = newColumns[columnId];
         const taskIndex = column.taskIds.indexOf(taskId);
         
         if (taskIndex !== -1) {
-          // Remove the task from that column
           newColumns[columnId] = {
             ...column,
             taskIds: column.taskIds.filter(id => id !== taskId)
@@ -259,7 +260,6 @@ const SprintBoard: React.FC = () => {
       return newColumns;
     });
     
-    // Update tasks state by removing the deleted task
     setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
   };
   
@@ -548,9 +548,88 @@ const NewTaskForm: React.FC<{
   const [priority, setPriority] = useState<"low" | "medium" | "high">("medium");
   const [assignedTo, setAssignedTo] = useState("");
   const [storyPoints, setStoryPoints] = useState<number>(1);
+  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
+  const [projectOwner, setProjectOwner] = useState<{id: string, username: string} | null>(null);
+  const [isLoadingCollaborators, setIsLoadingCollaborators] = useState(true);
   
   const { addTask, getSprint } = useProjects();
+  const { user } = useAuth();
   const sprint = getSprint(sprintId);
+  
+  useEffect(() => {
+    const fetchCollaborators = async () => {
+      setIsLoadingCollaborators(true);
+      try {
+        const { data: projectData, error: projectError } = await supabase
+          .from('projects')
+          .select('owner_id, title')
+          .eq('id', projectId)
+          .single();
+          
+        if (projectError) throw projectError;
+        
+        if (projectData) {
+          const { data: ownerData, error: ownerError } = await supabase
+            .from('users')
+            .select('id, username')
+            .eq('id', projectData.owner_id)
+            .single();
+            
+          if (!ownerError && ownerData) {
+            setProjectOwner(ownerData);
+          }
+        }
+        
+        const { data: collaboratorsData, error: collaboratorsError } = await supabase
+          .from('collaborators')
+          .select(`
+            id,
+            userId:user_id,
+            role,
+            createdAt:created_at,
+            users:user_id (
+              id,
+              username,
+              email
+            )
+          `)
+          .eq('project_id', projectId);
+        
+        if (collaboratorsError) throw collaboratorsError;
+        
+        const formattedCollaborators = collaboratorsData?.map(collab => ({
+          id: collab.id,
+          userId: collab.userId,
+          username: collab.users ? (collab.users as any).username || '' : '',
+          email: collab.users ? (collab.users as any).email || '' : '',
+          role: collab.role as ProjectRole,
+          createdAt: collab.createdAt
+        })) || [];
+        
+        setCollaborators(formattedCollaborators);
+        
+        if (user) {
+          if (projectOwner && projectOwner.id === user.id) {
+            setAssignedTo(projectOwner.username);
+          } else {
+            const currentUserAsCollaborator = formattedCollaborators.find(c => c.userId === user.id);
+            if (currentUserAsCollaborator) {
+              setAssignedTo(currentUserAsCollaborator.username);
+            }
+          }
+        }
+        
+      } catch (error) {
+        console.error("Error fetching collaborators:", error);
+      } finally {
+        setIsLoadingCollaborators(false);
+      }
+    };
+    
+    if (projectId) {
+      fetchCollaborators();
+    }
+  }, [projectId, user]);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -587,7 +666,6 @@ const NewTaskForm: React.FC<{
         storyPoints: storyPoints
       });
       
-      // After successful creation, update the columns state to include the new task
       setColumns(prevColumns => {
         const column = prevColumns[initialStatus];
         if (column) {
@@ -602,7 +680,6 @@ const NewTaskForm: React.FC<{
         return prevColumns;
       });
       
-      // Update tasks state to include the new task
       setTasks(prevTasks => [...prevTasks, newTask]);
       
       toast.success("Task created successfully");
@@ -612,6 +689,14 @@ const NewTaskForm: React.FC<{
       toast.error("Failed to create task");
     }
   };
+  
+  const assigneeOptions = [
+    ...(projectOwner ? [{ id: projectOwner.id, name: projectOwner.username }] : []),
+    ...collaborators.map(collab => ({ 
+      id: collab.userId,
+      name: collab.username 
+    }))
+  ];
   
   return (
     <>
@@ -696,14 +781,36 @@ const NewTaskForm: React.FC<{
           <label className="block mb-2 text-sm">
             Assigned To <span className="text-destructive">*</span>
           </label>
-          <input
-            type="text"
-            value={assignedTo}
-            onChange={(e) => setAssignedTo(e.target.value)}
-            className="scrum-input"
-            placeholder="e.g. John Doe"
-            required
-          />
+          {isLoadingCollaborators ? (
+            <div className="scrum-input flex items-center">
+              <div className="h-5 w-5 mr-2 rounded-full bg-scrum-accent/30 animate-pulse"></div>
+              <span className="text-scrum-text-secondary">Loading collaborators...</span>
+            </div>
+          ) : (
+            <Select 
+              value={assignedTo} 
+              onValueChange={setAssignedTo}
+              required
+            >
+              <SelectTrigger className="bg-scrum-background border-scrum-border text-scrum-text focus:ring-scrum-accent focus:border-scrum-border">
+                <SelectValue placeholder="Assign to..." />
+              </SelectTrigger>
+              <SelectContent className="bg-scrum-card border-scrum-border">
+                {assigneeOptions.map(option => (
+                  <SelectItem 
+                    key={option.id} 
+                    value={option.name}
+                    className="text-scrum-text focus:bg-scrum-accent/20 focus:text-scrum-text"
+                  >
+                    <div className="flex items-center">
+                      <User className="h-3.5 w-3.5 mr-2 text-scrum-text-secondary" />
+                      {option.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
         
         <div className="flex justify-end gap-2">

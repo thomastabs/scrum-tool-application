@@ -9,7 +9,6 @@ file_size_limit = "50MiB"
 # Enable RLS
 enable_row_level_security = true
 
-# Set up foreign key cascades for the tasks table when related sprints are deleted
+# Set up foreign key cascades for all tables
 [db]
 allow_cascade_delete = true
-

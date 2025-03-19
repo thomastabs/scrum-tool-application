@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { Collaborator, BurndownData as BurndownDataType } from '@/types';
 
@@ -356,13 +355,14 @@ export const fetchCollaborativeBacklogTasks = async (projectId: string) => {
   }
 };
 
-// New helper to fetch burndown data for a project
+// Helper function to fetch burndown data for a project
 export const fetchBurndownData = async (projectId: string, userId: string): Promise<BurndownDataType[]> => {
   try {
     const { data, error } = await supabase
       .from('burndown_data')
       .select('date, ideal_points, actual_points')
       .eq('project_id', projectId)
+      .eq('user_id', userId)
       .order('date', { ascending: true });
       
     if (error) throw error;
@@ -371,7 +371,8 @@ export const fetchBurndownData = async (projectId: string, userId: string): Prom
     return (data || []).map(item => ({
       date: item.date,
       ideal: item.ideal_points,
-      actual: item.actual_points
+      actual: item.actual_points,
+      formattedDate: item.date // This will be formatted in the component
     }));
   } catch (error) {
     console.error('Error fetching burndown data:', error);
@@ -379,30 +380,34 @@ export const fetchBurndownData = async (projectId: string, userId: string): Prom
   }
 };
 
-// New helper to upsert burndown data for a project
+// Improved helper to upsert burndown data with better handling
 export const upsertBurndownData = async (
   projectId: string, 
   userId: string,
   burndownData: BurndownDataType[]
 ): Promise<boolean> => {
   try {
-    // Convert our app format to database format
+    // Process all data in a single operation using upsert
     const dbData = burndownData.map(item => ({
       project_id: projectId,
       user_id: userId,
       date: item.date,
-      ideal_points: item.ideal,
-      actual_points: item.actual
+      ideal_points: item.ideal || 0,
+      actual_points: item.actual !== null && item.actual !== undefined ? item.actual : 0
     }));
     
     const { error } = await supabase
       .from('burndown_data')
       .upsert(dbData, { 
-        onConflict: 'project_id,date',
-        ignoreDuplicates: false 
+        onConflict: 'project_id,user_id,date',
+        ignoreDuplicates: false // We want to update if there's a conflict
       });
       
-    if (error) throw error;
+    if (error) {
+      console.error('Error in burndown data upsert:', error);
+      return false;
+    }
+    
     return true;
   } catch (error) {
     console.error('Error upserting burndown data:', error);
