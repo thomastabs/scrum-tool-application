@@ -55,8 +55,13 @@ const ProductBacklog: React.FC = () => {
   const sprints = projectId ? getSprintsByProject(projectId) : [];
   const availableSprints = sprints.filter(sprint => sprint.status !== "completed");
   
-  const canAddTasks = isOwner || userRole === 'admin';
-
+  // Product owners and project owners can add items to backlog
+  const canAddToBacklog = isOwner || userRole === 'product_owner';
+  
+  // Only scrum masters and product owners can move items from backlog to sprint 
+  // (scrum masters for planning, product owners for direct prioritization)
+  const canMoveToSprint = isOwner || userRole === 'scrum_master' || userRole === 'product_owner';
+  
   useEffect(() => {
     if (!projectId || !user) {
       setIsLoading(false);
@@ -314,7 +319,7 @@ const ProductBacklog: React.FC = () => {
             <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           </Button>
           
-          {canAddTasks && (
+          {canAddToBacklog && (
             <Button
               onClick={() => setIsAddingTask(true)}
               className="flex items-center gap-1"
@@ -378,6 +383,8 @@ const ProductBacklog: React.FC = () => {
                         key={task.id}
                         draggableId={task.id}
                         index={index}
+                        // Only allow dragging for those who can move tasks
+                        isDragDisabled={!canMoveToSprint}
                       >
                         {(provided, snapshot) => (
                           <div
@@ -401,39 +408,47 @@ const ProductBacklog: React.FC = () => {
                               </CardContent>
                               <CardFooter className="p-4 pt-0 flex justify-between">
                                 <div className="flex gap-1">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 px-2"
-                                    onClick={() => setEditingTask(task.id)}
-                                  >
-                                    <svg
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      className="h-3.5 w-3.5 mr-1"
+                                  {/* Only allow editing if user can add to backlog */}
+                                  {canAddToBacklog && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 px-2"
+                                      onClick={() => setEditingTask(task.id)}
                                     >
-                                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                      <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z" />
-                                    </svg>
-                                    Edit
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 px-2 text-destructive"
-                                    onClick={() => handleDeleteTask(task.id)}
-                                  >
-                                    <Trash className="h-3.5 w-3.5 mr-1" />
-                                    Delete
-                                  </Button>
+                                      <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        className="h-3.5 w-3.5 mr-1"
+                                      >
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                        <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z" />
+                                      </svg>
+                                      Edit
+                                    </Button>
+                                  )}
+                                  
+                                  {/* Only allow deletion if user can add to backlog */}
+                                  {canAddToBacklog && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 px-2 text-destructive"
+                                      onClick={() => handleDeleteTask(task.id)}
+                                    >
+                                      <Trash className="h-3.5 w-3.5 mr-1" />
+                                      Delete
+                                    </Button>
+                                  )}
                                 </div>
                                 
-                                {availableSprints.length > 0 && (
+                                {/* Only show move to sprint if user is scrum master or has required permission */}
+                                {canMoveToSprint && availableSprints.length > 0 && (
                                   <Dialog>
                                     <DialogTrigger asChild>
                                       <Button size="sm" className="h-8">

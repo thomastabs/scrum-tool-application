@@ -18,12 +18,20 @@ const NewSprintButton: React.FC<NewSprintButtonProps> = ({ projectId }) => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const { addSprint } = useProjects();
-  const { user } = useAuth();
+  const { user, isOwner, userRole } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<{
     startDate?: string;
     endDate?: string;
   }>({});
+  
+  // Only owners and scrum masters can create sprints
+  const canCreateSprint = isOwner || userRole === 'scrum_master';
+  
+  // If user can't create sprints, don't render the button
+  if (!canCreateSprint) {
+    return null;
+  }
   
   // Set default start date to today and end date to 2 weeks from today
   useEffect(() => {

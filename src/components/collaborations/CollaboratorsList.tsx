@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { fetchProjectCollaborators, removeCollaborator, updateCollaboratorRole } from "@/lib/supabase";
 import { Collaborator, ProjectRole } from "@/types";
-import { Users, UserX, Shield, Edit, X, Check } from "lucide-react";
+import { Users, UserX, Shield, Edit, X, Check, User, Eye } from "lucide-react";
 import { toast } from "sonner";
 
 interface CollaboratorsListProps {
@@ -17,7 +17,7 @@ const CollaboratorsList: React.FC<CollaboratorsListProps> = ({
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [selectedRole, setSelectedRole] = useState<ProjectRole>('viewer');
+  const [selectedRole, setSelectedRole] = useState<ProjectRole>('product_owner');
   
   const loadCollaborators = async () => {
     setLoading(true);
@@ -92,22 +92,26 @@ const CollaboratorsList: React.FC<CollaboratorsListProps> = ({
     let icon = null;
     
     switch (role) {
-      case "admin":
+      case "scrum_master":
         color = "bg-destructive/80 text-white";
         icon = <Shield className="h-3 w-3" />;
         break;
-      case "member":
+      case "worker":
         color = "bg-blue-500/80 text-white";
+        icon = <User className="h-3 w-3" />;
         break;
-      case "viewer":
+      case "product_owner":
         color = "bg-scrum-accent/80 text-white";
+        icon = <Eye className="h-3 w-3" />;
         break;
     }
     
     return (
       <span className={`text-xs px-2 py-0.5 rounded-full flex items-center gap-1 ${color}`}>
         {icon}
-        {role.charAt(0).toUpperCase() + role.slice(1)}
+        {role === 'product_owner' ? 'Product Owner' : 
+         role === 'worker' ? 'Worker' : 
+         role === 'scrum_master' ? 'Scrum Master' : role}
       </span>
     );
   };
@@ -151,9 +155,9 @@ const CollaboratorsList: React.FC<CollaboratorsListProps> = ({
                     onChange={(e) => setSelectedRole(e.target.value as ProjectRole)}
                     className="text-xs border border-scrum-border rounded bg-scrum-background p-1"
                   >
-                    <option value="viewer">Viewer</option>
-                    <option value="member">Member</option>
-                    <option value="admin">Admin</option>
+                    <option value="product_owner">Product Owner</option>
+                    <option value="worker">Worker</option>
+                    <option value="scrum_master">Scrum Master</option>
                   </select>
                   
                   <button 

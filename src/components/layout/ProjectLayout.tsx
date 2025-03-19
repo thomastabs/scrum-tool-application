@@ -30,7 +30,7 @@ const ProjectLayout: React.FC = () => {
       // Check if user is owner
       if (project.ownerId === user.id) {
         setIsOwner(true);
-        setUserRole('admin'); // Owner has admin privileges
+        setUserRole('scrum_master'); // Owner has admin privileges
         setIsLoading(false);
         return;
       }
@@ -99,11 +99,14 @@ const ProjectLayout: React.FC = () => {
     }
   };
   
-  const canEditProject = isOwner || userRole === 'admin';
+  // Only project owners and scrum masters can edit the project
+  const canEditProject = isOwner || userRole === 'scrum_master';
   
-  const canAccessBacklog = isOwner || userRole === 'admin' || userRole === 'member';
+  // Product owners can access backlog, as well as owners
+  const canAccessBacklog = isOwner || userRole === 'product_owner';
   
-  const canModifySprints = isOwner || userRole === 'admin' || userRole === 'member';
+  // Only owners and scrum masters can modify sprints
+  const canModifySprints = isOwner || userRole === 'scrum_master';
   
   const handleBackToProjects = () => {
     if (project.isCollaboration) {
@@ -189,7 +192,9 @@ const ProjectLayout: React.FC = () => {
         
         {userRole && !isOwner && (
           <div className="text-xs text-scrum-text-secondary mb-2">
-            You have {userRole} access to this project
+            You have {userRole === 'product_owner' ? 'Product Owner' : 
+                      userRole === 'worker' ? 'Worker' : 
+                      userRole === 'scrum_master' ? 'Scrum Master' : userRole} access to this project
           </div>
         )}
       </div>

@@ -50,7 +50,7 @@ export interface BurndownData {
   actual: number;
 }
 
-export type ProjectRole = 'viewer' | 'member' | 'admin';
+export type ProjectRole = 'product_owner' | 'worker' | 'scrum_master';
 
 export interface Collaborator {
   id: string;
