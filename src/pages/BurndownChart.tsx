@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
@@ -321,9 +322,8 @@ const BurndownChart: React.FC = () => {
                 position: "top", 
                 fill: "#ea384c",
                 fontSize: 12,
-                fontWeight: "bold",
-                backgroundColor: "#333",
-                padding: 5
+                fontWeight: "bold"
+                // Removed the backgroundColor property which was causing the error
               }} 
             />
             <Line
