@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Outlet, useParams, useNavigate, useLocation } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
@@ -102,8 +103,8 @@ const ProjectLayout: React.FC = () => {
   // Only project owners and scrum masters can edit the project
   const canEditProject = isOwner || userRole === 'scrum_master';
   
-  // Product owners can access backlog, as well as owners
-  const canAccessBacklog = isOwner || userRole === 'product_owner';
+  // Scrum Masters, Workers and Product Owners can access backlog
+  const canAccessBacklog = isOwner || userRole === 'scrum_master' || userRole === 'worker' || userRole === 'product_owner';
   
   // Only owners and scrum masters can modify sprints
   const canModifySprints = isOwner || userRole === 'scrum_master';

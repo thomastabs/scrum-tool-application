@@ -58,9 +58,8 @@ const ProductBacklog: React.FC = () => {
   // Product owners and project owners can add items to backlog
   const canAddToBacklog = isOwner || userRole === 'product_owner';
   
-  // Only scrum masters and product owners can move items from backlog to sprint 
-  // (scrum masters for planning, product owners for direct prioritization)
-  const canMoveToSprint = isOwner || userRole === 'scrum_master' || userRole === 'product_owner';
+  // Only scrum masters can move items from backlog to sprint
+  const canMoveToSprint = isOwner || userRole === 'scrum_master';
   
   useEffect(() => {
     if (!projectId || !user) {
@@ -179,6 +178,12 @@ const ProductBacklog: React.FC = () => {
   
   const handleMoveToSprint = async (taskId: string, sprintId: string) => {
     if (!taskId || !sprintId || !user) return;
+    
+    // Check if user has permission to move tasks to sprint
+    if (!canMoveToSprint) {
+      toast.error("Only Scrum Masters can move tasks to sprints");
+      return;
+    }
     
     try {
       const { error } = await supabase
@@ -447,7 +452,7 @@ const ProductBacklog: React.FC = () => {
                                   )}
                                 </div>
                                 
-                                {/* Only show move to sprint if user is scrum master or has required permission */}
+                                {/* Only show move to sprint if user is scrum master */}
                                 {canMoveToSprint && availableSprints.length > 0 && (
                                   <Dialog>
                                     <DialogTrigger asChild>
