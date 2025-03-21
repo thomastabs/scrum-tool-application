@@ -11,7 +11,7 @@ import { ProjectRole } from "@/types";
 
 const ProjectDetail: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
-  const { getProject, getSprintsByProject, getSprint, updateSprint, deleteSprint } = useProjects();
+  const { getProject, getSprintsByProject, getSprint, updateSprint } = useProjects();
   const { user } = useAuth();
   const navigate = useNavigate();
   
@@ -138,21 +138,6 @@ const ProjectDetail: React.FC = () => {
     } catch (error) {
       toast.error("Failed to update sprint");
       console.error(error);
-    }
-  };
-  
-  const handleDeleteSprint = async () => {
-    if (!editingSprint) return;
-    
-    if (window.confirm("Are you sure you want to delete this sprint?")) {
-      try {
-        await deleteSprint(editingSprint);
-        toast.success("Sprint deleted successfully");
-        setEditingSprint(null);
-      } catch (error) {
-        toast.error("Failed to delete sprint");
-        console.error(error);
-      }
     }
   };
   
@@ -335,15 +320,7 @@ const ProjectDetail: React.FC = () => {
                 </select>
               </div>
               
-              <div className="flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={handleDeleteSprint}
-                  className="text-destructive hover:text-destructive/80 transition-colors"
-                >
-                  Delete Sprint
-                </button>
-                
+              <div className="flex items-center justify-end">
                 <div className="flex gap-2">
                   <button
                     type="button"
