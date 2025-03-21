@@ -344,7 +344,7 @@ export type Database = {
       }
     }
     Enums: {
-      project_role: "product_owner" | "worker" | "scrum_master"
+      project_role: "product_owner" | "team_member" | "scrum_master"
       project_role_new: "product_owner" | "worker" | "scrum_master"
     }
     CompositeTypes: {
