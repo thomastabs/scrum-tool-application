@@ -371,7 +371,7 @@ const SprintBoard: React.FC = () => {
                                 >
                                   <TaskCard
                                     task={task}
-                                    onEdit={(isOwner || userRole === 'scrum_master' || userRole === 'team_member') ? () => setEditingTask(task.id) : undefined}
+                                    onEdit={(isOwner || userRole === 'scrum_master' || userRole === 'worker') ? () => setEditingTask(task.id) : undefined}
                                     isSprintCompleted={sprint.status === "completed"}
                                     onTaskDeleted={handleTaskDeleted}
                                   />

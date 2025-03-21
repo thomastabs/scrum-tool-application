@@ -51,7 +51,7 @@ const Collaborations: React.FC = () => {
         color = "bg-destructive/80 text-white";
         icon = <Shield className="h-3 w-3" />;
         break;
-      case "team_member":
+      case "worker":
         color = "bg-blue-500/80 text-white";
         icon = <User className="h-3 w-3" />;
         break;
@@ -65,7 +65,7 @@ const Collaborations: React.FC = () => {
       <span className={`text-xs px-2 py-0.5 rounded-full flex items-center gap-1 ${color}`}>
         {icon}
         {role === 'product_owner' ? 'Product Owner' : 
-         role === 'team_member' ? 'Team Member' : 
+         role === 'worker' ? 'Worker' : 
          role === 'scrum_master' ? 'Scrum Master' : role}
       </span>
     );

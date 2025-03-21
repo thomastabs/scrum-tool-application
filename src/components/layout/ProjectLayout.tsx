@@ -103,8 +103,8 @@ const ProjectLayout: React.FC = () => {
   // Only project owners and scrum masters can edit the project
   const canEditProject = isOwner || userRole === 'scrum_master';
   
-  // Scrum Masters, Team Members and Product Owners can access backlog
-  const canAccessBacklog = isOwner || userRole === 'scrum_master' || userRole === 'team_member' || userRole === 'product_owner';
+  // Scrum Masters, Workers and Product Owners can access backlog
+  const canAccessBacklog = isOwner || userRole === 'scrum_master' || userRole === 'worker' || userRole === 'product_owner';
   
   // Only owners and scrum masters can modify sprints
   const canModifySprints = isOwner || userRole === 'scrum_master';
@@ -202,7 +202,7 @@ const ProjectLayout: React.FC = () => {
         {userRole && !isOwner && (
           <div className="text-xs text-scrum-text-secondary mb-2">
             You have {userRole === 'product_owner' ? 'Product Owner' : 
-                      userRole === 'team_member' ? 'Team Member' : 
+                      userRole === 'worker' ? 'Worker' : 
                       userRole === 'scrum_master' ? 'Scrum Master' : userRole} access to this project
           </div>
         )}
