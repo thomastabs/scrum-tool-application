@@ -204,20 +204,6 @@ const SprintBoard: React.FC = () => {
         } catch (contextError) {
           console.log("Context update failed but Supabase update succeeded:", contextError);
         }
-        
-        if (destination.droppableId === "done") {
-          const allTasks = tasks;
-          const remainingTasks = allTasks.filter(
-            task => task.id !== draggableId && task.status !== "done"
-          );
-          
-          if (remainingTasks.length === 0 && sprint?.status === "in-progress") {
-            if (window.confirm("All tasks are completed! Would you like to mark this sprint as completed?")) {
-              await updateSprint(sprint.id, { status: "completed" });
-              toast.success("Sprint marked as completed!");
-            }
-          }
-        }
       } catch (error) {
         console.error("Error updating task status:", error);
         toast.error("Failed to update task status");
@@ -834,3 +820,4 @@ const NewTaskForm: React.FC<{
 };
 
 export default SprintBoard;
+

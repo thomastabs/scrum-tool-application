@@ -21,6 +21,7 @@ import ProjectTimeline from "./pages/ProjectTimeline";
 import NotFound from "./pages/NotFound";
 import ProductBacklog from "./pages/ProductBacklog";
 import ProjectCollaborators from "./pages/ProjectCollaborators";
+import EditProject from "./pages/EditProject";
 
 const queryClient = new QueryClient();
 
@@ -88,6 +89,7 @@ const App = () => (
                 <Route path="collaborators" element={<ProjectCollaborators />} />
                 <Route path="sprint/:sprintId" element={<SprintBoard />} />
                 <Route path="sprint/:sprintId/edit" element={<EditSprint />} />
+                <Route path="edit" element={<EditProject />} />
               </Route>
               
               {/* Sprint routes */}

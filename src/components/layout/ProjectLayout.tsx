@@ -116,6 +116,14 @@ const ProjectLayout: React.FC = () => {
       navigate("/", { state: { activeTab: "projects" } });
     }
   };
+
+  // Check if we're on the edit page
+  const isEditPage = location.pathname.endsWith('/edit');
+  
+  // If we're on the edit page, just render the outlet
+  if (isEditPage) {
+    return <Outlet />;
+  }
   
   return (
     <div className="pt-16 min-h-screen animate-fade-in">

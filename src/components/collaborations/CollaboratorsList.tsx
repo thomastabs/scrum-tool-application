@@ -4,6 +4,13 @@ import { fetchProjectCollaborators, removeCollaborator, updateCollaboratorRole }
 import { Collaborator, ProjectRole } from "@/types";
 import { Users, UserX, Shield, Edit, X, Check, User, Eye } from "lucide-react";
 import { toast } from "sonner";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 
 interface CollaboratorsListProps {
   projectId: string;
@@ -150,15 +157,19 @@ const CollaboratorsList: React.FC<CollaboratorsListProps> = ({
             <div className="flex items-center gap-3">
               {editingId === collaborator.id ? (
                 <div className="flex items-center gap-2">
-                  <select
+                  <Select 
                     value={selectedRole}
-                    onChange={(e) => setSelectedRole(e.target.value as ProjectRole)}
-                    className="text-xs border border-scrum-border rounded bg-scrum-background p-1"
+                    onValueChange={(value) => setSelectedRole(value as ProjectRole)}
                   >
-                    <option value="product_owner">Product Owner</option>
-                    <option value="worker">Worker</option>
-                    <option value="scrum_master">Scrum Master</option>
-                  </select>
+                    <SelectTrigger className="w-[140px] h-8 text-xs">
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="product_owner">Product Owner</SelectItem>
+                      <SelectItem value="worker">Worker</SelectItem>
+                      <SelectItem value="scrum_master">Scrum Master</SelectItem>
+                    </SelectContent>
+                  </Select>
                   
                   <button 
                     onClick={() => saveRoleChange(collaborator.id)}
