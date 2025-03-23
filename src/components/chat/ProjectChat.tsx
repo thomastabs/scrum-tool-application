@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Send, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useParams } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 interface ChatMessage {
   id: string;
@@ -128,16 +129,17 @@ const ProjectChat: React.FC = () => {
   });
   
   return (
-    <div className="scrum-card h-[500px] max-h-[calc(100vh-220px)] flex flex-col">
+    <div className="flex flex-col h-[500px] max-h-[calc(100vh-220px)]">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">Project Chat</h2>
-        <button 
+        <h2 className="text-lg font-semibold">Team Chat</h2>
+        <Button 
           onClick={fetchMessages} 
-          className="text-scrum-text-secondary hover:text-scrum-text-primary"
+          variant="ghost"
+          size="sm"
           title="Refresh messages"
         >
           <RefreshCw className="h-4 w-4" />
-        </button>
+        </Button>
       </div>
       
       <div className="flex-1 overflow-y-auto mb-4 border-t border-b border-scrum-border">
@@ -192,17 +194,18 @@ const ProjectChat: React.FC = () => {
           className="scrum-input flex-1"
           disabled={isSending}
         />
-        <button
+        <Button
           type="submit"
-          className="scrum-button flex items-center justify-center w-10"
           disabled={isSending || !newMessage.trim()}
+          size="icon"
+          variant="scrum-black"
         >
           {isSending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <Send className="h-4 w-4" />
           )}
-        </button>
+        </Button>
       </form>
     </div>
   );
