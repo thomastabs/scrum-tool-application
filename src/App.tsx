@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
-import Login from './pages/Login';
-import Register from './pages/Register';
+import Login from './pages/Auth/Login';
+import Register from './pages/Auth/Register';
 import UserSettings from './pages/UserSettings';
 import ProjectDetail from './pages/ProjectDetail';
 import EditProject from './pages/EditProject';
@@ -16,24 +17,36 @@ import ProjectTeam from './pages/ProjectTeam';
 import NotFound from './pages/NotFound';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProjectProvider } from './context/ProjectContext';
-import ProtectedRoute from './components/ProtectedRoute';
 import { Toaster } from "sonner";
+import ProjectLayout from './components/layout/ProjectLayout';
+
+// Create a ProtectedRoute component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+    }
+  }, [isAuthenticated, navigate]);
+
+  return isAuthenticated ? <>{children}</> : null;
+};
 
 function App() {
   const [loading, setLoading] = useState(true);
-  const { checkSession } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
     const checkAuthStatus = async () => {
-      const user = await checkSession();
-      
       // If the user is not logged in and tries to access a protected route, redirect to login
       const publicRoutes = ['/login', '/register'];
       const isPublicRoute = publicRoutes.includes(location.pathname);
       
-      if (!user && !isPublicRoute) {
+      if (!isAuthenticated && !isPublicRoute) {
         navigate('/login');
       }
       
@@ -41,7 +54,7 @@ function App() {
     };
     
     checkAuthStatus();
-  }, [checkSession, navigate, location]);
+  }, [isAuthenticated, navigate, location]);
 
   return (
     <AuthProvider>
@@ -64,7 +77,9 @@ function App() {
             <Route index element={<ProjectDetail />} />
             <Route path="edit" element={<EditProject />} />
             <Route path="backlog" element={<ProductBacklog />} />
-            <Route path="backlog/new" element={<BacklogItemForm />} />
+            <Route path="backlog/new" element={
+              <BacklogItemForm onClose={() => navigate(-1)} />
+            } />
             <Route path="sprints/:sprintId" element={<SprintBoard />} />
             <Route path="sprints/:sprintId/edit" element={<EditSprint />} />
             <Route path="timeline" element={<ProjectTimeline />} />
