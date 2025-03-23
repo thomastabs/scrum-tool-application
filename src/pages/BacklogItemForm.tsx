@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -6,7 +5,6 @@ import * as z from "zod";
 import { useProjects } from "@/context/ProjectContext";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useParams, useNavigate } from "react-router-dom";
 import {
   Form,
   FormControl,
@@ -45,18 +43,10 @@ const BacklogItemForm: React.FC<BacklogItemFormProps> = ({ taskId, onClose, proj
   const { getTask, addTask, updateTask } = useProjects();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const params = useParams();
-  const navigate = useNavigate();
   const isEditMode = !!taskId;
-  
-  // Get project ID from params if not provided through props
-  const currentProjectId = projectId || params.projectId || "";
   
   // Get the task to edit if in edit mode
   const taskToEdit = isEditMode && taskId ? getTask(taskId) : null;
-
-  // If onClose is not provided, use navigate to go back
-  const handleClose = onClose || (() => navigate(-1));
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -100,12 +90,12 @@ const BacklogItemForm: React.FC<BacklogItemFormProps> = ({ taskId, onClose, proj
         toast.success("Backlog item updated successfully");
       } else {
         // Create new task
-        if (!currentProjectId) {
+        if (!projectId) {
           toast.error("Project ID is required to create a backlog item");
           return;
         }
         
-        console.log('Creating new backlog item with project ID:', currentProjectId);
+        console.log('Creating new backlog item with project ID:', projectId); // Add logging to help debug
         
         // Direct Supabase insert as a fallback method
         if (user) {
@@ -116,7 +106,7 @@ const BacklogItemForm: React.FC<BacklogItemFormProps> = ({ taskId, onClose, proj
               description: data.description,
               status: "backlog",
               sprint_id: null,
-              project_id: currentProjectId,
+              project_id: projectId,
               priority: data.priority,
               story_points: data.storyPoints,
               user_id: user.id
@@ -134,7 +124,7 @@ const BacklogItemForm: React.FC<BacklogItemFormProps> = ({ taskId, onClose, proj
             title: data.title,
             description: data.description,
             status: "backlog",
-            projectId: currentProjectId,
+            projectId: projectId,
             priority: data.priority,
             storyPoints: data.storyPoints,
             sprintId: "",
@@ -143,7 +133,7 @@ const BacklogItemForm: React.FC<BacklogItemFormProps> = ({ taskId, onClose, proj
         }
       }
       
-      handleClose();
+      onClose();
     } catch (error) {
       console.error("Error creating/updating backlog item:", error);
       toast.error(`Error ${isEditMode ? 'updating' : 'creating'} backlog item: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -159,7 +149,7 @@ const BacklogItemForm: React.FC<BacklogItemFormProps> = ({ taskId, onClose, proj
           <h2 className="text-2xl font-semibold">
             {isEditMode ? "Edit Backlog Item" : "Create Backlog Item"}
           </h2>
-          <Button variant="ghost" size="icon" onClick={handleClose}>
+          <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </div>

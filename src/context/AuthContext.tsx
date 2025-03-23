@@ -20,7 +20,6 @@ interface AuthContextType {
   updateEmail: (email: string) => Promise<boolean>;
   updatePassword: (password: string) => Promise<boolean>;
   toggleTheme: () => void;
-  checkSession: () => Promise<User | null>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -39,7 +38,6 @@ const AuthContext = createContext<AuthContextType>({
   updateEmail: async () => false,
   updatePassword: async () => false,
   toggleTheme: () => {},
-  checkSession: async () => null,
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -51,27 +49,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [userRole, setUserRole] = useState<ProjectRole | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(true);
 
-  // Check if user session exists in localStorage
-  const checkSession = async (): Promise<User | null> => {
-    try {
-      const savedUser = localStorage.getItem("scrumUser");
-      if (savedUser) {
-        const parsedUser = JSON.parse(savedUser);
-        setUser(parsedUser);
-        return parsedUser;
-      }
-      return null;
-    } catch (error) {
-      console.error("Error checking session:", error);
-      return null;
-    }
-  };
-
   useEffect(() => {
-    const loadUserFromStorage = async () => {
+    const loadUserFromStorage = () => {
       try {
-        // Use the checkSession method to load user
-        await checkSession();
+        const savedUser = localStorage.getItem("scrumUser");
+        if (savedUser) {
+          setUser(JSON.parse(savedUser));
+        }
         
         // Load theme preference
         const themePreference = localStorage.getItem("scrumTheme");
@@ -321,7 +305,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateEmail,
         updatePassword,
         toggleTheme,
-        checkSession,
       }}
     >
       {children}

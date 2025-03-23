@@ -139,10 +139,10 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
       let finalCompletionDate = completionDate;
       if (status === "done" && !finalCompletionDate) {
         finalCompletionDate = new Date();
+      } else if (status !== "done") {
+        // Clear completion date if task is not done
+        finalCompletionDate = undefined;
       }
-      
-      // Important: Don't clear completion date even if task is moved back
-      // from done to another status - this preserves burndown chart history
       
       const updatedData = {
         title,

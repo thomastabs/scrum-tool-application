@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useProjects } from "@/context/ProjectContext";
 import { Edit, Trash, AlertTriangle, Star, Hash, User, Calendar } from "lucide-react";
@@ -128,8 +129,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
           </span>
         )}
         
-        {/* Display completion date if it exists (regardless of status) */}
-        {completionDate && (
+        {/* Display completion date if it exists */}
+        {completionDate && task.status === "done" && (
           <span className="bg-green-700/30 text-xs px-2 py-0.5 rounded-full flex items-center gap-1">
             <Calendar className="h-3 w-3" />
             {format(parseISO(completionDate), "MMM d, yyyy")}
