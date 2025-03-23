@@ -434,9 +434,20 @@ export const updateTaskWithCompletionDate = async (taskId: string, data: {
       if (data.status === 'done' && !data.completion_date) {
         updateData.completion_date = new Date().toISOString().split('T')[0];
       } 
-      // If status is not 'done', clear the completion date
-      else if (data.status && data.status !== 'done') {
-        updateData.completion_date = null;
+      // Never clear the completion date once it's set
+      // This is the key change to maintain persistence
+      else if (data.status && data.status !== 'done' && 'completion_date' in data && !data.completion_date) {
+        // If completion_date is explicitly set to null/undefined, retrieve the existing value
+        const { data: existingTask, error: fetchError } = await supabase
+          .from('tasks')
+          .select('completion_date')
+          .eq('id', taskId)
+          .single();
+          
+        if (!fetchError && existingTask && existingTask.completion_date) {
+          // Preserve the existing completion date
+          updateData.completion_date = existingTask.completion_date;
+        }
       }
       
       const { data: updatedTask, error } = await supabase

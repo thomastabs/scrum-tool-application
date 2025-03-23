@@ -37,6 +37,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
   const [projectId, setProjectId] = useState<string | null>(null);
   const [completionDate, setCompletionDate] = useState<Date | undefined>(undefined);
   const [status, setStatus] = useState<string>("todo");
+  const [previousStatus, setPreviousStatus] = useState<string>("todo");
   
   const { getTask, updateTask } = useProjects();
   
@@ -52,6 +53,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
       setStoryPoints(task.storyPoints || task.story_points || 1);
       setProjectId(task.projectId);
       setStatus(task.status || "todo");
+      setPreviousStatus(task.status || "todo");
       
       // Set completion date if it exists
       if (task.completionDate || task.completion_date) {
@@ -135,14 +137,16 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
     }
     
     try {
-      // Automatically set completion date if status is done and no date is set
+      // Set the completion date logic
       let finalCompletionDate = completionDate;
-      if (status === "done" && !finalCompletionDate) {
+      
+      // Only set a new completion date if:
+      // 1. Status changed to "done" from something else AND
+      // 2. There wasn't already a completion date set
+      if (status === "done" && previousStatus !== "done" && !completionDate) {
         finalCompletionDate = new Date();
-      } else if (status !== "done") {
-        // Clear completion date if task is not done
-        finalCompletionDate = undefined;
       }
+      // Never clear the completion date once it's set
       
       const updatedData = {
         title,

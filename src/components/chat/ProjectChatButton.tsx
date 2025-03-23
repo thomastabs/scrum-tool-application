@@ -1,7 +1,11 @@
+
 import React, { useState, useEffect } from "react";
 import { MessageSquare, X } from "lucide-react";
 import ProjectChat from "./ProjectChat";
 import { Button } from "@/components/ui/button";
+
+// Note: This component is kept for reference but is no longer used in the app
+// The chat functionality has been moved to the Team tab
 
 const ProjectChatButton: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
