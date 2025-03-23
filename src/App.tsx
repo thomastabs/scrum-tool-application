@@ -22,6 +22,7 @@ import NotFound from "./pages/NotFound";
 import ProductBacklog from "./pages/ProductBacklog";
 import ProjectCollaborators from "./pages/ProjectCollaborators";
 import EditProject from "./pages/EditProject";
+import UserSettings from "./pages/UserSettings";
 
 const queryClient = new QueryClient();
 
@@ -79,6 +80,7 @@ const App = () => (
               {/* Protected routes */}
               <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/projects" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><UserSettings /></ProtectedRoute>} />
               
               {/* Project routes */}
               <Route path="/projects/:projectId" element={<ProtectedRoute><ProjectLayout /></ProtectedRoute>}>

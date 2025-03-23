@@ -92,6 +92,41 @@ export type Database = {
           },
         ]
       }
+      chat_messages: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          project_id: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          project_id: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          project_id?: string
+          user_id?: string
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       collaborators: {
         Row: {
           created_at: string | null
@@ -230,6 +265,7 @@ export type Database = {
         Row: {
           assign_to: string | null
           column_id: string | null
+          completion_date: string | null
           created_at: string | null
           description: string | null
           id: string
@@ -244,6 +280,7 @@ export type Database = {
         Insert: {
           assign_to?: string | null
           column_id?: string | null
+          completion_date?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
@@ -258,6 +295,7 @@ export type Database = {
         Update: {
           assign_to?: string | null
           column_id?: string | null
+          completion_date?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
@@ -334,6 +372,12 @@ export type Database = {
           user_email: string
         }
         Returns: string
+      }
+      user_can_access_project: {
+        Args: {
+          project_id: string
+        }
+        Returns: boolean
       }
       user_has_project_access: {
         Args: {

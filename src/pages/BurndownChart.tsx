@@ -36,6 +36,7 @@ const BurndownChart: React.FC = () => {
   const [lastTasksLength, setLastTasksLength] = useState(0);
   const [lastSprintsLength, setLastSprintsLength] = useState(0);
   const dataFetchedRef = useRef(false);
+  const loadingTimeoutRef = useRef<number | null>(null);
   
   const project = getProject(projectId || "");
   
@@ -60,12 +61,22 @@ const BurndownChart: React.FC = () => {
         console.error("Error loading burndown data:", error);
         await generateAndSaveBurndownData();
       } finally {
-        setIsLoading(false);
-        dataFetchedRef.current = true;
+        // Use a timeout to prevent the loading indicator from flickering
+        if (loadingTimeoutRef.current) window.clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = window.setTimeout(() => {
+          setIsLoading(false);
+          dataFetchedRef.current = true;
+        }, 500);
       }
     };
     
     loadBurndownData();
+    
+    return () => {
+      if (loadingTimeoutRef.current) {
+        window.clearTimeout(loadingTimeoutRef.current);
+      }
+    };
   }, [projectId, user]);
   
   useEffect(() => {
@@ -158,7 +169,7 @@ const BurndownChart: React.FC = () => {
     }
     
     const totalStoryPoints = allTasks.reduce((sum, task) => {
-      return sum + (task.storyPoints || 0);
+      return sum + (task.storyPoints || task.story_points || 0);
     }, 0);
     
     if (totalStoryPoints === 0) {
@@ -168,10 +179,16 @@ const BurndownChart: React.FC = () => {
     const completedTasksByDate = new Map<string, number>();
     
     allTasks.forEach(task => {
-      if (task.status === "done" && task.updatedAt && task.storyPoints) {
-        const completionDate = task.updatedAt.split('T')[0];
-        const currentPoints = completedTasksByDate.get(completionDate) || 0;
-        completedTasksByDate.set(completionDate, currentPoints + task.storyPoints);
+      if (task.status === "done" && task.storyPoints) {
+        // Use completion_date if available, otherwise use updatedAt
+        const completionDateStr = task.completionDate || task.completion_date || task.updatedAt;
+        if (completionDateStr) {
+          // Extract just the date part (YYYY-MM-DD)
+          const completionDate = completionDateStr.split('T')[0];
+          const currentPoints = completedTasksByDate.get(completionDate) || 0;
+          const points = task.storyPoints || task.story_points || 0;
+          completedTasksByDate.set(completionDate, currentPoints + points);
+        }
       }
     });
     
@@ -233,8 +250,11 @@ const BurndownChart: React.FC = () => {
   
   if (isLoading) {
     return (
-      <div className="text-center py-12">
-        <p>Loading burndown chart data...</p>
+      <div className="text-center py-12 opacity-100 transition-opacity duration-300">
+        <div className="flex flex-col items-center justify-center gap-4">
+          <div className="h-12 w-12 rounded-full border-4 border-scrum-accent border-t-transparent animate-spin"></div>
+          <p className="text-scrum-text-secondary">Loading burndown chart data...</p>
+        </div>
       </div>
     );
   }
@@ -256,7 +276,7 @@ const BurndownChart: React.FC = () => {
         </p>
       </div>
       
-      <div className="scrum-card h-[500px]">
+      <div className="scrum-card h-[500px] opacity-100 transition-opacity duration-500">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={chartData}
@@ -323,7 +343,6 @@ const BurndownChart: React.FC = () => {
                 fill: "#ea384c",
                 fontSize: 12,
                 fontWeight: "bold"
-                // Removed the backgroundColor property which was causing the error
               }} 
             />
             <Line
@@ -377,6 +396,9 @@ const BurndownChart: React.FC = () => {
           </li>
           <li>
             The <strong style={{ color: "#ea384c" }}>TODAY</strong> line marks the current date on the timeline.
+          </li>
+          <li>
+            Task completion is calculated based on the <strong>completion date</strong> of each task.
           </li>
         </ul>
       </div>

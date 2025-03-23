@@ -414,3 +414,43 @@ export const upsertBurndownData = async (
     return false;
   }
 };
+
+// Add a new helper to update a task with completion date
+export const updateTaskWithCompletionDate = async (taskId: string, data: {
+  title?: string;
+  description?: string;
+  status?: string;
+  priority?: string;
+  story_points?: number;
+  assign_to?: string;
+  completion_date?: string;
+}) => {
+  try {
+    return await withRetry(async () => {
+      // Add completion_date to the update when status is changed to done
+      let updateData = { ...data };
+      
+      // If status is 'done' and no completion_date provided, set to today
+      if (data.status === 'done' && !data.completion_date) {
+        updateData.completion_date = new Date().toISOString().split('T')[0];
+      } 
+      // If status is not 'done', clear the completion date
+      else if (data.status && data.status !== 'done') {
+        updateData.completion_date = null;
+      }
+      
+      const { data: updatedTask, error } = await supabase
+        .from('tasks')
+        .update(updateData)
+        .eq('id', taskId)
+        .select()
+        .single();
+        
+      if (error) throw error;
+      return updatedTask;
+    });
+  } catch (error) {
+    console.error('Error updating task with completion date:', error);
+    throw error;
+  }
+};

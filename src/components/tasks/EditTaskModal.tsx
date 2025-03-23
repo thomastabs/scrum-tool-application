@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useProjects } from "@/context/ProjectContext";
-import { X, Edit, User } from "lucide-react";
+import { X, Edit, User, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { ProjectRole, Collaborator } from "@/types";
@@ -12,6 +12,10 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Button } from "@/components/ui/button";
+import { format, parseISO } from "date-fns";
 
 interface EditTaskModalProps {
   taskId: string;
@@ -31,6 +35,8 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
   const [projectOwner, setProjectOwner] = useState<{id: string, username: string} | null>(null);
   const [isLoadingCollaborators, setIsLoadingCollaborators] = useState(true);
   const [projectId, setProjectId] = useState<string | null>(null);
+  const [completionDate, setCompletionDate] = useState<Date | undefined>(undefined);
+  const [status, setStatus] = useState<string>("todo");
   
   const { getTask, updateTask } = useProjects();
   
@@ -45,6 +51,13 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
       setAssignedTo(task.assignedTo || task.assign_to || "");
       setStoryPoints(task.storyPoints || task.story_points || 1);
       setProjectId(task.projectId);
+      setStatus(task.status || "todo");
+      
+      // Set completion date if it exists
+      if (task.completionDate || task.completion_date) {
+        const dateStr = task.completionDate || task.completion_date;
+        setCompletionDate(dateStr ? parseISO(dateStr) : undefined);
+      }
       
       // If we have the project ID, fetch collaborators
       if (task.projectId) {
@@ -122,12 +135,23 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
     }
     
     try {
+      // Automatically set completion date if status is done and no date is set
+      let finalCompletionDate = completionDate;
+      if (status === "done" && !finalCompletionDate) {
+        finalCompletionDate = new Date();
+      } else if (status !== "done") {
+        // Clear completion date if task is not done
+        finalCompletionDate = undefined;
+      }
+      
       const updatedData = {
         title,
         description,
         priority,
         assignedTo,
-        storyPoints
+        storyPoints,
+        status,
+        completionDate: finalCompletionDate ? format(finalCompletionDate, "yyyy-MM-dd") : undefined
       };
       
       console.log("Updating task with:", updatedData);
@@ -227,6 +251,49 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
                 className="scrum-input"
                 required
               />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block mb-2 text-sm">
+                Status <span className="text-destructive">*</span>
+              </label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="scrum-input"
+                required
+              >
+                <option value="todo">To Do</option>
+                <option value="in-progress">In Progress</option>
+                <option value="done">Done</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block mb-2 text-sm">
+                Completion Date
+              </label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    className={`scrum-input flex justify-between items-center text-left font-normal ${!completionDate && "text-muted-foreground"}`}
+                  >
+                    {completionDate ? format(completionDate, "PPP") : "Select date"}
+                    <Calendar className="ml-auto h-4 w-4 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={completionDate}
+                    onSelect={setCompletionDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
           

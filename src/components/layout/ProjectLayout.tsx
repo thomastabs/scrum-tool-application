@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Outlet, useParams, useNavigate, useLocation } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
@@ -7,6 +8,7 @@ import { ArrowLeft, LayoutGrid, List, LineChart, Edit, Trash, Package, Users } f
 import { toast } from "sonner";
 import { fetchProjectCollaborators } from "@/lib/supabase";
 import { Collaborator, ProjectRole } from "@/types";
+import ProjectChatButton from "@/components/chat/ProjectChatButton";
 
 const ProjectLayout: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -210,6 +212,9 @@ const ProjectLayout: React.FC = () => {
       <main className="px-6 py-2 pb-20">
         <Outlet />
       </main>
+      
+      {/* Add the chat button for project members */}
+      {(isOwner || userRole) && <ProjectChatButton />}
     </div>
   );
 };
