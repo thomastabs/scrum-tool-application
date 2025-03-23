@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -30,8 +29,8 @@
     --scrum-background: 0 0% 96%;
     --scrum-card: 0 0% 100%;
     --scrum-border: 240 6% 80%;
-    --scrum-accent: 0 0% 0%;
-    --scrum-highlight: 0 0% 20%;
+    --scrum-accent: 220 70% 50%;  /* Updated blue for better visibility */
+    --scrum-highlight: 220 70% 40%;  /* Darker blue for hover state */
     --scrum-text-primary: 240 10% 10%;
     --scrum-text-secondary: 240 3.8% 40%;
   }
@@ -59,10 +58,10 @@
     
     /* Scrum-specific dark mode */
     --scrum-background: 0 0% 6%;
-    --scrum-card: 0 0% 9%;
+    --scrum-card: 0 0% 12%;
     --scrum-border: 0 0% 18%;
-    --scrum-accent: 0 0% 100%;
-    --scrum-highlight: 0 0% 90%;
+    --scrum-accent: 220 70% 50%;  /* Same blue for consistency */
+    --scrum-highlight: 220 70% 60%;  /* Lighter blue for hover in dark mode */
     --scrum-text-primary: 0 0% 98%;
     --scrum-text-secondary: 0 0% 70%;
   }
@@ -101,7 +100,7 @@
   }
   
   .scrum-button {
-    @apply bg-white text-black dark:bg-white dark:text-black hover:bg-opacity-90 py-2 px-4 rounded-md transition-all duration-200 font-medium;
+    @apply bg-white text-black hover:bg-opacity-90 dark:bg-scrum-accent dark:text-white dark:hover:bg-scrum-highlight py-2 px-4 rounded-md transition-all duration-200 font-medium;
   }
   
   .scrum-button-secondary {
