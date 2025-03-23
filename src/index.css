@@ -29,10 +29,15 @@
     --scrum-background: 0 0% 96%;
     --scrum-card: 0 0% 100%;
     --scrum-border: 240 6% 80%;
-    --scrum-accent: 220 70% 50%;  /* Updated blue for better visibility */
+    --scrum-accent: 220 70% 50%;  /* Blue for better visibility */
     --scrum-highlight: 220 70% 40%;  /* Darker blue for hover state */
     --scrum-text-primary: 240 10% 10%;
     --scrum-text-secondary: 240 3.8% 40%;
+    --scrum-chart-grid: 0 0% 85%;
+    --scrum-chart-axis: 0 0% 45%;
+    --scrum-chart-line-1: 235 80% 50%;
+    --scrum-chart-line-2: 145 63% 42%;
+    --scrum-chart-reference: 354 70% 54%;
   }
 
   .dark {
@@ -64,6 +69,11 @@
     --scrum-highlight: 220 70% 60%;  /* Lighter blue for hover in dark mode */
     --scrum-text-primary: 0 0% 98%;
     --scrum-text-secondary: 0 0% 70%;
+    --scrum-chart-grid: 0 0% 25%;
+    --scrum-chart-axis: 0 0% 45%;
+    --scrum-chart-line-1: 235 80% 70%;
+    --scrum-chart-line-2: 145 63% 50%;
+    --scrum-chart-reference: 354 70% 64%;
   }
 
   * {
@@ -100,7 +110,7 @@
   }
   
   .scrum-button {
-    @apply bg-white text-black hover:bg-opacity-90 dark:bg-scrum-accent dark:text-white dark:hover:bg-scrum-highlight py-2 px-4 rounded-md transition-all duration-200 font-medium;
+    @apply bg-black text-white hover:bg-opacity-90 dark:bg-scrum-accent dark:text-white dark:hover:bg-scrum-highlight py-2 px-4 rounded-md transition-all duration-200 font-medium;
   }
   
   .scrum-button-secondary {

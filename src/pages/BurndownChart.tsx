@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
@@ -287,18 +286,23 @@ const BurndownChart: React.FC = () => {
               bottom: 10,
             }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--scrum-chart-grid))" />
             <XAxis
               dataKey="formattedDate"
-              stroke="#777"
-              tick={{ fill: "#777" }}
-              axisLine={{ stroke: "#444" }}
+              stroke="hsl(var(--scrum-chart-axis))"
+              tick={{ fill: "hsl(var(--scrum-chart-axis))" }}
+              axisLine={{ stroke: "hsl(var(--scrum-chart-grid))" }}
             />
             <YAxis
-              label={{ value: "Story Points Remaining", angle: -90, position: "insideLeft", fill: "#777" }}
-              stroke="#777"
-              tick={{ fill: "#777" }}
-              axisLine={{ stroke: "#444" }}
+              label={{ 
+                value: "Story Points Remaining", 
+                angle: -90, 
+                position: "insideLeft", 
+                fill: "hsl(var(--scrum-chart-axis))" 
+              }}
+              stroke="hsl(var(--scrum-chart-axis))"
+              tick={{ fill: "hsl(var(--scrum-chart-axis))" }}
+              axisLine={{ stroke: "hsl(var(--scrum-chart-grid))" }}
             />
             <Tooltip
               content={({ active, payload }) => {
@@ -312,13 +316,13 @@ const BurndownChart: React.FC = () => {
                       <div className="mt-2 space-y-1">
                         {idealValue !== null && (
                           <p className="flex items-center text-sm">
-                            <span className="h-2 w-2 rounded-full bg-[#8884d8] mr-2"></span>
+                            <span className="h-2 w-2 rounded-full bg-[hsl(var(--scrum-chart-line-1))] mr-2"></span>
                             <span>Ideal: {idealValue} points</span>
                           </p>
                         )}
                         {actualValue !== null && (
                           <p className="flex items-center text-sm">
-                            <span className="h-2 w-2 rounded-full bg-[#82ca9d] mr-2"></span>
+                            <span className="h-2 w-2 rounded-full bg-[hsl(var(--scrum-chart-line-2))] mr-2"></span>
                             <span>Actual: {actualValue} points</span>
                           </p>
                         )}
@@ -330,17 +334,17 @@ const BurndownChart: React.FC = () => {
               }}
             />
             <Legend
-              wrapperStyle={{ color: "#fff" }}
+              wrapperStyle={{ color: "inherit" }}
             />
             <ReferenceLine 
               x={todayLabel} 
-              stroke="#ea384c" 
+              stroke="hsl(var(--scrum-chart-reference))" 
               strokeWidth={2}
               strokeDasharray="5 3" 
               label={{ 
                 value: "TODAY", 
                 position: "top", 
-                fill: "#ea384c",
+                fill: "hsl(var(--scrum-chart-reference))",
                 fontSize: 12,
                 fontWeight: "bold"
               }} 
@@ -348,7 +352,8 @@ const BurndownChart: React.FC = () => {
             <Line
               type="monotone"
               dataKey="ideal"
-              stroke="#8884d8"
+              stroke="hsl(var(--scrum-chart-line-1))"
+              strokeWidth={2}
               name="Ideal Burndown"
               dot={false}
               activeDot={{ r: 8 }}
@@ -356,7 +361,8 @@ const BurndownChart: React.FC = () => {
             <Line
               type="monotone"
               dataKey="actual"
-              stroke="#82ca9d"
+              stroke="hsl(var(--scrum-chart-line-2))"
+              strokeWidth={2}
               name="Actual Burndown"
               dot={(props) => {
                 const { cx, cy, payload, index } = props;
@@ -365,7 +371,7 @@ const BurndownChart: React.FC = () => {
                 if (index === lastActualIndex) {
                   return (
                     <svg x={cx - 5} y={cy - 5} width={10} height={10}>
-                      <circle cx={5} cy={5} r={5} fill="#82ca9d" />
+                      <circle cx={5} cy={5} r={5} fill="hsl(var(--scrum-chart-line-2))" />
                     </svg>
                   );
                 }
@@ -395,7 +401,7 @@ const BurndownChart: React.FC = () => {
             When the Actual line is <strong>below</strong> the Ideal line, the project is <strong>ahead of schedule</strong>.
           </li>
           <li>
-            The <strong style={{ color: "#ea384c" }}>TODAY</strong> line marks the current date on the timeline.
+            The <strong style={{ color: "hsl(var(--scrum-chart-reference))" }}>TODAY</strong> line marks the current date on the timeline.
           </li>
           <li>
             Task completion is calculated based on the <strong>completion date</strong> of each task.

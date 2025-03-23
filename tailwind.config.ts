@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -67,6 +66,13 @@ export default {
 						primary: 'hsl(var(--scrum-text-primary))',
 						secondary: 'hsl(var(--scrum-text-secondary))',
 						muted: '#777777'
+					},
+					chart: {
+						grid: 'hsl(var(--scrum-chart-grid))',
+						axis: 'hsl(var(--scrum-chart-axis))',
+						line1: 'hsl(var(--scrum-chart-line-1))',
+						line2: 'hsl(var(--scrum-chart-line-2))',
+						reference: 'hsl(var(--scrum-chart-reference))'
 					}
 				}
 			},

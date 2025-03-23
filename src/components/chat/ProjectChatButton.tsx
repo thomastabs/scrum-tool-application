@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { MessageSquare, X } from "lucide-react";
 import ProjectChat from "./ProjectChat";
@@ -25,11 +24,10 @@ const ProjectChatButton: React.FC = () => {
     <>
       <Button
         onClick={() => setIsOpen(!isOpen)}
-        className={`fixed bottom-6 right-6 z-30 p-3 rounded-full shadow-lg transition-all ${
-          isOpen ? 'bg-destructive' : 'bg-scrum-accent'
-        }`}
+        className={`fixed bottom-6 right-6 z-30 p-3 rounded-full shadow-lg transition-all`}
         title={isOpen ? "Close chat" : "Open project chat"}
         size="icon"
+        variant={isOpen ? "destructive" : "scrum-black"}
       >
         {isOpen ? (
           <X className="h-6 w-6 text-white" />
