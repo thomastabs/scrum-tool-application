@@ -37,7 +37,7 @@ const ProjectChat: React.FC = () => {
           event: 'INSERT',
           schema: 'public',
           table: 'chat_messages',
-          filter: `project_id=eq.${projectId}`
+          filter: `chat_messages.project_id=eq.${projectId}`
         },
         (payload) => {
           const newMessage = payload.new as ChatMessage;
