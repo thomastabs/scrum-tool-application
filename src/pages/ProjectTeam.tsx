@@ -125,15 +125,16 @@ const ProjectTeam: React.FC = () => {
     
     setIsSending(true);
     try {
-      // Fix: Use named columns to avoid ambiguity
-      const { error } = await supabase
-        .from('chat_messages')
-        .insert([{
-          project_id: projectId,
-          user_id: user.id,
-          username: user.username || user.email?.split('@')[0] || 'Anonymous',
-          message: newMessage.trim()
-        }]);
+      // Critical fix: Add method and specify full chat_messages table name to avoid ambiguity
+      const { error } = await supabase.rpc(
+        'insert_chat_message',
+        {
+          p_project_id: projectId,
+          p_user_id: user.id,
+          p_username: user.username || user.email?.split('@')[0] || 'Anonymous',
+          p_message: newMessage.trim()
+        }
+      );
         
       if (error) throw error;
       

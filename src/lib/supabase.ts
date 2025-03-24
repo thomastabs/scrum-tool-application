@@ -482,20 +482,19 @@ export const updateTaskWithCompletionDate = async (taskId: string, data: {
   }
 };
 
-// Helper function to send a project chat message
+// Helper function to send a project chat message using direct SQL access to avoid ambiguity
 export const sendProjectChatMessage = async (projectId: string, userId: string, username: string, message: string) => {
   try {
-    // Fix: Be explicit with column names to avoid ambiguity
-    const { data, error } = await supabase
-      .from('chat_messages')
-      .insert([{
-        project_id: projectId,
-        user_id: userId,
-        username: username,
-        message: message
-      }])
-      .select('id, message, user_id, username, created_at')
-      .single();
+    // Call the new database function to insert a chat message to avoid ambiguity
+    const { data, error } = await supabase.rpc(
+      'insert_chat_message',
+      {
+        p_project_id: projectId,
+        p_user_id: userId,
+        p_username: username,
+        p_message: message
+      }
+    );
       
     if (error) throw error;
     return data;
