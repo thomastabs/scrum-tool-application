@@ -482,4 +482,41 @@ export const updateTaskWithCompletionDate = async (taskId: string, data: {
   }
 };
 
-// Note: We've removed the fetchProjectChatMessages and sendProjectChatMessage functions as part of removing the chat feature
+// Helper function to send a project chat message
+export const sendProjectChatMessage = async (projectId: string, userId: string, username: string, message: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .insert([{
+        project_id: projectId,
+        user_id: userId,
+        username: username,
+        message: message
+      }])
+      .select()
+      .single();
+      
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error sending project chat message:', error);
+    throw error;
+  }
+};
+
+// Helper function to fetch project chat messages
+export const fetchProjectChatMessages = async (projectId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: true });
+      
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching project chat messages:', error);
+    return [];
+  }
+};
