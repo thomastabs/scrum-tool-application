@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
@@ -265,6 +266,40 @@ const SprintBoard: React.FC = () => {
     );
     
     console.log("Task updated in SprintBoard:", updatedTask);
+    
+    // Also update the columns state to ensure the task appears in the correct column
+    // This is crucial for immediate UI updates
+    setColumns(prevColumns => {
+      const newColumns = { ...prevColumns };
+      
+      // First, find which column currently contains the task
+      let currentColumnId: string | null = null;
+      
+      Object.keys(newColumns).forEach(columnId => {
+        if (newColumns[columnId].taskIds.includes(updatedTask.id)) {
+          currentColumnId = columnId;
+        }
+      });
+      
+      // If the task's status has changed, move it to the new column
+      if (currentColumnId && currentColumnId !== updatedTask.status) {
+        // Remove from current column
+        newColumns[currentColumnId] = {
+          ...newColumns[currentColumnId],
+          taskIds: newColumns[currentColumnId].taskIds.filter(id => id !== updatedTask.id)
+        };
+        
+        // Add to new column
+        if (newColumns[updatedTask.status]) {
+          newColumns[updatedTask.status] = {
+            ...newColumns[updatedTask.status],
+            taskIds: [...newColumns[updatedTask.status].taskIds, updatedTask.id]
+          };
+        }
+      }
+      
+      return newColumns;
+    });
   };
   
   const handleCompleteSprint = async () => {
