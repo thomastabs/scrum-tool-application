@@ -45,7 +45,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
     const task = getTask(taskId);
     
     if (task) {
-      console.log("Loading task data:", task);
+      console.log("Loading task data in EditTaskModal:", task);
       setTitle(task.title);
       setDescription(task.description || "");
       setPriority(task.priority || "medium");
@@ -55,13 +55,23 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
       setStatus(task.status || "todo");
       setPreviousStatus(task.status || "todo");
       
-      // Set completion date if it exists
-      if (task.completionDate || task.completion_date) {
-        const dateStr = task.completionDate || task.completion_date;
-        setCompletionDate(dateStr ? parseISO(dateStr) : undefined);
+      // Get the completion date from either field
+      const dateStr = task.completionDate || task.completion_date;
+      console.log("Initial completion date from task:", dateStr);
+      
+      if (dateStr) {
+        try {
+          const parsedDate = parseISO(dateStr);
+          console.log("Parsed date for EditTaskModal:", parsedDate);
+          setCompletionDate(parsedDate);
+        } catch (err) {
+          console.error("Error parsing date:", err, "Date string was:", dateStr);
+        }
+      } else {
+        console.log("No completion date found in task");
+        setCompletionDate(undefined);
       }
       
-      // If we have the project ID, fetch collaborators
       if (task.projectId) {
         fetchCollaborators(task.projectId);
       }
@@ -71,7 +81,6 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
   const fetchCollaborators = async (projectId: string) => {
     setIsLoadingCollaborators(true);
     try {
-      // Fetch project owner
       const { data: projectData, error: projectError } = await supabase
         .from('projects')
         .select('owner_id, title')
@@ -81,7 +90,6 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
       if (projectError) throw projectError;
       
       if (projectData) {
-        // Get owner's username
         const { data: ownerData, error: ownerError } = await supabase
           .from('users')
           .select('id, username')
@@ -93,7 +101,6 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
         }
       }
       
-      // Fetch collaborators
       const { data: collaboratorsData, error: collaboratorsError } = await supabase
         .from('collaborators')
         .select(`
@@ -137,17 +144,6 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
     }
     
     try {
-      // Set the completion date logic
-      let finalCompletionDate = completionDate;
-      
-      // Only set a new completion date if:
-      // 1. Status changed to "done" from something else AND
-      // 2. There wasn't already a completion date set
-      if (status === "done" && previousStatus !== "done" && !completionDate) {
-        finalCompletionDate = new Date();
-      }
-      // Never clear the completion date once it's set
-      
       const updatedData = {
         title,
         description,
@@ -155,11 +151,31 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
         assignedTo,
         storyPoints,
         status,
-        completionDate: finalCompletionDate ? format(finalCompletionDate, "yyyy-MM-dd") : undefined
+        completionDate: completionDate ? format(completionDate, "yyyy-MM-dd") : null
       };
       
-      console.log("Updating task with:", updatedData);
+      console.log("Updating task with data:", updatedData);
       
+      // Use direct Supabase update to ensure completion_date is properly saved
+      const { error } = await supabase
+        .from('tasks')
+        .update({
+          title: updatedData.title,
+          description: updatedData.description,
+          status: updatedData.status,
+          assign_to: updatedData.assignedTo,
+          story_points: updatedData.storyPoints,
+          priority: updatedData.priority,
+          completion_date: updatedData.completionDate
+        })
+        .eq('id', taskId);
+        
+      if (error) {
+        console.error("Error updating task:", error);
+        throw error;
+      }
+      
+      // Also update the local state through context
       await updateTask(taskId, updatedData);
       
       toast.success("Task updated successfully");
@@ -170,7 +186,6 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
     }
   };
   
-  // Build assignee options from owner and collaborators
   const assigneeOptions = [
     ...(projectOwner ? [{ id: projectOwner.id, name: projectOwner.username }] : []),
     ...collaborators.map(collab => ({ 

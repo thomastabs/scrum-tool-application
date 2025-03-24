@@ -68,9 +68,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
       }
     }
   };
-
-  // Debug the task data to check for missing fields
-  console.log("TaskCard rendering with task data:", task);
   
   // Get story points from appropriate property
   const storyPoints = task.storyPoints !== undefined ? task.storyPoints : task.story_points;
@@ -78,8 +75,9 @@ const TaskCard: React.FC<TaskCardProps> = ({
   // Get assignee from appropriate property
   const assignee = task.assignedTo || task.assign_to;
   
-  // Get completion date from appropriate property
+  // Get completion date from appropriate property with better logging
   const completionDate = task.completionDate || task.completion_date;
+  console.log(`TaskCard - Task ${task.id} completion date:`, completionDate);
   
   return (
     <div className="bg-scrum-background border border-scrum-border rounded-md p-3 hover:border-scrum-highlight transition-colors">
@@ -113,7 +111,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
       <div className="flex flex-wrap items-center gap-2 mt-2">
         {getPriorityBadge()}
         
-        {/* Display story points if they exist (checking both property names) */}
+        {/* Display story points if they exist */}
         {storyPoints !== undefined && storyPoints !== null && (
           <span className="bg-scrum-accent/30 text-xs px-2 py-0.5 rounded-full flex items-center gap-1">
             <Hash className="h-3 w-3" />
@@ -121,7 +119,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
           </span>
         )}
         
-        {/* Display assignee if it exists (checking both property names) */}
+        {/* Display assignee if it exists */}
         {assignee && (
           <span className="bg-scrum-card text-xs px-2 py-0.5 rounded-full flex items-center gap-1">
             <User className="h-3 w-3" />
@@ -130,7 +128,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
         )}
         
         {/* Display completion date if it exists */}
-        {completionDate && task.status === "done" && (
+        {completionDate && (
           <span className="bg-green-700/30 text-xs px-2 py-0.5 rounded-full flex items-center gap-1">
             <Calendar className="h-3 w-3" />
             {format(parseISO(completionDate), "MMM d, yyyy")}
