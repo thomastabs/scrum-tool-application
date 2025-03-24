@@ -485,6 +485,7 @@ export const updateTaskWithCompletionDate = async (taskId: string, data: {
 // Helper function to send a project chat message
 export const sendProjectChatMessage = async (projectId: string, userId: string, username: string, message: string) => {
   try {
+    // Fix: Be explicit with column names to avoid ambiguity
     const { data, error } = await supabase
       .from('chat_messages')
       .insert([{
@@ -493,7 +494,7 @@ export const sendProjectChatMessage = async (projectId: string, userId: string, 
         username: username,
         message: message
       }])
-      .select()
+      .select('id, message, user_id, username, created_at')
       .single();
       
     if (error) throw error;
@@ -507,9 +508,10 @@ export const sendProjectChatMessage = async (projectId: string, userId: string, 
 // Helper function to fetch project chat messages
 export const fetchProjectChatMessages = async (projectId: string) => {
   try {
+    // Fix: Be explicit with column names to avoid ambiguity
     const { data, error } = await supabase
       .from('chat_messages')
-      .select('*')
+      .select('id, message, user_id, username, created_at')
       .eq('project_id', projectId)
       .order('created_at', { ascending: true });
       

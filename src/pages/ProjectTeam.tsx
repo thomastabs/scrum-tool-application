@@ -67,9 +67,10 @@ const ProjectTeam: React.FC = () => {
     
     const loadChatMessages = async () => {
       try {
+        // Fix: Specify the table and column explicitly to avoid ambiguity
         const { data, error } = await supabase
           .from('chat_messages')
-          .select('*')
+          .select('id, message, user_id, username, created_at')
           .eq('project_id', projectId)
           .order('created_at', { ascending: true });
           
@@ -99,7 +100,7 @@ const ProjectTeam: React.FC = () => {
         event: 'INSERT',
         schema: 'public',
         table: 'chat_messages',
-        filter: `chat_messages.project_id=eq.${projectId}`
+        filter: `project_id=eq.${projectId}`
       }, (payload) => {
         console.log('New message received:', payload);
         const newMsg = payload.new as any;
@@ -124,6 +125,7 @@ const ProjectTeam: React.FC = () => {
     
     setIsSending(true);
     try {
+      // Fix: Use named columns to avoid ambiguity
       const { error } = await supabase
         .from('chat_messages')
         .insert([{
