@@ -60,16 +60,25 @@ const ProjectTeam: React.FC = () => {
   
   // Load task statistics when tasks and collaborators are available
   useEffect(() => {
-    if (!projectId || tasks.length === 0 || (collaborators.length === 0 && !owner)) return;
+    if (!projectId) return;
     
+    console.log("Processing task data for project:", projectId);
+    console.log("Available tasks:", tasks.length);
+    console.log("Available collaborators:", collaborators.length);
+    console.log("Owner:", owner);
+    
+    // Get all sprints for this project
     const projectSprints = getSprintsByProject(projectId);
+    console.log("Project sprints:", projectSprints.length);
     
-    // Get all tasks for this project
+    // Get all tasks for this project - both sprint tasks and backlog tasks
     const projectTasks = tasks.filter(task => {
-      // Check if task belongs to one of the project's sprints
-      return projectSprints.some(sprint => sprint.id === task.sprintId) || 
-             task.projectId === projectId;
+      const isInSprint = projectSprints.some(sprint => sprint.id === task.sprintId);
+      const isProjectBacklog = task.projectId === projectId && !task.sprintId;
+      return isInSprint || isProjectBacklog;
     });
+    
+    console.log("Project tasks:", projectTasks.length);
     
     // Create a mapping of user IDs to their assigned tasks
     const tasksByUser: Record<string, Task[]> = {};
@@ -80,7 +89,7 @@ const ProjectTeam: React.FC = () => {
       completedStoryPoints: number
     }> = {};
     
-    // Initialize stats for all users
+    // Initialize stats for owner if available
     if (owner) {
       tasksByUser[owner.id] = [];
       statsByUser[owner.id] = {
@@ -91,6 +100,7 @@ const ProjectTeam: React.FC = () => {
       };
     }
     
+    // Initialize stats for all collaborators
     collaborators.forEach(collab => {
       tasksByUser[collab.userId] = [];
       statsByUser[collab.userId] = {
@@ -103,35 +113,39 @@ const ProjectTeam: React.FC = () => {
     
     // Process all tasks
     projectTasks.forEach(task => {
-      const assignedTo = task.assignedTo;
+      if (!task.assignedTo) return;
       
-      if (assignedTo && (tasksByUser[assignedTo] || owner?.id === assignedTo)) {
-        // Make sure the user exists in our mapping
-        if (!tasksByUser[assignedTo]) {
-          tasksByUser[assignedTo] = [];
-          statsByUser[assignedTo] = {
-            assignedTasks: 0,
-            completedTasks: 0,
-            totalStoryPoints: 0,
-            completedStoryPoints: 0
-          };
-        }
-        
-        // Add task to user's task list
-        tasksByUser[assignedTo].push(task);
-        
-        // Update stats
-        const storyPoints = task.storyPoints || 0;
-        statsByUser[assignedTo].totalStoryPoints += storyPoints;
-        
-        if (task.status === 'done') {
-          statsByUser[assignedTo].completedTasks++;
-          statsByUser[assignedTo].completedStoryPoints += storyPoints;
-        } else {
-          statsByUser[assignedTo].assignedTasks++;
-        }
+      console.log(`Processing task ${task.id} assigned to ${task.assignedTo}`);
+      
+      // Check if this user exists in our mapping
+      if (!tasksByUser[task.assignedTo]) {
+        console.log(`Creating new entry for user ${task.assignedTo}`);
+        tasksByUser[task.assignedTo] = [];
+        statsByUser[task.assignedTo] = {
+          assignedTasks: 0,
+          completedTasks: 0,
+          totalStoryPoints: 0,
+          completedStoryPoints: 0
+        };
+      }
+      
+      // Add task to user's task list
+      tasksByUser[task.assignedTo].push(task);
+      
+      // Update stats
+      const storyPoints = task.storyPoints || 0;
+      statsByUser[task.assignedTo].totalStoryPoints += storyPoints;
+      
+      if (task.status === 'done') {
+        statsByUser[task.assignedTo].completedTasks++;
+        statsByUser[task.assignedTo].completedStoryPoints += storyPoints;
+      } else {
+        statsByUser[task.assignedTo].assignedTasks++;
       }
     });
+    
+    console.log("Task mapping by user:", Object.keys(tasksByUser).map(id => `${id}: ${tasksByUser[id].length} tasks`));
+    console.log("Stats by user:", statsByUser);
     
     setUserTasks(tasksByUser);
     setUserStats(statsByUser);
@@ -201,6 +215,7 @@ const ProjectTeam: React.FC = () => {
     const stats = userStats[userId];
     
     if (!stats) {
+      console.log(`No stats available for user ${userId}`);
       return null;
     }
     
