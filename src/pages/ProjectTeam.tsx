@@ -118,10 +118,13 @@ const ProjectTeam: React.FC = () => {
         
         // Transform the snake_case API response to match our Task type
         const transformedTasks = sprintTasksRaw.map(rawTask => {
+          // First, check if description exists on rawTask
+          const description = 'description' in rawTask ? rawTask.description : '';
+          
           return {
             id: rawTask.id,
             title: rawTask.title,
-            description: rawTask.description || '',
+            description: description,
             sprintId: rawTask.sprint_id,
             status: rawTask.status,
             assignedTo: rawTask.assign_to,
@@ -151,11 +154,24 @@ const ProjectTeam: React.FC = () => {
       allMembers.forEach((username, userId) => {
         const userTasks = allTasks.filter(task => task.assign_to === userId || task.assignedTo === userId);
         
-        // Handle both formats for sprint ID
-        const isActiveTask = (task: Task) => {
-          const sprintIdValue = task.sprint_id || task.sprintId;
-          return activeSprintIds.includes(sprintIdValue || '');
+        // Handle both formats for sprint ID by creating a type guard
+        const getTaskSprintId = (task: Task): string => {
+          // First check for the camelCase version from the type
+          if (task.sprintId) return task.sprintId;
+          
+          // Then check for the snake_case version that might exist as an additional property
+          const taskAny = task as any;
+          if (taskAny.sprint_id) return taskAny.sprint_id;
+          
+          // Return empty string as fallback
+          return '';
         };
+        
+        const isActiveTask = (task: Task) => {
+          const sprintIdValue = getTaskSprintId(task);
+          return activeSprintIds.includes(sprintIdValue);
+        };
+        
         const isCompletedTask = (task: Task) => task.status === 'done';
         
         stats[userId] = {
