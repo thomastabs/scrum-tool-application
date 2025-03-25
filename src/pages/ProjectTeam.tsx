@@ -4,16 +4,29 @@ import { useParams } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
 import { useAuth } from "@/context/AuthContext";
 import { fetchProjectCollaborators } from "@/lib/supabase";
-import { Users, Mail } from "lucide-react";
-import { Collaborator } from "@/types";
+import { Users, Mail, ChevronDown, CheckCircle, Clock, Star } from "lucide-react";
+import { Collaborator, Task } from "@/types";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const ProjectTeam: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
-  const { getProject } = useProjects();
+  const { getProject, sprints, tasks, getSprintsByProject } = useProjects();
   const { user } = useAuth();
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [owner, setOwner] = useState<{id: string, username: string, email?: string} | null>(null);
+  const [userTasks, setUserTasks] = useState<Record<string, Task[]>>({});
+  const [userStats, setUserStats] = useState<Record<string, {
+    assignedTasks: number,
+    completedTasks: number,
+    totalStoryPoints: number,
+    completedStoryPoints: number
+  }>>({});
   
   const project = getProject(projectId || "");
   
@@ -45,6 +58,85 @@ const ProjectTeam: React.FC = () => {
     loadCollaborators();
   }, [projectId, project]);
   
+  // Load task statistics when tasks and collaborators are available
+  useEffect(() => {
+    if (!projectId || tasks.length === 0 || (collaborators.length === 0 && !owner)) return;
+    
+    const projectSprints = getSprintsByProject(projectId);
+    
+    // Get all tasks for this project
+    const projectTasks = tasks.filter(task => {
+      // Check if task belongs to one of the project's sprints
+      return projectSprints.some(sprint => sprint.id === task.sprintId) || 
+             task.projectId === projectId;
+    });
+    
+    // Create a mapping of user IDs to their assigned tasks
+    const tasksByUser: Record<string, Task[]> = {};
+    const statsByUser: Record<string, {
+      assignedTasks: number,
+      completedTasks: number,
+      totalStoryPoints: number,
+      completedStoryPoints: number
+    }> = {};
+    
+    // Initialize stats for all users
+    if (owner) {
+      tasksByUser[owner.id] = [];
+      statsByUser[owner.id] = {
+        assignedTasks: 0,
+        completedTasks: 0,
+        totalStoryPoints: 0,
+        completedStoryPoints: 0
+      };
+    }
+    
+    collaborators.forEach(collab => {
+      tasksByUser[collab.userId] = [];
+      statsByUser[collab.userId] = {
+        assignedTasks: 0,
+        completedTasks: 0,
+        totalStoryPoints: 0,
+        completedStoryPoints: 0
+      };
+    });
+    
+    // Process all tasks
+    projectTasks.forEach(task => {
+      const assignedTo = task.assignedTo;
+      
+      if (assignedTo && (tasksByUser[assignedTo] || owner?.id === assignedTo)) {
+        // Make sure the user exists in our mapping
+        if (!tasksByUser[assignedTo]) {
+          tasksByUser[assignedTo] = [];
+          statsByUser[assignedTo] = {
+            assignedTasks: 0,
+            completedTasks: 0,
+            totalStoryPoints: 0,
+            completedStoryPoints: 0
+          };
+        }
+        
+        // Add task to user's task list
+        tasksByUser[assignedTo].push(task);
+        
+        // Update stats
+        const storyPoints = task.storyPoints || 0;
+        statsByUser[assignedTo].totalStoryPoints += storyPoints;
+        
+        if (task.status === 'done') {
+          statsByUser[assignedTo].completedTasks++;
+          statsByUser[assignedTo].completedStoryPoints += storyPoints;
+        } else {
+          statsByUser[assignedTo].assignedTasks++;
+        }
+      }
+    });
+    
+    setUserTasks(tasksByUser);
+    setUserStats(statsByUser);
+  }, [projectId, tasks, collaborators, owner, getSprintsByProject]);
+  
   if (isLoading) {
     return (
       <div className="text-center py-8">
@@ -64,6 +156,75 @@ const ProjectTeam: React.FC = () => {
       default:
         return "bg-gray-100 text-gray-800 dark:bg-gray-800/40 dark:text-gray-400";
     }
+  };
+  
+  const renderTaskDropdown = (userId: string) => {
+    const userTaskList = userTasks[userId] || [];
+    
+    if (userTaskList.length === 0) {
+      return (
+        <div className="text-xs text-muted-foreground mt-1">
+          No tasks assigned
+        </div>
+      );
+    }
+    
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger className="text-xs flex items-center gap-1 hover:text-primary transition-colors mt-1">
+          <span>View {userTaskList.length} task{userTaskList.length !== 1 ? 's' : ''}</span>
+          <ChevronDown className="h-3 w-3" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-64 max-h-64 overflow-auto">
+          {userTaskList.map(task => (
+            <DropdownMenuItem key={task.id} className="flex flex-col items-start">
+              <div className="font-medium truncate w-full">{task.title}</div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span className={`px-1.5 py-0.5 rounded-full ${task.status === 'done' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'}`}>
+                  {task.status === 'done' ? 'Complete' : 'In Progress'}
+                </span>
+                {task.storyPoints && (
+                  <span className="flex items-center gap-0.5">
+                    <Star className="h-3 w-3" />
+                    {task.storyPoints}
+                  </span>
+                )}
+              </div>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
+  
+  const renderUserStats = (userId: string) => {
+    const stats = userStats[userId];
+    
+    if (!stats) {
+      return null;
+    }
+    
+    return (
+      <div className="flex flex-col gap-1 mt-2 text-xs">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            <span>Active: {stats.assignedTasks}</span>
+          </div>
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <CheckCircle className="h-3 w-3" />
+            <span>Completed: {stats.completedTasks}</span>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <Star className="h-3 w-3" />
+            <span>Points: {stats.completedStoryPoints} / {stats.totalStoryPoints}</span>
+          </div>
+        </div>
+        {renderTaskDropdown(userId)}
+      </div>
+    );
   };
   
   return (
@@ -89,6 +250,7 @@ const ProjectTeam: React.FC = () => {
                 <div className="text-xs px-2 py-1 rounded-full inline-block bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 mt-1">
                   Owner
                 </div>
+                {renderUserStats(owner.id)}
               </div>
             </div>
           ) : (
@@ -118,6 +280,7 @@ const ProjectTeam: React.FC = () => {
                        collab.role === 'product_owner' ? 'Product Owner' : 
                        'Team Member'}
                     </div>
+                    {renderUserStats(collab.userId)}
                   </div>
                 </div>
               ))}
