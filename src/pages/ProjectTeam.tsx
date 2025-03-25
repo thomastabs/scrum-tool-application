@@ -130,7 +130,13 @@ const ProjectTeam: React.FC = () => {
       allMembers.forEach((username, userId) => {
         const userTasks = allTasks.filter(task => task.assign_to === userId);
         
-        const isActiveTask = (task: Task) => activeSprintIds.includes(task.sprint_id || '');
+        // Fix here: Using sprintId instead of sprint_id for type checking
+        // But maintain compatibility with the API response format
+        const isActiveTask = (task: Task) => {
+          // Handle both formats (sprintId from type and sprint_id from API)
+          const sprintIdValue = (task as any).sprint_id || task.sprintId;
+          return activeSprintIds.includes(sprintIdValue || '');
+        };
         const isCompletedTask = (task: Task) => task.status === 'done';
         
         stats[userId] = {

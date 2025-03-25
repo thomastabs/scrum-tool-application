@@ -337,19 +337,20 @@ export const fetchCollaborativeProjectSprints = async (projectId: string) => {
   }
 };
 
-// New helper to fetch tasks for a sprint as a collaborator
+// Helper function to fetch tasks for a sprint as a collaborator
 export const fetchCollaborativeSprintTasks = async (sprintId: string) => {
   try {
-    const { data, error } = await supabase
-      .from('tasks')
-      .select('*')
-      .eq('sprint_id', sprintId);
-      
-    if (error) throw error;
-    
-    return data || [];
+    return await withRetry(async () => {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('id, title, status, story_points, assign_to, sprint_id, completion_date')
+        .eq('sprint_id', sprintId);
+        
+      if (error) throw error;
+      return data || [];
+    }, `sprint-tasks-${sprintId}`, 5 * 60 * 1000); // Cache for 5 minutes
   } catch (error) {
-    console.error('Error fetching collaborative sprint tasks:', error);
+    console.error('Error fetching sprint tasks:', error);
     return [];
   }
 };
@@ -522,23 +523,3 @@ export const fetchProjectSprints = async (projectId: string) => {
     return [];
   }
 };
-
-// Helper function to fetch tasks for a specific sprint
-export const fetchCollaborativeSprintTasks = async (sprintId: string) => {
-  try {
-    return await withRetry(async () => {
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('id, title, status, story_points, assign_to, sprint_id, completion_date')
-        .eq('sprint_id', sprintId);
-        
-      if (error) throw error;
-      return data || [];
-    }, `sprint-tasks-${sprintId}`, 5 * 60 * 1000); // Cache for 5 minutes
-  } catch (error) {
-    console.error('Error fetching sprint tasks:', error);
-    return [];
-  }
-};
-
-// Note: We've removed the fetchProjectChatMessages and sendProjectChatMessage functions as part of removing the chat feature
