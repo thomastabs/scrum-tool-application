@@ -505,4 +505,40 @@ export const updateTaskWithCompletionDate = async (taskId: string, data: {
   }
 };
 
+// Helper function to fetch all sprints for a project
+export const fetchProjectSprints = async (projectId: string) => {
+  try {
+    return await withRetry(async () => {
+      const { data, error } = await supabase
+        .from('sprints')
+        .select('id, title, start_date, end_date, status')
+        .eq('project_id', projectId);
+        
+      if (error) throw error;
+      return data || [];
+    }, `sprints-${projectId}`, 5 * 60 * 1000); // Cache for 5 minutes
+  } catch (error) {
+    console.error('Error fetching project sprints:', error);
+    return [];
+  }
+};
+
+// Helper function to fetch tasks for a specific sprint
+export const fetchCollaborativeSprintTasks = async (sprintId: string) => {
+  try {
+    return await withRetry(async () => {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('id, title, status, story_points, assign_to, sprint_id, completion_date')
+        .eq('sprint_id', sprintId);
+        
+      if (error) throw error;
+      return data || [];
+    }, `sprint-tasks-${sprintId}`, 5 * 60 * 1000); // Cache for 5 minutes
+  } catch (error) {
+    console.error('Error fetching sprint tasks:', error);
+    return [];
+  }
+};
+
 // Note: We've removed the fetchProjectChatMessages and sendProjectChatMessage functions as part of removing the chat feature

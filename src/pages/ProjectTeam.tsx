@@ -3,9 +3,9 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
 import { useAuth } from "@/context/AuthContext";
-import { fetchProjectCollaborators } from "@/lib/supabase";
-import { Users, Mail, ChevronLeft, ChevronRight } from "lucide-react";
-import { Collaborator } from "@/types";
+import { fetchProjectCollaborators, fetchProjectSprints, fetchCollaborativeSprintTasks } from "@/lib/supabase";
+import { Users, Mail, ChevronLeft, ChevronRight, CheckCircle, Circle, ChevronDown, ChevronUp } from "lucide-react";
+import { Collaborator, Task } from "@/types";
 import {
   Pagination,
   PaginationContent,
@@ -22,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 // Cache storage for collaborators data
 const collaboratorsCache = new Map();
@@ -37,8 +38,19 @@ const ProjectTeam: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [owner, setOwner] = useState<{id: string, username: string, email?: string} | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [taskData, setTaskData] = useState<Record<string, TaskStats>>({});
+  const [expandedUsers, setExpandedUsers] = useState<Record<string, boolean>>({});
+  const [loadingTasks, setLoadingTasks] = useState(false);
   
   const project = getProject(projectId || "");
+  
+  interface TaskStats {
+    currentAssigned: number;
+    completedTasks: number;
+    currentPoints: number;
+    totalPoints: number;
+    assignedTasks: Task[];
+  }
   
   useEffect(() => {
     const loadCollaborators = async () => {
@@ -79,7 +91,74 @@ const ProjectTeam: React.FC = () => {
     };
     
     loadCollaborators();
+    loadTaskStatistics();
   }, [projectId, project]);
+  
+  const loadTaskStatistics = async () => {
+    if (!projectId) return;
+    
+    setLoadingTasks(true);
+    try {
+      // Fetch all sprints for the project
+      const sprints = await fetchProjectSprints(projectId);
+      
+      // Determine which sprints are active
+      const now = new Date();
+      const activeSprintIds = sprints
+        .filter(sprint => {
+          const startDate = new Date(sprint.start_date);
+          const endDate = new Date(sprint.end_date);
+          return startDate <= now && endDate >= now;
+        })
+        .map(sprint => sprint.id);
+      
+      // Fetch tasks for all sprints
+      const allTasks: Task[] = [];
+      for (const sprint of sprints) {
+        const sprintTasks = await fetchCollaborativeSprintTasks(sprint.id);
+        allTasks.push(...sprintTasks);
+      }
+      
+      // Create a map of all collaborators and the owner
+      const allMembers = new Map<string, string>();
+      collaborators.forEach(collab => allMembers.set(collab.userId, collab.username));
+      if (owner) allMembers.set(owner.id, owner.username);
+      
+      // Calculate statistics for each team member
+      const stats: Record<string, TaskStats> = {};
+      
+      allMembers.forEach((username, userId) => {
+        const userTasks = allTasks.filter(task => task.assign_to === userId);
+        
+        const isActiveTask = (task: Task) => activeSprintIds.includes(task.sprint_id || '');
+        const isCompletedTask = (task: Task) => task.status === 'done';
+        
+        stats[userId] = {
+          currentAssigned: userTasks.filter(task => isActiveTask(task) && !isCompletedTask(task)).length,
+          completedTasks: userTasks.filter(isCompletedTask).length,
+          currentPoints: userTasks
+            .filter(task => isActiveTask(task))
+            .reduce((sum, task) => sum + (task.story_points || 0), 0),
+          totalPoints: userTasks
+            .reduce((sum, task) => sum + (task.story_points || 0), 0),
+          assignedTasks: userTasks.filter(task => !isCompletedTask(task)),
+        };
+      });
+      
+      setTaskData(stats);
+    } catch (error) {
+      console.error("Error loading task statistics:", error);
+    } finally {
+      setLoadingTasks(false);
+    }
+  };
+  
+  const toggleUserExpand = (userId: string) => {
+    setExpandedUsers(prev => ({
+      ...prev,
+      [userId]: !prev[userId]
+    }));
+  };
   
   if (isLoading) {
     return (
@@ -131,6 +210,79 @@ const ProjectTeam: React.FC = () => {
     return links;
   };
   
+  // Format date to be more readable
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'Not set';
+    return new Date(dateString).toLocaleDateString();
+  };
+  
+  const renderTaskStats = (userId: string) => {
+    const stats = taskData[userId];
+    if (!stats) return null;
+    
+    return (
+      <div className="flex flex-wrap gap-2 mt-1">
+        <Badge variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+          Active: {stats.currentAssigned}
+        </Badge>
+        <Badge variant="outline" className="bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300">
+          Completed: {stats.completedTasks}
+        </Badge>
+        <Badge variant="outline" className="bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300">
+          Points: {stats.currentPoints}/{stats.totalPoints}
+        </Badge>
+      </div>
+    );
+  };
+  
+  const renderTaskDropdown = (userId: string) => {
+    const isExpanded = expandedUsers[userId] || false;
+    const stats = taskData[userId];
+    
+    if (!stats || stats.assignedTasks.length === 0) {
+      return (
+        <div className="text-xs text-muted-foreground mt-1">
+          No active tasks
+        </div>
+      );
+    }
+    
+    return (
+      <div className="mt-2">
+        <button 
+          onClick={() => toggleUserExpand(userId)} 
+          className="flex items-center text-xs text-blue-600 dark:text-blue-400 hover:underline"
+        >
+          {isExpanded ? (
+            <>Hide tasks <ChevronUp className="h-3 w-3 ml-1" /></>
+          ) : (
+            <>Show tasks ({stats.assignedTasks.length}) <ChevronDown className="h-3 w-3 ml-1" /></>
+          )}
+        </button>
+        
+        {isExpanded && (
+          <div className="mt-2 bg-accent/10 rounded-md p-2 space-y-2 max-h-40 overflow-y-auto">
+            {stats.assignedTasks.map(task => (
+              <div key={task.id} className="text-xs">
+                <div className="flex items-center gap-1">
+                  {task.status === 'done' ? (
+                    <CheckCircle className="h-3 w-3 text-green-500" />
+                  ) : (
+                    <Circle className="h-3 w-3 text-gray-400" />
+                  )}
+                  <span className="font-medium">{task.title}</span>
+                </div>
+                <div className="pl-4 text-muted-foreground">
+                  Status: {task.status} • {task.story_points || 0} points
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+  
   return (
     <div>
       <h2 className="text-2xl font-bold mb-6">Team</h2>
@@ -154,6 +306,15 @@ const ProjectTeam: React.FC = () => {
                 <div className="text-xs px-2 py-1 rounded-full inline-block bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 mt-1">
                   Owner
                 </div>
+                
+                {loadingTasks ? (
+                  <div className="text-xs mt-2 animate-pulse">Loading task statistics...</div>
+                ) : (
+                  <>
+                    {renderTaskStats(owner.id)}
+                    {renderTaskDropdown(owner.id)}
+                  </>
+                )}
               </div>
             </div>
           ) : (
@@ -170,6 +331,7 @@ const ProjectTeam: React.FC = () => {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Role</TableHead>
+                    <TableHead>Stats</TableHead>
                     <TableHead>Email</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -190,6 +352,16 @@ const ProjectTeam: React.FC = () => {
                            collab.role === 'product_owner' ? 'Product Owner' : 
                            'Team Member'}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {loadingTasks ? (
+                          <div className="text-xs animate-pulse">Loading stats...</div>
+                        ) : (
+                          <>
+                            {renderTaskStats(collab.userId)}
+                            {renderTaskDropdown(collab.userId)}
+                          </>
+                        )}
                       </TableCell>
                       <TableCell>
                         {collab.email && (
