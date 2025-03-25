@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
@@ -115,8 +114,30 @@ const ProjectTeam: React.FC = () => {
       // Fetch tasks for all sprints
       const allTasks: Task[] = [];
       for (const sprint of sprints) {
-        const sprintTasks = await fetchCollaborativeSprintTasks(sprint.id);
-        allTasks.push(...sprintTasks);
+        const sprintTasksRaw = await fetchCollaborativeSprintTasks(sprint.id);
+        
+        // Transform the snake_case API response to match our Task type
+        const transformedTasks = sprintTasksRaw.map(rawTask => {
+          return {
+            id: rawTask.id,
+            title: rawTask.title,
+            description: rawTask.description || '',
+            sprintId: rawTask.sprint_id,
+            status: rawTask.status,
+            assignedTo: rawTask.assign_to,
+            storyPoints: rawTask.story_points,
+            createdAt: new Date().toISOString(), // Default value as it's required by type
+            updatedAt: new Date().toISOString(), // Default value as it's required by type
+            completionDate: rawTask.completion_date,
+            // Keep the original fields as well for compatibility
+            story_points: rawTask.story_points,
+            assign_to: rawTask.assign_to,
+            sprint_id: rawTask.sprint_id,
+            completion_date: rawTask.completion_date
+          } as Task;
+        });
+        
+        allTasks.push(...transformedTasks);
       }
       
       // Create a map of all collaborators and the owner
@@ -128,13 +149,11 @@ const ProjectTeam: React.FC = () => {
       const stats: Record<string, TaskStats> = {};
       
       allMembers.forEach((username, userId) => {
-        const userTasks = allTasks.filter(task => task.assign_to === userId);
+        const userTasks = allTasks.filter(task => task.assign_to === userId || task.assignedTo === userId);
         
-        // Fix here: Using sprintId instead of sprint_id for type checking
-        // But maintain compatibility with the API response format
+        // Handle both formats for sprint ID
         const isActiveTask = (task: Task) => {
-          // Handle both formats (sprintId from type and sprint_id from API)
-          const sprintIdValue = (task as any).sprint_id || task.sprintId;
+          const sprintIdValue = task.sprint_id || task.sprintId;
           return activeSprintIds.includes(sprintIdValue || '');
         };
         const isCompletedTask = (task: Task) => task.status === 'done';
@@ -144,9 +163,9 @@ const ProjectTeam: React.FC = () => {
           completedTasks: userTasks.filter(isCompletedTask).length,
           currentPoints: userTasks
             .filter(task => isActiveTask(task))
-            .reduce((sum, task) => sum + (task.story_points || 0), 0),
+            .reduce((sum, task) => sum + (task.story_points || task.storyPoints || 0), 0),
           totalPoints: userTasks
-            .reduce((sum, task) => sum + (task.story_points || 0), 0),
+            .reduce((sum, task) => sum + (task.story_points || task.storyPoints || 0), 0),
           assignedTasks: userTasks.filter(task => !isCompletedTask(task)),
         };
       });
@@ -279,7 +298,7 @@ const ProjectTeam: React.FC = () => {
                   <span className="font-medium">{task.title}</span>
                 </div>
                 <div className="pl-4 text-muted-foreground">
-                  Status: {task.status} • {task.story_points || 0} points
+                  Status: {task.status} • {task.storyPoints || task.story_points || 0} points
                 </div>
               </div>
             ))}
