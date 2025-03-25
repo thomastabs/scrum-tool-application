@@ -30,23 +30,44 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
   }
 });
 
+// Cache storage for API responses
+const apiCache = new Map();
+
 // Helper function to get authenticated client
 export const getAuthenticatedClient = () => {
   return supabase;
 };
 
-// Add a retry wrapper for Supabase requests
+// Add a retry wrapper for Supabase requests with caching
 export const withRetry = async <T>(
   operation: () => Promise<T>,
+  cacheKey?: string,
+  cacheDuration = 5 * 60 * 1000, // 5 minutes by default
   retries = 3,
   delay = 1000,
   backoffFactor = 2
 ): Promise<T> => {
+  // Check cache first if cacheKey is provided
+  if (cacheKey && apiCache.has(cacheKey)) {
+    console.log(`Using cached data for ${cacheKey}`);
+    return apiCache.get(cacheKey);
+  }
+
   let lastError: any;
   
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
-      return await operation();
+      const result = await operation();
+      
+      // Store in cache if cacheKey is provided
+      if (cacheKey) {
+        apiCache.set(cacheKey, result);
+        setTimeout(() => {
+          apiCache.delete(cacheKey);
+        }, cacheDuration);
+      }
+      
+      return result;
     } catch (error) {
       console.log(`Attempt ${attempt + 1} failed:`, error);
       lastError = error;
@@ -164,33 +185,35 @@ export const addCollaborator = async (projectId: string, userId: string, role: '
   }
 };
 
-// Helper function to fetch collaborators for a project
+// Helper function to fetch collaborators for a project with caching
 export const fetchProjectCollaborators = async (projectId: string) => {
   try {
-    const { data, error } = await supabase
-      .from('collaborators')
-      .select(`
-        id,
-        role,
-        created_at,
-        user_id,
-        users:user_id (id, username, email)
-      `)
-      .eq('project_id', projectId);
+    return await withRetry(async () => {
+      const { data, error } = await supabase
+        .from('collaborators')
+        .select(`
+          id,
+          role,
+          created_at,
+          user_id,
+          users:user_id (id, username, email)
+        `)
+        .eq('project_id', projectId);
+        
+      if (error) throw error;
       
-    if (error) throw error;
-    
-    // Transform the data to match our Collaborator type
-    const collaborators: Collaborator[] = (data || []).map(item => ({
-      id: item.id,
-      userId: item.user_id,
-      username: item.users ? (item.users as any).username || '' : '',
-      email: item.users ? (item.users as any).email || '' : '',
-      role: item.role,
-      createdAt: item.created_at
-    }));
-    
-    return collaborators;
+      // Transform the data to match our Collaborator type
+      const collaborators: Collaborator[] = (data || []).map(item => ({
+        id: item.id,
+        userId: item.user_id,
+        username: item.users ? (item.users as any).username || '' : '',
+        email: item.users ? (item.users as any).email || '' : '',
+        role: item.role,
+        createdAt: item.created_at
+      }));
+      
+      return collaborators;
+    }, `collaborators-${projectId}`, 5 * 60 * 1000); // Cache for 5 minutes
   } catch (error) {
     console.error('Error fetching collaborators:', error);
     return [];

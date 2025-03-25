@@ -7,6 +7,9 @@ import { fetchProjectCollaborators } from "@/lib/supabase";
 import { Users, Mail } from "lucide-react";
 import { Collaborator } from "@/types";
 
+// Cache storage for collaborators data
+const collaboratorsCache = new Map();
+
 const ProjectTeam: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const { getProject } = useProjects();
@@ -23,9 +26,22 @@ const ProjectTeam: React.FC = () => {
       
       setIsLoading(true);
       try {
-        // Get collaborators
-        const collaboratorsData = await fetchProjectCollaborators(projectId);
-        setCollaborators(collaboratorsData);
+        // Check cache first before making API call
+        const cacheKey = `collaborators-${projectId}`;
+        if (collaboratorsCache.has(cacheKey)) {
+          console.log('Using cached collaborators data');
+          setCollaborators(collaboratorsCache.get(cacheKey));
+        } else {
+          // Get collaborators
+          const collaboratorsData = await fetchProjectCollaborators(projectId);
+          setCollaborators(collaboratorsData);
+          
+          // Store in cache with a 5-minute expiry
+          collaboratorsCache.set(cacheKey, collaboratorsData);
+          setTimeout(() => {
+            collaboratorsCache.delete(cacheKey);
+          }, 5 * 60 * 1000); // 5 minutes
+        }
         
         // Set owner data if available from project
         if (project?.ownerId && project?.ownerName) {
