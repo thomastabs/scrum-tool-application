@@ -30,44 +30,23 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
   }
 });
 
-// Cache storage for API responses
-const apiCache = new Map();
-
 // Helper function to get authenticated client
 export const getAuthenticatedClient = () => {
   return supabase;
 };
 
-// Add a retry wrapper for Supabase requests with caching
+// Add a retry wrapper for Supabase requests
 export const withRetry = async <T>(
   operation: () => Promise<T>,
-  cacheKey?: string,
-  cacheDuration = 5 * 60 * 1000, // 5 minutes by default
   retries = 3,
   delay = 1000,
   backoffFactor = 2
 ): Promise<T> => {
-  // Check cache first if cacheKey is provided
-  if (cacheKey && apiCache.has(cacheKey)) {
-    console.log(`Using cached data for ${cacheKey}`);
-    return apiCache.get(cacheKey);
-  }
-
   let lastError: any;
   
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
-      const result = await operation();
-      
-      // Store in cache if cacheKey is provided
-      if (cacheKey) {
-        apiCache.set(cacheKey, result);
-        setTimeout(() => {
-          apiCache.delete(cacheKey);
-        }, cacheDuration);
-      }
-      
-      return result;
+      return await operation();
     } catch (error) {
       console.log(`Attempt ${attempt + 1} failed:`, error);
       lastError = error;
@@ -185,35 +164,33 @@ export const addCollaborator = async (projectId: string, userId: string, role: '
   }
 };
 
-// Helper function to fetch collaborators for a project with caching and field optimization
+// Helper function to fetch collaborators for a project
 export const fetchProjectCollaborators = async (projectId: string) => {
   try {
-    return await withRetry(async () => {
-      // Optimize the query by explicitly selecting only the fields we need
-      const { data, error } = await supabase
-        .from('collaborators')
-        .select(`
-          id,
-          role,
-          user_id,
-          users:user_id (id, username, email)
-        `)
-        .eq('project_id', projectId);
-        
-      if (error) throw error;
+    const { data, error } = await supabase
+      .from('collaborators')
+      .select(`
+        id,
+        role,
+        created_at,
+        user_id,
+        users:user_id (id, username, email)
+      `)
+      .eq('project_id', projectId);
       
-      // Transform the data to match our Collaborator type
-      const collaborators: Collaborator[] = (data || []).map(item => ({
-        id: item.id,
-        userId: item.user_id,
-        username: item.users ? (item.users as any).username || '' : '',
-        email: item.users ? (item.users as any).email || '' : '',
-        role: item.role,
-        createdAt: null // We don't need this for display, so don't fetch it
-      }));
-      
-      return collaborators;
-    }, `collaborators-${projectId}`, 5 * 60 * 1000); // Cache for 5 minutes
+    if (error) throw error;
+    
+    // Transform the data to match our Collaborator type
+    const collaborators: Collaborator[] = (data || []).map(item => ({
+      id: item.id,
+      userId: item.user_id,
+      username: item.users ? (item.users as any).username || '' : '',
+      email: item.users ? (item.users as any).email || '' : '',
+      role: item.role,
+      createdAt: item.created_at
+    }));
+    
+    return collaborators;
   } catch (error) {
     console.error('Error fetching collaborators:', error);
     return [];
@@ -337,20 +314,19 @@ export const fetchCollaborativeProjectSprints = async (projectId: string) => {
   }
 };
 
-// Helper function to fetch tasks for a sprint as a collaborator
+// New helper to fetch tasks for a sprint as a collaborator
 export const fetchCollaborativeSprintTasks = async (sprintId: string) => {
   try {
-    return await withRetry(async () => {
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('id, title, status, story_points, assign_to, sprint_id, completion_date')
-        .eq('sprint_id', sprintId);
-        
-      if (error) throw error;
-      return data || [];
-    }, `sprint-tasks-${sprintId}`, 5 * 60 * 1000); // Cache for 5 minutes
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('sprint_id', sprintId);
+      
+    if (error) throw error;
+    
+    return data || [];
   } catch (error) {
-    console.error('Error fetching sprint tasks:', error);
+    console.error('Error fetching collaborative sprint tasks:', error);
     return [];
   }
 };
@@ -506,20 +482,4 @@ export const updateTaskWithCompletionDate = async (taskId: string, data: {
   }
 };
 
-// Helper function to fetch all sprints for a project
-export const fetchProjectSprints = async (projectId: string) => {
-  try {
-    return await withRetry(async () => {
-      const { data, error } = await supabase
-        .from('sprints')
-        .select('id, title, start_date, end_date, status')
-        .eq('project_id', projectId);
-        
-      if (error) throw error;
-      return data || [];
-    }, `sprints-${projectId}`, 5 * 60 * 1000); // Cache for 5 minutes
-  } catch (error) {
-    console.error('Error fetching project sprints:', error);
-    return [];
-  }
-};
+// Note: We've removed the fetchProjectChatMessages and sendProjectChatMessage functions as part of removing the chat feature

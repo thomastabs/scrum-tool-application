@@ -43,7 +43,6 @@ export interface Task {
   // Database field name versions
   story_points?: number;
   assign_to?: string;
-  sprint_id?: string; // Added this to clearly indicate it's a valid property
   completion_date?: string; // Database field name version
 }
 
