@@ -185,16 +185,16 @@ export const addCollaborator = async (projectId: string, userId: string, role: '
   }
 };
 
-// Helper function to fetch collaborators for a project with caching
+// Helper function to fetch collaborators for a project with caching and field optimization
 export const fetchProjectCollaborators = async (projectId: string) => {
   try {
     return await withRetry(async () => {
+      // Optimize the query by explicitly selecting only the fields we need
       const { data, error } = await supabase
         .from('collaborators')
         .select(`
           id,
           role,
-          created_at,
           user_id,
           users:user_id (id, username, email)
         `)
@@ -209,7 +209,7 @@ export const fetchProjectCollaborators = async (projectId: string) => {
         username: item.users ? (item.users as any).username || '' : '',
         email: item.users ? (item.users as any).email || '' : '',
         role: item.role,
-        createdAt: item.created_at
+        createdAt: null // We don't need this for display, so don't fetch it
       }));
       
       return collaborators;

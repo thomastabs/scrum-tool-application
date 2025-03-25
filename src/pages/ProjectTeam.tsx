@@ -4,11 +4,30 @@ import { useParams } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
 import { useAuth } from "@/context/AuthContext";
 import { fetchProjectCollaborators } from "@/lib/supabase";
-import { Users, Mail } from "lucide-react";
+import { Users, Mail, ChevronLeft, ChevronRight } from "lucide-react";
 import { Collaborator } from "@/types";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 // Cache storage for collaborators data
 const collaboratorsCache = new Map();
+
+// Page size for collaborators pagination
+const PAGE_SIZE = 5;
 
 const ProjectTeam: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -17,6 +36,7 @@ const ProjectTeam: React.FC = () => {
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [owner, setOwner] = useState<{id: string, username: string, email?: string} | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   
   const project = getProject(projectId || "");
   
@@ -32,7 +52,7 @@ const ProjectTeam: React.FC = () => {
           console.log('Using cached collaborators data');
           setCollaborators(collaboratorsCache.get(cacheKey));
         } else {
-          // Get collaborators
+          // Get collaborators - with optimized field selection
           const collaboratorsData = await fetchProjectCollaborators(projectId);
           setCollaborators(collaboratorsData);
           
@@ -69,6 +89,16 @@ const ProjectTeam: React.FC = () => {
     );
   }
   
+  const totalPages = Math.ceil(collaborators.length / PAGE_SIZE);
+  const paginatedCollaborators = collaborators.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
+  
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+  
   const getRoleBadgeClass = (role: string) => {
     switch(role) {
       case 'scrum_master':
@@ -80,6 +110,25 @@ const ProjectTeam: React.FC = () => {
       default:
         return "bg-gray-100 text-gray-800 dark:bg-gray-800/40 dark:text-gray-400";
     }
+  };
+  
+  const renderPaginationLinks = () => {
+    const links = [];
+    
+    for (let i = 1; i <= totalPages; i++) {
+      links.push(
+        <PaginationItem key={i}>
+          <PaginationLink 
+            isActive={currentPage === i}
+            onClick={() => handlePageChange(i)}
+          >
+            {i}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+    
+    return links;
   };
   
   return (
@@ -115,29 +164,68 @@ const ProjectTeam: React.FC = () => {
         <div className="scrum-card p-6">
           <h3 className="text-lg font-semibold mb-4">Team Members</h3>
           {collaborators.length > 0 ? (
-            <div className="space-y-3">
-              {collaborators.map(collab => (
-                <div key={collab.id} className="flex items-center gap-3 p-3 bg-background rounded-md border border-border">
-                  <div className="h-10 w-10 bg-accent/20 rounded-full flex items-center justify-center">
-                    <span className="text-lg font-semibold">{collab.username.charAt(0).toUpperCase()}</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium">{collab.username}</div>
-                    {collab.email && (
-                      <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                        <Mail className="h-3 w-3" />
-                        <span>{collab.email}</span>
-                      </div>
-                    )}
-                    <div className={`text-xs px-2 py-1 rounded-full inline-block ${getRoleBadgeClass(collab.role)} mt-1`}>
-                      {collab.role === 'scrum_master' ? 'Scrum Master' : 
-                       collab.role === 'product_owner' ? 'Product Owner' : 
-                       'Team Member'}
-                    </div>
-                  </div>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Email</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedCollaborators.map(collab => (
+                    <TableRow key={collab.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <div className="h-8 w-8 bg-accent/20 rounded-full flex items-center justify-center">
+                            <span className="text-sm font-semibold">{collab.username.charAt(0).toUpperCase()}</span>
+                          </div>
+                          <span>{collab.username}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className={`text-xs px-2 py-1 rounded-full inline-block ${getRoleBadgeClass(collab.role)}`}>
+                          {collab.role === 'scrum_master' ? 'Scrum Master' : 
+                           collab.role === 'product_owner' ? 'Product Owner' : 
+                           'Team Member'}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {collab.email && (
+                          <div className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            <span>{collab.email}</span>
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              
+              {totalPages > 1 && (
+                <div className="mt-4">
+                  <Pagination>
+                    <PaginationContent>
+                      {currentPage > 1 && (
+                        <PaginationItem>
+                          <PaginationPrevious onClick={() => handlePageChange(currentPage - 1)} />
+                        </PaginationItem>
+                      )}
+                      
+                      {renderPaginationLinks()}
+                      
+                      {currentPage < totalPages && (
+                        <PaginationItem>
+                          <PaginationNext onClick={() => handlePageChange(currentPage + 1)} />
+                        </PaginationItem>
+                      )}
+                    </PaginationContent>
+                  </Pagination>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           ) : (
             <div className="text-muted-foreground">No team members yet</div>
           )}
