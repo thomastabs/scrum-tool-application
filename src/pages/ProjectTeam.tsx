@@ -71,6 +71,7 @@ const ProjectTeam: React.FC = () => {
     console.log("Available tasks:", tasks.length);
     console.log("Available collaborators:", collaborators.length);
     console.log("Owner:", owner);
+    console.log(`Owner Email: ${owner?.email}`);
     
     const projectSprints = getSprintsByProject(projectId);
     console.log("Project sprints:", projectSprints.length);
