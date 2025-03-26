@@ -48,6 +48,12 @@ const ProjectTeam: React.FC = () => {
         
         // Set owner data if available from project
         if (project?.ownerId && project?.ownerName) {
+          console.log("Project owner data:", {
+            ownerId: project.ownerId,
+            ownerName: project.ownerName,
+            ownerEmail: project.ownerEmail
+          });
+          
           const ownerEmail = project.ownerEmail || "No email available";
           console.log("Setting owner email to:", ownerEmail);
           

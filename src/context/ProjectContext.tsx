@@ -125,6 +125,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           updatedAt: project.updated_at,
           ownerId: project.owner_id,
           ownerName: project.owner?.username || '',
+          ownerEmail: project.owner?.email || '',
           isCollaboration: false
         }));
 

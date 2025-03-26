@@ -262,6 +262,7 @@ export const fetchCollaborativeProjects = async (userId: string) => {
         updatedAt: project.updated_at,
         ownerId: project.owner_id,
         ownerName: project.owner ? project.owner.username || '' : '',
+        ownerEmail: project.owner ? project.owner.email || '' : '',
         isCollaboration: true,
         role: item.role
       };
