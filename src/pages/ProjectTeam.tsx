@@ -24,7 +24,7 @@ const ProjectTeam: React.FC = () => {
   const { user } = useAuth();
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [owner, setOwner] = useState<{id: string, username: string, email?: string} | null>(null);
+  const [owner, setOwner] = useState<{id: string, username: string, email: string} | null>(null);
   const [userTasks, setUserTasks] = useState<Record<string, Task[]>>({});
   const [userStats, setUserStats] = useState<Record<string, {
     assignedTasks: number,
@@ -48,10 +48,13 @@ const ProjectTeam: React.FC = () => {
         
         // Set owner data if available from project
         if (project?.ownerId && project?.ownerName) {
+          const ownerEmail = project.ownerEmail || "No email available";
+          console.log("Setting owner email to:", ownerEmail);
+          
           setOwner({
             id: project.ownerId,
             username: project.ownerName,
-            email: project.ownerEmail
+            email: ownerEmail
           });
         }
       } catch (error) {
@@ -313,12 +316,10 @@ const ProjectTeam: React.FC = () => {
                   </div>
                   
                   <div className="flex-1 p-6">
-                    {owner.email && (
-                      <div className="text-sm flex items-center gap-1 mb-3">
-                        <Mail className="h-4 w-4" />
-                        <span>{owner.email}</span>
-                      </div>
-                    )}
+                    <div className="text-sm flex items-center gap-1 mb-3">
+                      <Mail className="h-4 w-4" />
+                      <span>{owner.email}</span>
+                    </div>
                     
                     <Separator className="my-3" />
                     
