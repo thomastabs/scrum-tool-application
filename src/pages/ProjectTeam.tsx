@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
 import { useAuth } from "@/context/AuthContext";
 import { fetchProjectCollaborators } from "@/lib/supabase";
-import { Users, Mail, ChevronDown, CheckCircle, Clock, Star } from "lucide-react";
+import { Users, Mail, ChevronDown, CheckCircle, Clock, Star, Calendar, Shield, User } from "lucide-react";
 import { Collaborator, Task } from "@/types";
 import { 
   DropdownMenu,
@@ -12,6 +12,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { format } from "date-fns";
+import { Separator } from "@/components/ui/separator";
 
 const ProjectTeam: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -27,6 +32,7 @@ const ProjectTeam: React.FC = () => {
     totalStoryPoints: number,
     completedStoryPoints: number
   }>>({});
+  const [userSprintContributions, setUserSprintContributions] = useState<Record<string, string[]>>({});
   
   const project = getProject(projectId || "");
   
@@ -45,7 +51,7 @@ const ProjectTeam: React.FC = () => {
           setOwner({
             id: project.ownerId,
             username: project.ownerName,
-            email: undefined
+            email: project.ownerEmail
           });
         }
       } catch (error) {
@@ -58,7 +64,6 @@ const ProjectTeam: React.FC = () => {
     loadCollaborators();
   }, [projectId, project]);
   
-  // Load task statistics when tasks and collaborators are available
   useEffect(() => {
     if (!projectId) return;
     
@@ -67,11 +72,9 @@ const ProjectTeam: React.FC = () => {
     console.log("Available collaborators:", collaborators.length);
     console.log("Owner:", owner);
     
-    // Get all sprints for this project
     const projectSprints = getSprintsByProject(projectId);
     console.log("Project sprints:", projectSprints.length);
     
-    // Get all tasks for this project - both sprint tasks and backlog tasks
     const projectTasks = tasks.filter(task => {
       const isInSprint = projectSprints.some(sprint => sprint.id === task.sprintId);
       const isProjectBacklog = task.projectId === projectId && !task.sprintId;
@@ -80,7 +83,6 @@ const ProjectTeam: React.FC = () => {
     
     console.log("Project tasks:", projectTasks.length);
     
-    // Create a mapping of user IDs to their assigned tasks
     const tasksByUser: Record<string, Task[]> = {};
     const statsByUser: Record<string, {
       assignedTasks: number,
@@ -88,36 +90,35 @@ const ProjectTeam: React.FC = () => {
       totalStoryPoints: number,
       completedStoryPoints: number
     }> = {};
+    const sprintsByUser: Record<string, string[]> = {};
     
-    // Initialize stats for owner if available
     if (owner) {
-      tasksByUser[owner.id] = [];
-      statsByUser[owner.id] = {
+      tasksByUser[owner.username] = [];
+      statsByUser[owner.username] = {
         assignedTasks: 0,
         completedTasks: 0,
         totalStoryPoints: 0,
         completedStoryPoints: 0
       };
+      sprintsByUser[owner.username] = [];
     }
     
-    // Initialize stats for all collaborators
     collaborators.forEach(collab => {
-      tasksByUser[collab.userId] = [];
-      statsByUser[collab.userId] = {
+      tasksByUser[collab.username] = [];
+      statsByUser[collab.username] = {
         assignedTasks: 0,
         completedTasks: 0,
         totalStoryPoints: 0,
         completedStoryPoints: 0
       };
+      sprintsByUser[collab.username] = [];
     });
     
-    // Process all tasks
     projectTasks.forEach(task => {
       if (!task.assignedTo) return;
       
       console.log(`Processing task ${task.id} assigned to ${task.assignedTo}`);
       
-      // Check if this user exists in our mapping
       if (!tasksByUser[task.assignedTo]) {
         console.log(`Creating new entry for user ${task.assignedTo}`);
         tasksByUser[task.assignedTo] = [];
@@ -127,14 +128,20 @@ const ProjectTeam: React.FC = () => {
           totalStoryPoints: 0,
           completedStoryPoints: 0
         };
+        sprintsByUser[task.assignedTo] = [];
       }
       
-      // Add task to user's task list
       tasksByUser[task.assignedTo].push(task);
       
-      // Update stats
       const storyPoints = task.storyPoints || 0;
       statsByUser[task.assignedTo].totalStoryPoints += storyPoints;
+      
+      if (task.sprintId) {
+        const sprint = projectSprints.find(s => s.id === task.sprintId);
+        if (sprint && !sprintsByUser[task.assignedTo].includes(sprint.title)) {
+          sprintsByUser[task.assignedTo].push(sprint.title);
+        }
+      }
       
       if (task.status === 'done') {
         statsByUser[task.assignedTo].completedTasks++;
@@ -146,9 +153,11 @@ const ProjectTeam: React.FC = () => {
     
     console.log("Task mapping by user:", Object.keys(tasksByUser).map(id => `${id}: ${tasksByUser[id].length} tasks`));
     console.log("Stats by user:", statsByUser);
+    console.log("Sprint contributions by user:", sprintsByUser);
     
     setUserTasks(tasksByUser);
     setUserStats(statsByUser);
+    setUserSprintContributions(sprintsByUser);
   }, [projectId, tasks, collaborators, owner, getSprintsByProject]);
   
   if (isLoading) {
@@ -162,13 +171,13 @@ const ProjectTeam: React.FC = () => {
   const getRoleBadgeClass = (role: string) => {
     switch(role) {
       case 'scrum_master':
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400";
+        return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
       case 'product_owner':
-        return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
+        return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
       case 'team_member':
-        return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400";
+        return "bg-violet-100 text-violet-700 dark:bg-purple-900/30 dark:text-purple-400";
       default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800/40 dark:text-gray-400";
+        return "bg-gray-100 text-gray-700 dark:bg-gray-800/40 dark:text-gray-400";
     }
   };
   
@@ -177,7 +186,7 @@ const ProjectTeam: React.FC = () => {
     
     if (userTaskList.length === 0) {
       return (
-        <div className="text-xs text-muted-foreground mt-1">
+        <div className="text-sm text-muted-foreground">
           No tasks assigned
         </div>
       );
@@ -185,9 +194,9 @@ const ProjectTeam: React.FC = () => {
     
     return (
       <DropdownMenu>
-        <DropdownMenuTrigger className="text-xs flex items-center gap-1 hover:text-primary transition-colors mt-1">
+        <DropdownMenuTrigger className="text-sm flex items-center gap-1 hover:text-primary transition-colors">
           <span>View {userTaskList.length} task{userTaskList.length !== 1 ? 's' : ''}</span>
-          <ChevronDown className="h-3 w-3" />
+          <ChevronDown className="h-4 w-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-64 max-h-64 overflow-auto">
           {userTaskList.map(task => (
@@ -210,95 +219,199 @@ const ProjectTeam: React.FC = () => {
       </DropdownMenu>
     );
   };
+
+  const renderSprintContributions = (username: string) => {
+    const contributions = userSprintContributions[username] || [];
+    
+    if (contributions.length === 0) {
+      return (
+        <div className="text-sm text-muted-foreground">
+          No sprint contributions yet
+        </div>
+      );
+    }
+    
+    return (
+      <div>
+        <div className="text-sm text-muted-foreground flex items-center gap-1">
+          <Calendar className="h-4 w-4" />
+          <span>Sprint Contributions:</span>
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {contributions.map((sprint, index) => (
+            <Badge key={index} variant="outline" className="text-xs bg-accent/50">
+              {sprint}
+            </Badge>
+          ))}
+        </div>
+      </div>
+    );
+  };
   
-  const renderUserStats = (userId: string) => {
-    const stats = userStats[userId];
+  const renderUserStats = (username: string) => {
+    const stats = userStats[username];
     
     if (!stats) {
-      console.log(`No stats available for user ${userId}`);
       return null;
     }
     
     return (
-      <div className="flex flex-col gap-1 mt-2 text-xs">
-        <div className="grid grid-cols-2 gap-2">
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <Clock className="h-3 w-3" />
+      <div className="space-y-2">
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <div className="flex items-center gap-1">
+            <Clock className="h-4 w-4" />
             <span>Active: {stats.assignedTasks}</span>
           </div>
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <CheckCircle className="h-3 w-3" />
+          <div className="flex items-center gap-1">
+            <CheckCircle className="h-4 w-4" />
             <span>Completed: {stats.completedTasks}</span>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <Star className="h-3 w-3" />
-            <span>Points: {stats.completedStoryPoints} / {stats.totalStoryPoints}</span>
-          </div>
+        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+          <Star className="h-4 w-4" />
+          <span>Points: {stats.completedStoryPoints} / {stats.totalStoryPoints}</span>
         </div>
-        {renderTaskDropdown(userId)}
+        {renderTaskDropdown(username)}
       </div>
     );
+  };
+
+  const formatJoinDate = (date: string) => {
+    try {
+      return format(new Date(date), 'MMM d, yyyy');
+    } catch (error) {
+      return 'Unknown date';
+    }
   };
   
   return (
     <div>
       <h2 className="text-2xl font-bold mb-6">Team</h2>
       
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div className="scrum-card p-6">
-          <h3 className="text-lg font-semibold mb-4">Project Owner</h3>
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Shield className="h-5 w-5 text-amber-500" />
+            Project Owner
+          </h3>
+          
           {owner ? (
-            <div className="flex items-center gap-3 p-3 bg-background rounded-md border border-border">
-              <div className="h-10 w-10 bg-accent/20 rounded-full flex items-center justify-center">
-                <span className="text-lg font-semibold">{owner.username.charAt(0).toUpperCase()}</span>
-              </div>
-              <div className="flex-1">
-                <div className="font-medium">{owner.username}</div>
-                {owner.email && (
-                  <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                    <Mail className="h-3 w-3" />
-                    <span>{owner.email}</span>
+            <Card className="bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-amber-200 dark:border-amber-800/30 overflow-hidden shadow-sm">
+              <CardContent className="p-0">
+                <div className="flex flex-col md:flex-row">
+                  <div className="p-6 flex flex-col items-center justify-center bg-amber-50/80 dark:bg-amber-900/10 min-w-[150px]">
+                    <Avatar className="h-16 w-16 bg-amber-100 dark:bg-amber-700 text-amber-700 dark:text-amber-200 mb-2">
+                      <AvatarFallback className="text-xl">
+                        {owner.username.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <h4 className="font-semibold text-center">{owner.username}</h4>
+                    <Badge className="mt-2 bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-800 dark:text-amber-200 dark:hover:bg-amber-700">
+                      Owner
+                    </Badge>
                   </div>
-                )}
-                <div className="text-xs px-2 py-1 rounded-full inline-block bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 mt-1">
-                  Owner
+                  
+                  <div className="flex-1 p-6">
+                    {owner.email && (
+                      <div className="text-sm flex items-center gap-1 mb-3">
+                        <Mail className="h-4 w-4" />
+                        <span>{owner.email}</span>
+                      </div>
+                    )}
+                    
+                    <Separator className="my-3" />
+                    
+                    <div className="space-y-4">
+                      {renderUserStats(owner.username)}
+                      {renderSprintContributions(owner.username)}
+                    </div>
+                  </div>
                 </div>
-                {renderUserStats(owner.id)}
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           ) : (
             <div className="text-muted-foreground">Owner information not available</div>
           )}
         </div>
         
         <div className="scrum-card p-6">
-          <h3 className="text-lg font-semibold mb-4">Team Members</h3>
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Users className="h-5 w-5 text-indigo-500" />
+            Team Members
+          </h3>
+          
           {collaborators.length > 0 ? (
-            <div className="space-y-3">
-              {collaborators.map(collab => (
-                <div key={collab.id} className="flex items-center gap-3 p-3 bg-background rounded-md border border-border">
-                  <div className="h-10 w-10 bg-accent/20 rounded-full flex items-center justify-center">
-                    <span className="text-lg font-semibold">{collab.username.charAt(0).toUpperCase()}</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium">{collab.username}</div>
-                    {collab.email && (
-                      <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                        <Mail className="h-3 w-3" />
-                        <span>{collab.email}</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {collaborators.map(collab => {
+                let cardStyle = "";
+                let sidebarStyle = "";
+                
+                if (collab.role === 'scrum_master') {
+                  cardStyle = "bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800/30";
+                  sidebarStyle = "bg-blue-50/80 dark:bg-blue-900/10";
+                } else if (collab.role === 'product_owner') {
+                  cardStyle = "bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-800/30";
+                  sidebarStyle = "bg-green-50/80 dark:bg-green-900/10";
+                } else {
+                  cardStyle = "bg-gradient-to-r from-violet-50 to-violet-100 dark:from-purple-900/20 dark:to-purple-800/20 border-violet-200 dark:border-purple-800/30";
+                  sidebarStyle = "bg-violet-50/80 dark:bg-purple-900/10";
+                }
+                
+                let avatarStyle = "";
+                if (collab.role === 'scrum_master') {
+                  avatarStyle = "bg-blue-100 dark:bg-blue-700 text-blue-700 dark:text-blue-200";
+                } else if (collab.role === 'product_owner') {
+                  avatarStyle = "bg-green-100 dark:bg-green-700 text-green-700 dark:text-green-200";
+                } else {
+                  avatarStyle = "bg-violet-100 dark:bg-purple-700 text-violet-700 dark:text-purple-200";
+                }
+                
+                return (
+                  <Card key={collab.id} className={`${cardStyle} overflow-hidden shadow-sm hover:shadow-md transition-shadow`}>
+                    <CardContent className="p-0">
+                      <div className="flex flex-col">
+                        <div className={`p-4 flex items-center gap-3 border-b border-border/50 ${sidebarStyle}`}>
+                          <Avatar className={`h-12 w-12 ${avatarStyle}`}>
+                            <AvatarFallback className="text-lg">
+                              {collab.username.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          
+                          <div className="flex-1 overflow-hidden">
+                            <h4 className="font-semibold truncate">{collab.username}</h4>
+                            <div className="flex items-center flex-wrap gap-2">
+                              <Badge className={`text-xs ${getRoleBadgeClass(collab.role)}`}>
+                                {collab.role === 'scrum_master' ? 'Scrum Master' : 
+                                 collab.role === 'product_owner' ? 'Product Owner' : 
+                                 'Team Member'}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="p-4 space-y-3">
+                          {collab.email && (
+                            <div className="text-sm flex items-center gap-1 mb-3">
+                              <Mail className="h-4 w-4" />
+                              <span>{collab.email}</span>
+                            </div>
+                          )}
+                          
+                          <div className="text-sm text-muted-foreground flex items-center gap-1">
+                            <User className="h-4 w-4" />
+                            <span>Joined: {formatJoinDate(collab.createdAt)}</span>
+                          </div>
+                          
+                          <Separator className="my-2" />
+                          
+                          {renderUserStats(collab.username)}
+                          {renderSprintContributions(collab.username)}
+                        </div>
                       </div>
-                    )}
-                    <div className={`text-xs px-2 py-1 rounded-full inline-block ${getRoleBadgeClass(collab.role)} mt-1`}>
-                      {collab.role === 'scrum_master' ? 'Scrum Master' : 
-                       collab.role === 'product_owner' ? 'Product Owner' : 
-                       'Team Member'}
-                    </div>
-                    {renderUserStats(collab.userId)}
-                  </div>
-                </div>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           ) : (
             <div className="text-muted-foreground">No team members yet</div>

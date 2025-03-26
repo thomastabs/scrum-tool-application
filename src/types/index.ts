@@ -14,6 +14,7 @@ export interface Project {
   updatedAt: string;
   ownerId?: string;
   ownerName?: string;
+  ownerEmail?: string; // Added this property to fix the TypeScript error
   isCollaboration?: boolean;
 }
 
