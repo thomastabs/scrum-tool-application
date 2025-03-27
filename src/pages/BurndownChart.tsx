@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
@@ -40,28 +41,21 @@ const BurndownChart: React.FC = () => {
   const project = getProject(projectId || "");
   const projectSprints = projectId ? getSprintsByProject(projectId) : [];
   
-  // Early return if no sprints exist
-  if (projectSprints.length === 0 && !isLoading) {
-    return (
-      <div className="text-center py-12 bg-scrum-card border border-scrum-border rounded-lg">
-        <h2 className="text-xl font-bold mb-4">Project Burndown Chart</h2>
-        <p className="text-scrum-text-secondary mb-4">
-          No sprints available. Create sprints to view the burndown chart.
-        </p>
-      </div>
-    );
-  }
-  
+  // Load data only if we have sprints
   useEffect(() => {
-    if (!projectId || !user || dataFetchedRef.current) return;
+    if (!projectId || !user) return;
     
     const loadBurndownData = async () => {
       setIsLoading(true);
+      dataFetchedRef.current = false;
+      
       try {
         // Check if there are any sprints before loading data
         const availableSprints = getSprintsByProject(projectId);
+        
         if (availableSprints.length === 0) {
           setIsLoading(false);
+          dataFetchedRef.current = true;
           return;
         }
         
@@ -78,7 +72,11 @@ const BurndownChart: React.FC = () => {
         }
       } catch (error) {
         console.error("Error loading burndown data:", error);
-        await generateAndSaveBurndownData();
+        // Only try to generate data if we have sprints
+        const availableSprints = getSprintsByProject(projectId);
+        if (availableSprints.length > 0) {
+          await generateAndSaveBurndownData();
+        }
       } finally {
         // Use a timeout to prevent the loading indicator from flickering
         if (loadingTimeoutRef.current) window.clearTimeout(loadingTimeoutRef.current);
@@ -101,7 +99,10 @@ const BurndownChart: React.FC = () => {
   useEffect(() => {
     if (!projectId || !user || isLoading || !dataFetchedRef.current) return;
     
+    // Don't update if there are no sprints
     const projectSprints = getSprintsByProject(projectId);
+    if (projectSprints.length === 0) return;
+    
     const currentTasksCount = tasks.filter(t => t.projectId === projectId).length;
     const currentSprintsCount = projectSprints.length;
     
@@ -126,7 +127,7 @@ const BurndownChart: React.FC = () => {
       
       updateBurndownData();
     }
-  }, [tasks, sprints, projectId, user, isLoading, lastTasksLength, lastSprintsLength, isUpdating]);
+  }, [tasks, sprints, projectId, user, isLoading, lastTasksLength, lastSprintsLength, isUpdating, getSprintsByProject]);
   
   const generateAndSaveBurndownData = async () => {
     try {
@@ -154,8 +155,9 @@ const BurndownChart: React.FC = () => {
     
     const projectSprints = getSprintsByProject(projectId || "");
     
+    // Return empty data if no sprints exist
     if (projectSprints.length === 0) {
-      return generateDefaultTimeframe(today, 21);
+      return [];
     }
     
     let earliestStartDate: Date | null = null;
@@ -175,7 +177,7 @@ const BurndownChart: React.FC = () => {
     }
     
     if (!earliestStartDate || !latestEndDate) {
-      return generateDefaultTimeframe(today, 21);
+      return [];
     }
     
     const daysInProject = differenceInDays(latestEndDate, earliestStartDate) + 1;
@@ -185,7 +187,7 @@ const BurndownChart: React.FC = () => {
     const totalStoryPoints = calculateTotalStoryPoints(projectSprints);
     
     if (totalStoryPoints === 0) {
-      return generateDefaultTimeframe(today, timeframeDays);
+      return [];
     }
     
     // Group completed sprints by end date
@@ -297,6 +299,30 @@ const BurndownChart: React.FC = () => {
           <div className="h-12 w-12 rounded-full border-4 border-scrum-accent border-t-transparent animate-spin"></div>
           <p className="text-scrum-text-secondary">Loading burndown chart data...</p>
         </div>
+      </div>
+    );
+  }
+  
+  // Check if there are sprints after loading
+  if (projectSprints.length === 0) {
+    return (
+      <div className="text-center py-12 bg-scrum-card border border-scrum-border rounded-lg">
+        <h2 className="text-xl font-bold mb-4">Project Burndown Chart</h2>
+        <p className="text-scrum-text-secondary mb-4">
+          No sprints available. Create sprints to view the burndown chart.
+        </p>
+      </div>
+    );
+  }
+  
+  // If we have sprints but no chart data, show a message
+  if (chartData.length === 0) {
+    return (
+      <div className="text-center py-12 bg-scrum-card border border-scrum-border rounded-lg">
+        <h2 className="text-xl font-bold mb-4">Project Burndown Chart</h2>
+        <p className="text-scrum-text-secondary mb-4">
+          Unable to generate burndown chart. Make sure your sprints have tasks with story points.
+        </p>
       </div>
     );
   }
