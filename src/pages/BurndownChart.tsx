@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
@@ -39,6 +38,19 @@ const BurndownChart: React.FC = () => {
   const loadingTimeoutRef = useRef<number | null>(null);
   
   const project = getProject(projectId || "");
+  const projectSprints = projectId ? getSprintsByProject(projectId) : [];
+  
+  // Early return if no sprints exist
+  if (projectSprints.length === 0 && !isLoading) {
+    return (
+      <div className="text-center py-12 bg-scrum-card border border-scrum-border rounded-lg">
+        <h2 className="text-xl font-bold mb-4">Project Burndown Chart</h2>
+        <p className="text-scrum-text-secondary mb-4">
+          No sprints available. Create sprints to view the burndown chart.
+        </p>
+      </div>
+    );
+  }
   
   useEffect(() => {
     if (!projectId || !user || dataFetchedRef.current) return;
@@ -46,6 +58,13 @@ const BurndownChart: React.FC = () => {
     const loadBurndownData = async () => {
       setIsLoading(true);
       try {
+        // Check if there are any sprints before loading data
+        const availableSprints = getSprintsByProject(projectId);
+        if (availableSprints.length === 0) {
+          setIsLoading(false);
+          return;
+        }
+        
         const existingData = await fetchBurndownData(projectId, user.id);
         
         if (existingData && existingData.length > 0) {
@@ -77,7 +96,7 @@ const BurndownChart: React.FC = () => {
         window.clearTimeout(loadingTimeoutRef.current);
       }
     };
-  }, [projectId, user]);
+  }, [projectId, user, getSprintsByProject]);
   
   useEffect(() => {
     if (!projectId || !user || isLoading || !dataFetchedRef.current) return;
