@@ -214,7 +214,7 @@ const BurndownChart: React.FC = () => {
             // Reduce the remaining points by the total story points in this sprint
             const sprintTasks = getTasksBySprint(sprint.id);
             const sprintPoints = sprintTasks.reduce((sum, task) => {
-              return sum + (task.storyPoints || task.story_points || 0);
+              return sum + (task.storyPoints || 0);
             }, 0);
             
             remainingPoints = Math.max(0, remainingPoints - sprintPoints);
@@ -241,7 +241,7 @@ const BurndownChart: React.FC = () => {
     for (const sprint of sprints) {
       const sprintTasks = getTasksBySprint(sprint.id);
       totalPoints += sprintTasks.reduce((sum, task) => {
-        return sum + (task.storyPoints || task.story_points || 0);
+        return sum + (task.storyPoints || 0);
       }, 0);
     }
     
@@ -259,37 +259,14 @@ const BurndownChart: React.FC = () => {
           sprintsByEndDate.set(endDateStr, []);
         }
         
-        sprintsByEndDate.get(endDateStr)?.push(sprint);
+        const sprints = sprintsByEndDate.get(endDateStr);
+        if (sprints) {
+          sprints.push(sprint);
+        }
       }
     }
     
     return sprintsByEndDate;
-  };
-  
-  const generateDefaultTimeframe = (startDate: Date, days: number): BurndownDataPoint[] => {
-    const data: BurndownDataPoint[] = [];
-    const totalPoints = 100;
-    const pointsPerDay = totalPoints / days;
-    const today = startOfDay(new Date());
-    
-    for (let i = 0; i < days; i++) {
-      const date = addDays(startDate, i - Math.floor(days / 3));
-      const dateStr = date.toISOString().split('T')[0];
-      const idealRemaining = Math.max(0, totalPoints - (i * pointsPerDay));
-      
-      const actual = isBefore(date, today) || isToday(date) 
-        ? Math.round(idealRemaining * (0.8 + Math.random() * 0.4))
-        : null;
-      
-      data.push({
-        date: dateStr,
-        ideal: Math.round(idealRemaining),
-        actual: actual,
-        formattedDate: format(date, "MMM dd"),
-      });
-    }
-    
-    return data;
   };
   
   if (isLoading) {
@@ -329,7 +306,7 @@ const BurndownChart: React.FC = () => {
   
   const todayStr = new Date().toISOString().split('T')[0];
   const todayIndex = chartData.findIndex(d => d.date === todayStr);
-  const todayLabel = todayIndex >= 0 ? chartData[todayIndex]?.formattedDate : format(new Date(), "MMM dd");
+  const todayLabel = todayIndex >= 0 && chartData[todayIndex] ? chartData[todayIndex].formattedDate : format(new Date(), "MMM dd");
   
   const lastActualIndex = chartData.reduce((lastIdx, point, idx) => {
     return point.actual !== null ? idx : lastIdx;
@@ -405,19 +382,21 @@ const BurndownChart: React.FC = () => {
             <Legend
               wrapperStyle={{ color: "inherit" }}
             />
-            <ReferenceLine 
-              x={todayLabel} 
-              stroke="hsl(var(--scrum-chart-reference))" 
-              strokeWidth={2}
-              strokeDasharray="5 3" 
-              label={{ 
-                value: "TODAY", 
-                position: "top", 
-                fill: "hsl(var(--scrum-chart-reference))",
-                fontSize: 12,
-                fontWeight: "bold"
-              }} 
-            />
+            {todayLabel && (
+              <ReferenceLine 
+                x={todayLabel} 
+                stroke="hsl(var(--scrum-chart-reference))" 
+                strokeWidth={2}
+                strokeDasharray="5 3" 
+                label={{ 
+                  value: "TODAY", 
+                  position: "top", 
+                  fill: "hsl(var(--scrum-chart-reference))",
+                  fontSize: 12,
+                  fontWeight: "bold"
+                }} 
+              />
+            )}
             <Line
               type="monotone"
               dataKey="ideal"
