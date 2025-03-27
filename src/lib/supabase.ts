@@ -531,12 +531,15 @@ export const fetchProjectCollaboratorsOptimized = async (projectId: string) => {
     
     // Get owner info from the first result (all rows will have the same project data)
     let owner = null;
-    if (data && data.length > 0 && data[0].project && data[0].project.owner) {
-      owner = {
-        id: (data[0].project.owner as any).id,
-        username: (data[0].project.owner as any).username,
-        email: (data[0].project.owner as any).email
-      };
+    if (data && data.length > 0 && data[0].project) {
+      const projectData = data[0].project as any;
+      if (projectData && projectData.owner) {
+        owner = {
+          id: projectData.owner.id,
+          username: projectData.owner.username,
+          email: projectData.owner.email
+        };
+      }
     }
     
     // Transform the data to match our Collaborator type
