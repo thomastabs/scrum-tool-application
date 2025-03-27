@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -45,30 +46,58 @@ const BacklogItemForm: React.FC<BacklogItemFormProps> = ({ taskId, onClose, proj
   const [loading, setLoading] = useState(false);
   const isEditMode = !!taskId;
   
-  // Get the task to edit if in edit mode
-  const taskToEdit = isEditMode && taskId ? getTask(taskId) : null;
-
+  // Initialize form with default values
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      title: taskToEdit?.title || "",
-      description: taskToEdit?.description || "",
-      priority: (taskToEdit?.priority as "low" | "medium" | "high") || "medium",
-      storyPoints: taskToEdit?.storyPoints || 1,
+      title: "",
+      description: "",
+      priority: "medium",
+      storyPoints: 1,
     },
   });
 
-  // Update form when task is loaded
+  // Load task data for editing if in edit mode
   useEffect(() => {
-    if (taskToEdit) {
-      form.reset({
-        title: taskToEdit.title,
-        description: taskToEdit.description || "",
-        priority: (taskToEdit.priority as "low" | "medium" | "high") || "medium",
-        storyPoints: taskToEdit.storyPoints || 1,
-      });
+    if (isEditMode && taskId) {
+      const taskToEdit = getTask(taskId);
+      if (taskToEdit) {
+        form.reset({
+          title: taskToEdit.title,
+          description: taskToEdit.description || "",
+          priority: (taskToEdit.priority as "low" | "medium" | "high") || "medium",
+          storyPoints: taskToEdit.storyPoints || 1,
+        });
+      } else {
+        // If task not found in context, try fetching directly
+        const fetchTask = async () => {
+          try {
+            const { data, error } = await supabase
+              .from('tasks')
+              .select('*')
+              .eq('id', taskId)
+              .single();
+              
+            if (error) throw error;
+            
+            if (data) {
+              form.reset({
+                title: data.title,
+                description: data.description || "",
+                priority: (data.priority as "low" | "medium" | "high") || "medium",
+                storyPoints: data.story_points || 1,
+              });
+            }
+          } catch (error) {
+            console.error("Error fetching task:", error);
+            toast.error("Failed to load task data");
+          }
+        };
+        
+        fetchTask();
+      }
     }
-  }, [taskToEdit, form]);
+  }, [taskId, getTask, form, isEditMode]);
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     setLoading(true);
@@ -95,11 +124,23 @@ const BacklogItemForm: React.FC<BacklogItemFormProps> = ({ taskId, onClose, proj
           return;
         }
         
-        console.log('Creating new backlog item with project ID:', projectId); // Add logging to help debug
-        
-        // Direct Supabase insert as a fallback method
-        if (user) {
-          const { data: insertData, error } = await supabase
+        // Prefer the context method first
+        try {
+          await addTask({
+            title: data.title,
+            description: data.description,
+            status: "backlog",
+            projectId: projectId,
+            priority: data.priority,
+            storyPoints: data.storyPoints,
+            sprintId: "",
+          });
+          toast.success("Backlog item created successfully");
+        } catch (contextError) {
+          console.error("Context error:", contextError);
+          
+          // Fallback to direct Supabase insert if context method fails
+          const { error } = await supabase
             .from('tasks')
             .insert([{
               title: data.title,
@@ -113,23 +154,10 @@ const BacklogItemForm: React.FC<BacklogItemFormProps> = ({ taskId, onClose, proj
             }]);
             
           if (error) {
-            console.error("Supabase error:", error);
             throw error;
           } else {
             toast.success("Backlog item created successfully");
           }
-        } else {
-          // Try using the context method as originally intended
-          await addTask({
-            title: data.title,
-            description: data.description,
-            status: "backlog",
-            projectId: projectId,
-            priority: data.priority,
-            storyPoints: data.storyPoints,
-            sprintId: "",
-          });
-          toast.success("Backlog item created successfully");
         }
       }
       

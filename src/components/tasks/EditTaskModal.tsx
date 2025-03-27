@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useProjects } from "@/context/ProjectContext";
 import { X, Edit, User, Calendar } from "lucide-react";
 import { toast } from "sonner";
@@ -20,7 +20,7 @@ import { format, parseISO } from "date-fns";
 interface EditTaskModalProps {
   taskId: string;
   onClose: () => void;
-  onTaskUpdated?: (updatedTask: any) => void; // Add callback for immediate updates
+  onTaskUpdated?: (updatedTask: any) => void;
 }
 
 const EditTaskModal: React.FC<EditTaskModalProps> = ({ 
@@ -28,6 +28,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
   onClose,
   onTaskUpdated
 }) => {
+  const [task, setTask] = useState<any>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<"low" | "medium" | "high">("medium");
@@ -39,103 +40,154 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
   const [projectId, setProjectId] = useState<string | null>(null);
   const [completionDate, setCompletionDate] = useState<Date | undefined>(undefined);
   const [status, setStatus] = useState<string>("todo");
-  const [previousStatus, setPreviousStatus] = useState<string>("todo");
+  const [isInitialized, setIsInitialized] = useState(false);
   
   const { getTask, updateTask } = useProjects();
   
+  // Initialize task data
   useEffect(() => {
-    const task = getTask(taskId);
-    
-    if (task) {
-      console.log("Loading task data in EditTaskModal:", task);
-      setTitle(task.title);
-      setDescription(task.description || "");
-      setPriority(task.priority || "medium");
-      setAssignedTo(task.assignedTo || task.assign_to || "");
-      setStoryPoints(task.storyPoints || task.story_points || 1);
-      setProjectId(task.projectId);
-      setStatus(task.status || "todo");
-      setPreviousStatus(task.status || "todo");
+    async function loadTaskData() {
+      // Try to get from context first (fast)
+      const contextTask = getTask(taskId);
       
-      // Get the completion date from either field
-      const dateStr = task.completionDate || task.completion_date;
-      console.log("Initial completion date from task:", dateStr);
-      
-      if (dateStr) {
-        try {
-          const parsedDate = parseISO(dateStr);
-          console.log("Parsed date for EditTaskModal:", parsedDate);
-          setCompletionDate(parsedDate);
-        } catch (err) {
-          console.error("Error parsing date:", err, "Date string was:", dateStr);
+      if (contextTask) {
+        initializeTaskState(contextTask);
+        setProjectId(contextTask.projectId);
+        
+        // If we have projectId, fetch collaborators
+        if (contextTask.projectId) {
+          fetchCollaborators(contextTask.projectId);
         }
       } else {
-        console.log("No completion date found in task");
-        setCompletionDate(undefined);
-      }
-      
-      if (task.projectId) {
-        fetchCollaborators(task.projectId);
+        // Fallback to direct fetch if not in context
+        try {
+          const { data, error } = await supabase
+            .from('tasks')
+            .select('*')
+            .eq('id', taskId)
+            .single();
+            
+          if (error) throw error;
+          if (data) {
+            initializeTaskState(data);
+            setProjectId(data.project_id);
+            
+            // If we have projectId, fetch collaborators
+            if (data.project_id) {
+              fetchCollaborators(data.project_id);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching task data:", error);
+          toast.error("Failed to load task data");
+          onClose();
+        }
       }
     }
+    
+    loadTaskData();
   }, [taskId, getTask]);
+  
+  // Helper function to initialize all state from task data
+  const initializeTaskState = (taskData: any) => {
+    setTask(taskData);
+    setTitle(taskData.title || "");
+    setDescription(taskData.description || "");
+    setPriority(taskData.priority || "medium");
+    setAssignedTo(taskData.assignedTo || taskData.assign_to || "");
+    setStoryPoints(taskData.storyPoints || taskData.story_points || 1);
+    setStatus(taskData.status || "todo");
+    
+    // Handle completion date
+    const dateStr = taskData.completionDate || taskData.completion_date;
+    if (dateStr) {
+      try {
+        setCompletionDate(parseISO(dateStr));
+      } catch (err) {
+        console.error("Error parsing date:", err);
+      }
+    }
+    
+    setIsInitialized(true);
+  };
   
   const fetchCollaborators = async (projectId: string) => {
     setIsLoadingCollaborators(true);
     try {
-      const { data: projectData, error: projectError } = await supabase
-        .from('projects')
-        .select('owner_id, title')
-        .eq('id', projectId)
-        .single();
-        
-      if (projectError) throw projectError;
+      // Use Promise.all to run these requests in parallel
+      const [projectResponse, collaboratorsResponse] = await Promise.all([
+        // Fetch project owner
+        supabase
+          .from('projects')
+          .select('owner_id, title')
+          .eq('id', projectId)
+          .single(),
+          
+        // Fetch collaborators
+        supabase
+          .from('collaborators')
+          .select(`
+            id,
+            userId:user_id,
+            role,
+            createdAt:created_at,
+            users:user_id (
+              id,
+              username,
+              email
+            )
+          `)
+          .eq('project_id', projectId)
+      ]);
       
-      if (projectData) {
-        const { data: ownerData, error: ownerError } = await supabase
+      // Handle project owner data
+      if (!projectResponse.error && projectResponse.data) {
+        const ownerResponse = await supabase
           .from('users')
           .select('id, username')
-          .eq('id', projectData.owner_id)
+          .eq('id', projectResponse.data.owner_id)
           .single();
           
-        if (!ownerError && ownerData) {
-          setProjectOwner(ownerData);
+        if (!ownerResponse.error && ownerResponse.data) {
+          setProjectOwner(ownerResponse.data);
         }
       }
       
-      const { data: collaboratorsData, error: collaboratorsError } = await supabase
-        .from('collaborators')
-        .select(`
-          id,
-          userId:user_id,
-          role,
-          createdAt:created_at,
-          users:user_id (
-            id,
-            username,
-            email
-          )
-        `)
-        .eq('project_id', projectId);
-      
-      if (collaboratorsError) throw collaboratorsError;
-      
-      const formattedCollaborators = collaboratorsData?.map(collab => ({
-        id: collab.id,
-        userId: collab.userId,
-        username: collab.users ? (collab.users as any).username || '' : '',
-        email: collab.users ? (collab.users as any).email || '' : '',
-        role: collab.role as ProjectRole,
-        createdAt: collab.createdAt
-      })) || [];
-      
-      setCollaborators(formattedCollaborators);
+      // Handle collaborators data
+      if (!collaboratorsResponse.error && collaboratorsResponse.data) {
+        const formattedCollaborators = collaboratorsResponse.data.map(collab => ({
+          id: collab.id,
+          userId: collab.userId,
+          username: collab.users ? (collab.users as any).username || '' : '',
+          email: collab.users ? (collab.users as any).email || '' : '',
+          role: collab.role as ProjectRole,
+          createdAt: collab.createdAt
+        }));
+        
+        setCollaborators(formattedCollaborators);
+      }
     } catch (error) {
       console.error("Error fetching collaborators:", error);
     } finally {
       setIsLoadingCollaborators(false);
     }
   };
+  
+  // Memoize assignee options to prevent recalculation on every render
+  const assigneeOptions = useMemo(() => {
+    const options = [];
+    
+    if (projectOwner) {
+      options.push({ id: projectOwner.id, name: projectOwner.username });
+    }
+    
+    options.push(...collaborators.map(collab => ({ 
+      id: collab.userId,
+      name: collab.username 
+    })));
+    
+    return options;
+  }, [projectOwner, collaborators]);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,8 +207,6 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
         status,
         completionDate: completionDate ? format(completionDate, "yyyy-MM-dd") : null
       };
-      
-      console.log("Updating task with data:", updatedData);
       
       // Use direct Supabase update to ensure completion_date is properly saved
       const { data: updatedTask, error } = await supabase
@@ -195,13 +245,35 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
     }
   };
   
-  const assigneeOptions = [
-    ...(projectOwner ? [{ id: projectOwner.id, name: projectOwner.username }] : []),
-    ...collaborators.map(collab => ({ 
-      id: collab.userId,
-      name: collab.username 
-    }))
-  ];
+  // Show loading state while task data or collaborators are loading
+  if (!isInitialized) {
+    return (
+      <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 animate-fade-in">
+        <div className="bg-scrum-card border border-scrum-border rounded-lg p-6 w-full max-w-lg animate-pulse">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <Edit className="h-4 w-4" />
+              <span>Loading Task...</span>
+            </h2>
+            <button
+              onClick={onClose}
+              className="text-scrum-text-secondary hover:text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="space-y-4">
+            <div className="h-10 bg-scrum-background/30 rounded animate-pulse"></div>
+            <div className="h-24 bg-scrum-background/30 rounded animate-pulse"></div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="h-10 bg-scrum-background/30 rounded animate-pulse"></div>
+              <div className="h-10 bg-scrum-background/30 rounded animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 animate-fade-in">
