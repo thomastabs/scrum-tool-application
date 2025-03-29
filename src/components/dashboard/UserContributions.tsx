@@ -109,9 +109,9 @@ const UserContributions: React.FC = () => {
   };
 
   return (
-    <Card>
+    <Card className="border border-border bg-card dark:bg-card">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-medium flex items-center">
+        <CardTitle className="text-lg font-medium flex items-center text-card-foreground dark:text-card-foreground">
           <Calendar className="mr-2 h-5 w-5" />
           Contribution Activity
         </CardTitle>
@@ -119,7 +119,7 @@ const UserContributions: React.FC = () => {
       <CardContent>
         {isLoading ? (
           <div className="flex justify-center items-center h-24">
-            <p className="text-sm text-gray-500 animate-pulse">Loading contributions...</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 animate-pulse">Loading contributions...</p>
           </div>
         ) : contributions.length > 0 ? (
           <div className="grid grid-cols-13 gap-1">
@@ -127,8 +127,8 @@ const UserContributions: React.FC = () => {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-6 text-center">
-            <CalendarX className="h-8 w-8 text-gray-400 mb-2" />
-            <p className="text-sm text-gray-500">No contributions yet</p>
+            <CalendarX className="h-8 w-8 text-gray-400 dark:text-gray-500 mb-2" />
+            <p className="text-sm text-gray-500 dark:text-gray-400">No contributions yet</p>
           </div>
         )}
       </CardContent>
