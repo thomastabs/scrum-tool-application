@@ -7,6 +7,7 @@ import ProjectCard from "@/components/projects/ProjectCard";
 import NewProjectButton from "@/components/projects/NewProjectButton";
 import { Folder, Users, LayoutDashboard } from "lucide-react";
 import { useLocation } from "react-router-dom";
+import UserDashboard from "@/components/dashboard/UserDashboard";
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -49,26 +50,30 @@ const Dashboard: React.FC = () => {
   const renderTabContent = () => {
     if (activeTab === "overview") {
       return (
-        <div className="bg-scrum-card border border-scrum-border rounded-lg p-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-            <div>
-              <h2 className="text-xl font-bold">Recent Projects</h2>
-              <p className="text-scrum-text-secondary">Your most recently created projects</p>
+        <div className="space-y-8">
+          <UserDashboard />
+          
+          <div className="bg-scrum-card border border-scrum-border rounded-lg p-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+              <div>
+                <h2 className="text-xl font-bold">Recent Projects</h2>
+                <p className="text-scrum-text-secondary">Your most recently created projects</p>
+              </div>
+              <NewProjectButton />
             </div>
-            <NewProjectButton />
-          </div>
 
-          {recentProjects.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-scrum-text-secondary mb-4">You don't have any projects yet</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {recentProjects.map((project) => (
-                <ProjectCard key={project.id} project={project} />
-              ))}
-            </div>
-          )}
+            {recentProjects.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-scrum-text-secondary mb-4">You don't have any projects yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {recentProjects.map((project) => (
+                  <ProjectCard key={project.id} project={project} />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       );
     } else if (activeTab === "projects") {
