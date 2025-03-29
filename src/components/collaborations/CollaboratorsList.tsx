@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { fetchProjectCollaborators, removeCollaborator, updateCollaboratorRole } from "@/lib/supabase";
 import { Collaborator, ProjectRole } from "@/types";
@@ -100,15 +99,15 @@ const CollaboratorsList: React.FC<CollaboratorsListProps> = ({
     
     switch (role) {
       case "scrum_master":
-        color = "bg-destructive/80 text-white";
+        color = "bg-blue-500/80 text-white";
         icon = <Shield className="h-3 w-3" />;
         break;
       case "team_member":
-        color = "bg-blue-500/80 text-white";
+        color = "bg-violet-100 dark:bg-purple-900/30 text-violet-700 dark:text-purple-400";
         icon = <User className="h-3 w-3" />;
         break;
       case "product_owner":
-        color = "bg-scrum-accent/80 text-white";
+        color = "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400";
         icon = <Eye className="h-3 w-3" />;
         break;
     }
@@ -135,7 +134,7 @@ const CollaboratorsList: React.FC<CollaboratorsListProps> = ({
       </div>
     );
   }
-  
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 mb-4">

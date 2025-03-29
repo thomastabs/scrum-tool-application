@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
 import { useAuth } from "@/context/AuthContext";
-import { fetchProjectCollaborators } from "@/lib/supabase";
+import { fetchProjectCollaboratorsOptimized } from "@/lib/supabase";
 import { Users, Mail, ChevronDown, CheckCircle, Clock, Star, Calendar, Shield, User } from "lucide-react";
 import { Collaborator, Task } from "@/types";
 import { 
@@ -42,25 +41,19 @@ const ProjectTeam: React.FC = () => {
       
       setIsLoading(true);
       try {
-        // Get collaborators
-        const collaboratorsData = await fetchProjectCollaborators(projectId);
+        // Get collaborators and owner using the optimized function
+        const { collaborators: collaboratorsData, owner: ownerData } = await fetchProjectCollaboratorsOptimized(projectId);
         setCollaborators(collaboratorsData);
         
-        // Set owner data if available from project
-        if (project?.ownerId && project?.ownerName) {
-          console.log("Project owner data:", {
-            ownerId: project.ownerId,
-            ownerName: project.ownerName,
-            ownerEmail: project.ownerEmail
-          });
-          
-          const ownerEmail = project.ownerEmail || "No email available";
-          console.log("Setting owner email to:", ownerEmail);
-          
+        // Set owner data from the optimized fetch
+        if (ownerData) {
+          setOwner(ownerData);
+        } else if (project?.ownerId && project?.ownerName) {
+          // Fallback to project context data if available
           setOwner({
             id: project.ownerId,
             username: project.ownerName,
-            email: ownerEmail
+            email: project.ownerEmail || "No email available"
           });
         }
       } catch (error) {

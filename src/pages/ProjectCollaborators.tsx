@@ -28,7 +28,7 @@ const ProjectCollaborators: React.FC = () => {
   return (
     <div className="animate-fade-up">
       <div className="flex items-center gap-3 mb-6">
-        <Users className="h-6 w-6 text-scrum-text-secondary" />
+        <Users className="h-6 w-6 text-indigo-500" />
         <h2 className="text-2xl font-bold">Project Collaborators</h2>
       </div>
       
