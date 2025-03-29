@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { useProjects } from "@/context/ProjectContext";
 import { X, Edit, User, Calendar } from "lucide-react";
@@ -16,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface EditTaskModalProps {
   taskId: string;
@@ -44,22 +44,18 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
   
   const { getTask, updateTask } = useProjects();
   
-  // Initialize task data
   useEffect(() => {
     async function loadTaskData() {
-      // Try to get from context first (fast)
       const contextTask = getTask(taskId);
       
       if (contextTask) {
         initializeTaskState(contextTask);
         setProjectId(contextTask.projectId);
         
-        // If we have projectId, fetch collaborators
         if (contextTask.projectId) {
           fetchCollaborators(contextTask.projectId);
         }
       } else {
-        // Fallback to direct fetch if not in context
         try {
           const { data, error } = await supabase
             .from('tasks')
@@ -72,7 +68,6 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
             initializeTaskState(data);
             setProjectId(data.project_id);
             
-            // If we have projectId, fetch collaborators
             if (data.project_id) {
               fetchCollaborators(data.project_id);
             }
@@ -88,7 +83,6 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
     loadTaskData();
   }, [taskId, getTask]);
   
-  // Helper function to initialize all state from task data
   const initializeTaskState = (taskData: any) => {
     setTask(taskData);
     setTitle(taskData.title || "");
@@ -98,7 +92,6 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
     setStoryPoints(taskData.storyPoints || taskData.story_points || 1);
     setStatus(taskData.status || "todo");
     
-    // Handle completion date
     const dateStr = taskData.completionDate || taskData.completion_date;
     if (dateStr) {
       try {
@@ -114,16 +107,13 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
   const fetchCollaborators = async (projectId: string) => {
     setIsLoadingCollaborators(true);
     try {
-      // Use Promise.all to run these requests in parallel
       const [projectResponse, collaboratorsResponse] = await Promise.all([
-        // Fetch project owner
         supabase
           .from('projects')
           .select('owner_id, title')
           .eq('id', projectId)
           .single(),
           
-        // Fetch collaborators
         supabase
           .from('collaborators')
           .select(`
@@ -140,7 +130,6 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
           .eq('project_id', projectId)
       ]);
       
-      // Handle project owner data
       if (!projectResponse.error && projectResponse.data) {
         const ownerResponse = await supabase
           .from('users')
@@ -153,7 +142,6 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
         }
       }
       
-      // Handle collaborators data
       if (!collaboratorsResponse.error && collaboratorsResponse.data) {
         const formattedCollaborators = collaboratorsResponse.data.map(collab => ({
           id: collab.id,
@@ -173,7 +161,6 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
     }
   };
   
-  // Memoize assignee options to prevent recalculation on every render
   const assigneeOptions = useMemo(() => {
     const options = [];
     
@@ -208,7 +195,6 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
         completionDate: completionDate ? format(completionDate, "yyyy-MM-dd") : null
       };
       
-      // Use direct Supabase update to ensure completion_date is properly saved
       const { data: updatedTask, error } = await supabase
         .from('tasks')
         .update({
@@ -229,10 +215,8 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
         throw error;
       }
       
-      // Also update the local state through context
       await updateTask(taskId, updatedData);
       
-      // Call the onTaskUpdated callback with the updated task data if provided
       if (onTaskUpdated && updatedTask) {
         onTaskUpdated(updatedTask);
       }
@@ -245,16 +229,15 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
     }
   };
   
-  // Show loading state while task data or collaborators are loading
   if (!isInitialized) {
     return (
       <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 animate-fade-in">
-        <div className="bg-scrum-card border border-scrum-border rounded-lg p-6 w-full max-w-lg animate-pulse">
+        <div className="bg-scrum-card border border-scrum-border rounded-lg p-6 w-full max-w-lg">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              <Edit className="h-4 w-4" />
-              <span>Loading Task...</span>
-            </h2>
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-5 w-5 rounded-full" />
+              <Skeleton className="h-6 w-32" />
+            </div>
             <button
               onClick={onClose}
               className="text-scrum-text-secondary hover:text-white"
@@ -263,11 +246,41 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
             </button>
           </div>
           <div className="space-y-4">
-            <div className="h-10 bg-scrum-background/30 rounded animate-pulse"></div>
-            <div className="h-24 bg-scrum-background/30 rounded animate-pulse"></div>
+            <div>
+              <Skeleton className="h-4 w-24 mb-2" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <div>
+              <Skeleton className="h-4 w-28 mb-2" />
+              <Skeleton className="h-24 w-full" />
+            </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="h-10 bg-scrum-background/30 rounded animate-pulse"></div>
-              <div className="h-10 bg-scrum-background/30 rounded animate-pulse"></div>
+              <div>
+                <Skeleton className="h-4 w-16 mb-2" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+              <div>
+                <Skeleton className="h-4 w-20 mb-2" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Skeleton className="h-4 w-14 mb-2" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+              <div>
+                <Skeleton className="h-4 w-24 mb-2" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            </div>
+            <div>
+              <Skeleton className="h-4 w-20 mb-2" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <Skeleton className="h-9 w-20" />
+              <Skeleton className="h-9 w-28" />
             </div>
           </div>
         </div>
@@ -402,9 +415,9 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
               Assigned To
             </label>
             {isLoadingCollaborators ? (
-              <div className="scrum-input flex items-center">
-                <div className="h-5 w-5 mr-2 rounded-full bg-scrum-accent/30 animate-pulse"></div>
-                <span className="text-scrum-text-secondary">Loading collaborators...</span>
+              <div className="scrum-input flex items-center space-x-2">
+                <Skeleton className="h-5 w-5 rounded-full" />
+                <Skeleton className="h-4 w-40" />
               </div>
             ) : (
               assigneeOptions.length > 0 ? (
