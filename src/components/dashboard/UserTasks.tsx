@@ -52,7 +52,18 @@ const UserTasks: React.FC<UserTasksProps> = ({ userId }) => {
         if (error) throw error;
         
         if (data) {
-          setTasks(data as Task[]);
+          // Transform the data to match the expected Task type structure
+          const formattedTasks: Task[] = data.map(item => ({
+            id: item.id,
+            title: item.title,
+            status: item.status,
+            priority: item.priority,
+            story_points: item.story_points,
+            project: item.project as { id: string; title: string },
+            sprint: item.sprint as { id: string; title: string } | null
+          }));
+          
+          setTasks(formattedTasks);
         }
       } catch (error) {
         console.error("Error fetching user tasks:", error);
