@@ -27,24 +27,34 @@ const UserContributions: React.FC = () => {
         startDate.setDate(startDate.getDate() - 90);
         const startDateStr = startDate.toISOString().split('T')[0];
         
-        // Fetch tasks completed by the user in the last 90 days
+        // First, let's get all the completed tasks
         const { data, error } = await withRetry(async () => {
           return await supabase
             .from('tasks')
-            .select('completion_date, count')
+            .select('completion_date')
             .eq('user_id', user.id)
             .not('completion_date', 'is', null)
-            .gte('completion_date', startDateStr)
-            .group('completion_date');
+            .gte('completion_date', startDateStr);
         });
         
         if (error) throw error;
         
-        // Format the data for the contribution graph
-        const contributionData = data?.map(item => ({
-          date: item.completion_date as string,
-          count: parseInt(item.count as string)
-        })) || [];
+        // Now manually count contributions per day
+        const contributionsMap = new Map<string, number>();
+        
+        data?.forEach(task => {
+          if (task.completion_date) {
+            const date = task.completion_date as string;
+            contributionsMap.set(date, (contributionsMap.get(date) || 0) + 1);
+          }
+        });
+        
+        // Convert the map to our ContributionDay array
+        const contributionData: ContributionDay[] = Array.from(contributionsMap.entries())
+          .map(([date, count]) => ({
+            date,
+            count
+          }));
         
         setContributions(contributionData);
       } catch (error) {
