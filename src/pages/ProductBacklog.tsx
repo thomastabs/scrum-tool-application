@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
@@ -50,16 +51,40 @@ const ProductBacklog: React.FC = () => {
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [availableSprints, setAvailableSprints] = useState<any[]>([]);
   
   const project = projectId ? getProject(projectId) : undefined;
-  const sprints = projectId ? getSprintsByProject(projectId) : [];
-  const availableSprints = sprints.filter(sprint => sprint.status !== "completed");
+  const allSprints = projectId ? getSprintsByProject(projectId) : [];
   
   // Product owners and project owners can add items to backlog
   const canAddToBacklog = isOwner || userRole === 'product_owner';
   
   // Scrum masters can move items from backlog to sprint
   const canMoveToSprint = isOwner || userRole === 'scrum_master';
+  
+  // Fetch available sprints directly from Supabase
+  const fetchAvailableSprints = async () => {
+    if (!projectId) return [];
+    
+    try {
+      const { data, error } = await supabase
+        .from('sprints')
+        .select('*')
+        .eq('project_id', projectId)
+        .neq('status', 'completed');
+        
+      if (error) {
+        console.error("Error fetching available sprints:", error);
+        throw error;
+      }
+      
+      console.log("Available sprints:", data);
+      return data || [];
+    } catch (error) {
+      console.error("Error fetching available sprints:", error);
+      return [];
+    }
+  };
   
   useEffect(() => {
     if (!projectId || !user) {
@@ -72,6 +97,7 @@ const ProductBacklog: React.FC = () => {
         setIsLoading(true);
         console.log('Fetching backlog tasks for project ID:', projectId);
         
+        // Fetch backlog tasks
         const { data, error } = await withRetry(async () => {
           return await supabase
             .from('tasks')
@@ -88,6 +114,11 @@ const ProductBacklog: React.FC = () => {
         
         console.log('Retrieved backlog tasks:', data);
         setBacklogTasks(data || []);
+        
+        // Fetch available sprints
+        const sprints = await fetchAvailableSprints();
+        setAvailableSprints(sprints);
+        
         setIsLoading(false);
       } catch (error) {
         console.error('Error fetching backlog tasks:', error);
@@ -99,6 +130,14 @@ const ProductBacklog: React.FC = () => {
     
     fetchBacklogItems();
   }, [projectId, user]);
+  
+  // Update available sprints when all sprints change
+  useEffect(() => {
+    if (allSprints && allSprints.length > 0) {
+      const nonCompletedSprints = allSprints.filter(sprint => sprint.status !== "completed");
+      setAvailableSprints(nonCompletedSprints);
+    }
+  }, [allSprints]);
   
   const handleRefresh = async () => {
     if (!projectId) return;
@@ -120,6 +159,11 @@ const ProductBacklog: React.FC = () => {
       if (error) throw error;
       
       setBacklogTasks(data || []);
+      
+      // Refresh available sprints
+      const sprints = await fetchAvailableSprints();
+      setAvailableSprints(sprints);
+      
       toast.success("Backlog refreshed successfully");
     } catch (error) {
       console.error("Error refreshing backlog:", error);
@@ -452,7 +496,7 @@ const ProductBacklog: React.FC = () => {
                                   )}
                                 </div>
                                 
-                                {/* Show move to sprint if user is scrum master */}
+                                {/* Show move to sprint if user is scrum master AND sprints are available */}
                                 {canMoveToSprint && availableSprints.length > 0 && (
                                   <Dialog>
                                     <DialogTrigger asChild>
@@ -480,7 +524,7 @@ const ProductBacklog: React.FC = () => {
                                             <div className="text-left">
                                               <p className="font-medium">{sprint.title}</p>
                                               <p className="text-xs text-muted-foreground">
-                                                {new Date(sprint.startDate).toLocaleDateString()} to {new Date(sprint.endDate).toLocaleDateString()}
+                                                {new Date(sprint.start_date).toLocaleDateString()} to {new Date(sprint.end_date).toLocaleDateString()}
                                               </p>
                                             </div>
                                           </Button>

@@ -15,7 +15,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       expand={false}
       richColors
       closeButton
-      duration={3000}
+      duration={5000} // Increased duration for better user experience
       toastOptions={{
         classNames: {
           toast:

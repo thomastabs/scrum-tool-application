@@ -21,13 +21,28 @@ const TaskCard: React.FC<TaskCardProps> = ({
 }) => {
   const { deleteTask } = useProjects();
 
+  // Improved null safety with optional chaining and defaults
+  const safeTask = {
+    ...task,
+    id: task?.id || '',
+    title: task?.title || 'Untitled Task',
+    description: task?.description || '',
+    priority: task?.priority || '',
+    storyPoints: task?.storyPoints !== undefined ? task.storyPoints : (task?.story_points || 0),
+    story_points: task?.story_points !== undefined ? task.story_points : (task?.storyPoints || 0),
+    assignedTo: task?.assignedTo || task?.assign_to || '',
+    assign_to: task?.assign_to || task?.assignedTo || '',
+    completionDate: task?.completionDate || task?.completion_date || null,
+    completion_date: task?.completion_date || task?.completionDate || null,
+  };
+
   const getPriorityBadge = () => {
-    if (!task.priority) return null;
+    if (!safeTask.priority) return null;
     
     let color = "";
     let icon = null;
     
-    switch (task.priority) {
+    switch (safeTask.priority) {
       case "high":
         color = "bg-destructive/80 text-white";
         icon = <AlertTriangle className="h-3 w-3" />;
@@ -46,7 +61,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
     return (
       <span className={`text-xs px-2 py-0.5 rounded-full flex items-center gap-1 ${color}`}>
         {icon}
-        {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+        {safeTask.priority.charAt(0).toUpperCase() + safeTask.priority.slice(1)}
       </span>
     );
   };
@@ -54,11 +69,11 @@ const TaskCard: React.FC<TaskCardProps> = ({
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to delete this task?")) {
       try {
-        await deleteTask(task.id);
+        await deleteTask(safeTask.id);
         
         // Notify parent component that task has been deleted
         if (onTaskDeleted) {
-          onTaskDeleted(task.id);
+          onTaskDeleted(safeTask.id);
         }
         
         toast.success("Task deleted successfully");
@@ -70,18 +85,18 @@ const TaskCard: React.FC<TaskCardProps> = ({
   };
   
   // Get story points from appropriate property
-  const storyPoints = task.storyPoints !== undefined ? task.storyPoints : task.story_points;
+  const storyPoints = safeTask.storyPoints;
   
   // Get assignee from appropriate property
-  const assignee = task.assignedTo || task.assign_to;
+  const assignee = safeTask.assignedTo;
   
   // Get completion date from appropriate property with better logging
-  const completionDate = task.completionDate || task.completion_date;
+  const completionDate = safeTask.completionDate;
   
   return (
     <div className="bg-scrum-background border border-scrum-border rounded-md p-3 hover:border-scrum-highlight transition-colors">
       <div className="flex items-start justify-between mb-2">
-        <h4 className="font-medium text-sm line-clamp-2">{task.title}</h4>
+        <h4 className="font-medium text-sm line-clamp-2">{safeTask.title}</h4>
         
         {!isSprintCompleted && onEdit && (
           <div className="flex items-center gap-1 ml-2">
@@ -101,9 +116,9 @@ const TaskCard: React.FC<TaskCardProps> = ({
         )}
       </div>
       
-      {task.description && (
+      {safeTask.description && (
         <p className="text-scrum-text-secondary text-xs mb-2 line-clamp-2">
-          {task.description}
+          {safeTask.description}
         </p>
       )}
       

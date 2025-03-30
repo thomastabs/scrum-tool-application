@@ -37,15 +37,85 @@ const SprintBoard: React.FC = () => {
   const [editingTask, setEditingTask] = useState<string | null>(null);
   const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
   const [tasks, setTasks] = useState<any[]>([]);
+  const [taskMap, setTaskMap] = useState<{[key: string]: any}>({});
   const [projectId, setProjectId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<ProjectRole | null>(null);
   const [isOwner, setIsOwner] = useState(false);
+  const [isUpdatingTask, setIsUpdatingTask] = useState(false);
+  
+  // Function to refresh board data
+  const refreshBoardData = async () => {
+    if (!sprintId) return;
+    
+    try {
+      console.log("Refreshing sprint board data for sprint ID:", sprintId);
+        
+      const { data: sprintData, error: sprintError } = await supabase
+        .from('sprints')
+        .select('*')
+        .eq('id', sprintId)
+        .single();
+        
+      if (sprintError) {
+        console.error("Error fetching sprint:", sprintError);
+        throw sprintError;
+      }
+      
+      if (!sprintData) {
+        console.error("Sprint not found");
+        throw new Error('Sprint not found');
+      }
+      
+      console.log("Sprint data fetched:", sprintData);
+      setSprint(sprintData);
+      setProjectId(sprintData.project_id);
+      
+      const { data: tasksData, error: tasksError } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('sprint_id', sprintId);
+        
+      if (tasksError) throw tasksError;
+      
+      console.log("Tasks data fetched:", tasksData || []);
+      
+      // Create a task map for quick lookups
+      const newTaskMap: {[key: string]: any} = {};
+      (tasksData || []).forEach(task => {
+        newTaskMap[task.id] = task;
+      });
+      
+      setTaskMap(newTaskMap);
+      setTasks(tasksData || []);
+      
+      const initialColumns: {[key: string]: {title: string, taskIds: string[]}} = {
+        "todo": { title: "TO DO", taskIds: [] },
+        "in-progress": { title: "IN PROGRESS", taskIds: [] },
+        "done": { title: "DONE", taskIds: [] }
+      };
+      
+      tasksData?.forEach(task => {
+        if (initialColumns[task.status]) {
+          initialColumns[task.status].taskIds.push(task.id);
+        } else {
+          initialColumns.todo.taskIds.push(task.id);
+        }
+      });
+      
+      setColumns(initialColumns);
+      
+    } catch (error) {
+      console.error('Error refreshing board data:', error);
+      toast.error("Failed to refresh board data");
+    }
+  };
   
   useEffect(() => {
     const fetchSprintData = async () => {
       if (!sprintId) return;
       
       try {
+        setIsLoading(true);
         console.log("Fetching sprint data for sprint ID:", sprintId);
         
         const { data: sprintData, error: sprintError } = await supabase
@@ -76,6 +146,14 @@ const SprintBoard: React.FC = () => {
         if (tasksError) throw tasksError;
         
         console.log("Tasks data fetched:", tasksData || []);
+        
+        // Create a task map for quick lookups
+        const taskMap: {[key: string]: any} = {};
+        (tasksData || []).forEach(task => {
+          taskMap[task.id] = task;
+        });
+        
+        setTaskMap(taskMap);
         setTasks(tasksData || []);
         
         const initialColumns: {[key: string]: {title: string, taskIds: string[]}} = {
@@ -191,11 +269,17 @@ const SprintBoard: React.FC = () => {
           
         if (error) throw error;
         
+        // Update the task in tasks array and taskMap
         setTasks(prevTasks => 
           prevTasks.map(task => 
             task.id === draggableId ? { ...task, status: destination.droppableId } : task
           )
         );
+        
+        setTaskMap(prevMap => ({
+          ...prevMap,
+          [draggableId]: { ...prevMap[draggableId], status: destination.droppableId }
+        }));
         
         try {
           await updateTask(draggableId, {
@@ -224,6 +308,7 @@ const SprintBoard: React.FC = () => {
   };
   
   const handleTaskDeleted = (taskId: string) => {
+    // First remove from columns
     setColumns(prevColumns => {
       const newColumns = { ...prevColumns };
       
@@ -242,17 +327,48 @@ const SprintBoard: React.FC = () => {
       return newColumns;
     });
     
+    // Remove from tasks array
     setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+    
+    // Remove from task map
+    setTaskMap(prevMap => {
+      const newMap = { ...prevMap };
+      delete newMap[taskId];
+      return newMap;
+    });
   };
   
   const handleTaskUpdated = (updatedTask: any) => {
     console.log("Task update received in SprintBoard:", updatedTask);
+    setIsUpdatingTask(true);
 
-    // First, update the tasks state with the new task data
-    setTasks(prevTasks => {
-      const updatedTasks = prevTasks.map(task => 
-        task.id === updatedTask.id ? {
-          ...task,
+    try {
+      // First, update the tasks state with the new task data
+      setTasks(prevTasks => {
+        const updatedTasks = prevTasks.map(task => 
+          task.id === updatedTask.id ? {
+            ...task,
+            title: updatedTask.title,
+            description: updatedTask.description,
+            status: updatedTask.status,
+            assignedTo: updatedTask.assign_to,
+            assign_to: updatedTask.assign_to,
+            storyPoints: updatedTask.story_points,
+            story_points: updatedTask.story_points,
+            priority: updatedTask.priority,
+            completionDate: updatedTask.completion_date,
+            completion_date: updatedTask.completion_date
+          } : task
+        );
+        console.log("Updated tasks array:", updatedTasks);
+        return updatedTasks;
+      });
+      
+      // Update the task map
+      setTaskMap(prevMap => ({
+        ...prevMap,
+        [updatedTask.id]: {
+          ...prevMap[updatedTask.id],
           title: updatedTask.title,
           description: updatedTask.description,
           status: updatedTask.status,
@@ -263,57 +379,61 @@ const SprintBoard: React.FC = () => {
           priority: updatedTask.priority,
           completionDate: updatedTask.completion_date,
           completion_date: updatedTask.completion_date
-        } : task
-      );
-      console.log("Updated tasks array:", updatedTasks);
-      return updatedTasks;
-    });
-    
-    // Then update the columns state to ensure the task appears in the correct column
-    setColumns(prevColumns => {
-      // Create a deep copy of the columns
-      const newColumns = JSON.parse(JSON.stringify(prevColumns));
-      
-      // Find which column currently contains the task
-      let currentColumnId: string | null = null;
-      let foundInColumn = false;
-      
-      Object.keys(newColumns).forEach(columnId => {
-        if (newColumns[columnId].taskIds.includes(updatedTask.id)) {
-          currentColumnId = columnId;
-          foundInColumn = true;
         }
-      });
-
-      console.log(`Task ${updatedTask.id} found in column: ${currentColumnId}, new status: ${updatedTask.status}`);
+      }));
       
-      // If the task's status has changed, move it to the new column
-      if (currentColumnId && currentColumnId !== updatedTask.status) {
-        // Remove from current column
-        newColumns[currentColumnId].taskIds = newColumns[currentColumnId].taskIds.filter(
-          (id: string) => id !== updatedTask.id
-        );
+      // Then update the columns state to ensure the task appears in the correct column
+      setColumns(prevColumns => {
+        // Create a deep copy of the columns
+        const newColumns = JSON.parse(JSON.stringify(prevColumns));
         
-        // Add to new column if it exists
-        if (newColumns[updatedTask.status]) {
-          newColumns[updatedTask.status].taskIds.push(updatedTask.id);
-        } else {
-          // Default to todo if the status doesn't match a column
-          newColumns.todo.taskIds.push(updatedTask.id);
-        }
-      } 
-      // If task wasn't found in any column, add it to the appropriate column
-      else if (!foundInColumn) {
-        const targetColumn = updatedTask.status && newColumns[updatedTask.status] 
-          ? updatedTask.status 
-          : 'todo';
+        // Find which column currently contains the task
+        let currentColumnId: string | null = null;
+        let foundInColumn = false;
+        
+        Object.keys(newColumns).forEach(columnId => {
+          if (newColumns[columnId].taskIds.includes(updatedTask.id)) {
+            currentColumnId = columnId;
+            foundInColumn = true;
+          }
+        });
+
+        console.log(`Task ${updatedTask.id} found in column: ${currentColumnId}, new status: ${updatedTask.status}`);
+        
+        // If the task's status has changed, move it to the new column
+        if (currentColumnId && currentColumnId !== updatedTask.status) {
+          // Remove from current column
+          newColumns[currentColumnId].taskIds = newColumns[currentColumnId].taskIds.filter(
+            (id: string) => id !== updatedTask.id
+          );
           
-        newColumns[targetColumn].taskIds.push(updatedTask.id);
-      }
-      
-      console.log("Updated columns state:", newColumns);
-      return newColumns;
-    });
+          // Add to new column if it exists
+          if (newColumns[updatedTask.status]) {
+            newColumns[updatedTask.status].taskIds.push(updatedTask.id);
+          } else {
+            // Default to todo if the status doesn't match a column
+            newColumns.todo.taskIds.push(updatedTask.id);
+          }
+        } 
+        // If task wasn't found in any column, add it to the appropriate column
+        else if (!foundInColumn) {
+          const targetColumn = updatedTask.status && newColumns[updatedTask.status] 
+            ? updatedTask.status 
+            : 'todo';
+            
+          newColumns[targetColumn].taskIds.push(updatedTask.id);
+        }
+        
+        console.log("Updated columns state:", newColumns);
+        return newColumns;
+      });
+    } catch (error) {
+      console.error("Error updating task in UI:", error);
+      toast.error("There was a problem updating the task. Refreshing data.");
+      refreshBoardData();
+    } finally {
+      setIsUpdatingTask(false);
+    }
   };
   
   const handleCompleteSprint = async () => {
@@ -408,9 +528,9 @@ const SprintBoard: React.FC = () => {
             
             if (!column) return null;
             
-            const columnTasks = column.taskIds.map(taskId => 
-              tasks.find(task => task.id === taskId)
-            ).filter(Boolean);
+            const columnTasks = column.taskIds
+              .map(taskId => taskMap[taskId] || tasks.find(task => task.id === taskId))
+              .filter(Boolean);
             
             return (
               <div key={columnId} className="min-w-[270px] max-w-[270px] flex-shrink-0">
@@ -433,7 +553,7 @@ const SprintBoard: React.FC = () => {
                               key={task.id}
                               draggableId={task.id}
                               index={index}
-                              isDragDisabled={sprint.status === "completed" || userRole === 'product_owner'}
+                              isDragDisabled={sprint.status === "completed" || userRole === 'product_owner' || isUpdatingTask}
                             >
                               {(provided, snapshot) => (
                                 <div
@@ -473,7 +593,10 @@ const SprintBoard: React.FC = () => {
       {editingTask && (
         <EditTaskModal
           taskId={editingTask}
-          onClose={() => setEditingTask(null)}
+          onClose={() => {
+            setEditingTask(null);
+            refreshBoardData(); // Refresh data when modal closes
+          }}
           onTaskUpdated={handleTaskUpdated}
         />
       )}
