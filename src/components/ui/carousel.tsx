@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import useEmblaCarousel, {
   type UseEmblaCarouselType,
@@ -17,6 +18,7 @@ type CarouselProps = {
   plugins?: CarouselPlugin
   orientation?: "horizontal" | "vertical"
   setApi?: (api: CarouselApi) => void
+  enableMouseWheel?: boolean
 }
 
 type CarouselContextProps = {
@@ -52,6 +54,7 @@ const Carousel = React.forwardRef<
       plugins,
       className,
       children,
+      enableMouseWheel = false,
       ...props
     },
     ref
@@ -96,6 +99,23 @@ const Carousel = React.forwardRef<
       [scrollPrev, scrollNext]
     )
 
+    const handleWheel = React.useCallback(
+      (event: React.WheelEvent<HTMLDivElement>) => {
+        if (!enableMouseWheel || !api) return
+        
+        // Prevent the default behavior
+        event.preventDefault()
+        
+        // Determine scroll direction
+        if (event.deltaX > 0 || event.deltaY > 0) {
+          scrollNext()
+        } else {
+          scrollPrev()
+        }
+      },
+      [api, enableMouseWheel, scrollNext, scrollPrev]
+    )
+
     React.useEffect(() => {
       if (!api || !setApi) {
         return
@@ -130,11 +150,13 @@ const Carousel = React.forwardRef<
           scrollNext,
           canScrollPrev,
           canScrollNext,
+          enableMouseWheel,
         }}
       >
         <div
           ref={ref}
           onKeyDownCapture={handleKeyDown}
+          onWheel={enableMouseWheel ? handleWheel : undefined}
           className={cn("relative", className)}
           role="region"
           aria-roledescription="carousel"

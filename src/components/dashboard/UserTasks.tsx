@@ -1,15 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
 import { Clock, ArrowUpRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/context/AuthContext";
 import { supabase, withRetry } from "@/lib/supabase";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Task } from "@/types";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Carousel,
   CarouselContent,
@@ -156,6 +153,7 @@ const UserTasks: React.FC = () => {
                 align: "start",
                 loop: tasks.length > 3,
               }}
+              enableMouseWheel={true}
               className="w-full"
             >
               <CarouselContent className="-ml-2">
