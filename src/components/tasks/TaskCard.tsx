@@ -8,7 +8,7 @@ import { format, parseISO } from "date-fns";
 
 interface TaskCardProps {
   task: Task;
-  onEdit: () => void;
+  onEdit?: () => void;
   isSprintCompleted?: boolean;
   onTaskDeleted?: (taskId: string) => void;
 }
@@ -77,14 +77,13 @@ const TaskCard: React.FC<TaskCardProps> = ({
   
   // Get completion date from appropriate property with better logging
   const completionDate = task.completionDate || task.completion_date;
-  console.log(`TaskCard - Task ${task.id} completion date:`, completionDate);
   
   return (
     <div className="bg-scrum-background border border-scrum-border rounded-md p-3 hover:border-scrum-highlight transition-colors">
       <div className="flex items-start justify-between mb-2">
         <h4 className="font-medium text-sm line-clamp-2">{task.title}</h4>
         
-        {!isSprintCompleted && (
+        {!isSprintCompleted && onEdit && (
           <div className="flex items-center gap-1 ml-2">
             <button
               onClick={onEdit}

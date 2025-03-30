@@ -246,9 +246,11 @@ const SprintBoard: React.FC = () => {
   };
   
   const handleTaskUpdated = (updatedTask: any) => {
-    // Update the tasks state with the new task data
-    setTasks(prevTasks => 
-      prevTasks.map(task => 
+    console.log("Task update received in SprintBoard:", updatedTask);
+
+    // First, update the tasks state with the new task data
+    setTasks(prevTasks => {
+      const updatedTasks = prevTasks.map(task => 
         task.id === updatedTask.id ? {
           ...task,
           title: updatedTask.title,
@@ -262,42 +264,54 @@ const SprintBoard: React.FC = () => {
           completionDate: updatedTask.completion_date,
           completion_date: updatedTask.completion_date
         } : task
-      )
-    );
+      );
+      console.log("Updated tasks array:", updatedTasks);
+      return updatedTasks;
+    });
     
-    console.log("Task updated in SprintBoard:", updatedTask);
-    
-    // Also update the columns state to ensure the task appears in the correct column
-    // This is crucial for immediate UI updates
+    // Then update the columns state to ensure the task appears in the correct column
     setColumns(prevColumns => {
-      const newColumns = { ...prevColumns };
+      // Create a deep copy of the columns
+      const newColumns = JSON.parse(JSON.stringify(prevColumns));
       
-      // First, find which column currently contains the task
+      // Find which column currently contains the task
       let currentColumnId: string | null = null;
+      let foundInColumn = false;
       
       Object.keys(newColumns).forEach(columnId => {
         if (newColumns[columnId].taskIds.includes(updatedTask.id)) {
           currentColumnId = columnId;
+          foundInColumn = true;
         }
       });
+
+      console.log(`Task ${updatedTask.id} found in column: ${currentColumnId}, new status: ${updatedTask.status}`);
       
       // If the task's status has changed, move it to the new column
       if (currentColumnId && currentColumnId !== updatedTask.status) {
         // Remove from current column
-        newColumns[currentColumnId] = {
-          ...newColumns[currentColumnId],
-          taskIds: newColumns[currentColumnId].taskIds.filter(id => id !== updatedTask.id)
-        };
+        newColumns[currentColumnId].taskIds = newColumns[currentColumnId].taskIds.filter(
+          (id: string) => id !== updatedTask.id
+        );
         
-        // Add to new column
+        // Add to new column if it exists
         if (newColumns[updatedTask.status]) {
-          newColumns[updatedTask.status] = {
-            ...newColumns[updatedTask.status],
-            taskIds: [...newColumns[updatedTask.status].taskIds, updatedTask.id]
-          };
+          newColumns[updatedTask.status].taskIds.push(updatedTask.id);
+        } else {
+          // Default to todo if the status doesn't match a column
+          newColumns.todo.taskIds.push(updatedTask.id);
         }
+      } 
+      // If task wasn't found in any column, add it to the appropriate column
+      else if (!foundInColumn) {
+        const targetColumn = updatedTask.status && newColumns[updatedTask.status] 
+          ? updatedTask.status 
+          : 'todo';
+          
+        newColumns[targetColumn].taskIds.push(updatedTask.id);
       }
       
+      console.log("Updated columns state:", newColumns);
       return newColumns;
     });
   };
@@ -403,6 +417,7 @@ const SprintBoard: React.FC = () => {
                 <div className="bg-scrum-card border border-scrum-border rounded-md h-full flex flex-col">
                   <div className="flex items-center justify-between p-3 border-b border-scrum-border">
                     <h4 className="font-medium text-sm">{column.title}</h4>
+                    <div className="text-xs text-scrum-text-secondary">{columnTasks.length}</div>
                   </div>
                   
                   <Droppable droppableId={columnId} isDropDisabled={sprint.status === "completed" || userRole === 'product_owner'}>

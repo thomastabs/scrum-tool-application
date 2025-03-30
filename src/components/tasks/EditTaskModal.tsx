@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 import { useProjects } from "@/context/ProjectContext";
 import { X, Edit, User, Calendar } from "lucide-react";
@@ -41,47 +42,62 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
   const [completionDate, setCompletionDate] = useState<Date | undefined>(undefined);
   const [status, setStatus] = useState<string>("todo");
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { getTask, updateTask } = useProjects();
   
   useEffect(() => {
     async function loadTaskData() {
-      const contextTask = getTask(taskId);
-      
-      if (contextTask) {
-        initializeTaskState(contextTask);
-        setProjectId(contextTask.projectId);
+      try {
+        console.log("Loading task data for task ID:", taskId);
         
-        if (contextTask.projectId) {
-          fetchCollaborators(contextTask.projectId);
-        }
-      } else {
-        try {
+        // Try to get task from context first
+        const contextTask = getTask(taskId);
+        
+        if (contextTask) {
+          console.log("Task found in context:", contextTask);
+          initializeTaskState(contextTask);
+          setProjectId(contextTask.projectId);
+          
+          if (contextTask.projectId) {
+            fetchCollaborators(contextTask.projectId);
+          }
+        } else {
+          // Fallback to fetching from Supabase
+          console.log("Task not found in context, fetching from Supabase");
+          
           const { data, error } = await supabase
             .from('tasks')
             .select('*')
             .eq('id', taskId)
             .single();
             
-          if (error) throw error;
+          if (error) {
+            console.error("Error fetching task data:", error);
+            throw error;
+          }
+          
           if (data) {
+            console.log("Task fetched from Supabase:", data);
             initializeTaskState(data);
             setProjectId(data.project_id);
             
             if (data.project_id) {
               fetchCollaborators(data.project_id);
             }
+          } else {
+            throw new Error("Task not found");
           }
-        } catch (error) {
-          console.error("Error fetching task data:", error);
-          toast.error("Failed to load task data");
-          onClose();
         }
+      } catch (error) {
+        console.error("Error loading task data:", error);
+        toast.error("Failed to load task data");
+        onClose();
       }
     }
     
     loadTaskData();
-  }, [taskId, getTask]);
+  }, [taskId, getTask, onClose]);
   
   const initializeTaskState = (taskData: any) => {
     setTask(taskData);
@@ -185,6 +201,8 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
     }
     
     try {
+      setIsSubmitting(true);
+      
       const updatedData = {
         title,
         description,
@@ -194,6 +212,8 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
         status,
         completionDate: completionDate ? format(completionDate, "yyyy-MM-dd") : null
       };
+      
+      console.log("Updating task with data:", updatedData);
       
       const { data: updatedTask, error } = await supabase
         .from('tasks')
@@ -211,13 +231,18 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
         .single();
         
       if (error) {
-        console.error("Error updating task:", error);
+        console.error("Error updating task in Supabase:", error);
         throw error;
       }
       
+      console.log("Task updated in Supabase:", updatedTask);
+      
+      // Also update task in context
       await updateTask(taskId, updatedData);
       
+      // If consumer provided a callback, call it with the updated task
       if (onTaskUpdated && updatedTask) {
+        console.log("Calling onTaskUpdated with:", updatedTask);
         onTaskUpdated(updatedTask);
       }
       
@@ -226,6 +251,8 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
     } catch (error) {
       console.error("Error updating task:", error);
       toast.error("Failed to update task");
+    } finally {
+      setIsSubmitting(false);
     }
   };
   
@@ -299,6 +326,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
           <button
             onClick={onClose}
             className="text-scrum-text-secondary hover:text-white"
+            disabled={isSubmitting}
           >
             <X className="h-5 w-5" />
           </button>
@@ -316,6 +344,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
               className="scrum-input"
               required
               autoFocus
+              disabled={isSubmitting}
             />
           </div>
           
@@ -328,6 +357,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
               onChange={(e) => setDescription(e.target.value)}
               className="scrum-input"
               rows={3}
+              disabled={isSubmitting}
             />
           </div>
           
@@ -341,6 +371,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
                 onChange={(e) => setPriority(e.target.value as "low" | "medium" | "high")}
                 className="scrum-input"
                 required
+                disabled={isSubmitting}
               >
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
@@ -363,6 +394,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
                 }}
                 className="scrum-input"
                 required
+                disabled={isSubmitting}
               />
             </div>
           </div>
@@ -377,6 +409,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
                 onChange={(e) => setStatus(e.target.value)}
                 className="scrum-input"
                 required
+                disabled={isSubmitting}
               >
                 <option value="todo">To Do</option>
                 <option value="in-progress">In Progress</option>
@@ -393,6 +426,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
                   <Button 
                     variant="outline" 
                     className={`scrum-input flex justify-between items-center text-left font-normal ${!completionDate && "text-muted-foreground"}`}
+                    disabled={isSubmitting}
                   >
                     {completionDate ? format(completionDate, "PPP") : "Select date"}
                     <Calendar className="ml-auto h-4 w-4 opacity-50" />
@@ -424,6 +458,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
                 <Select 
                   value={assignedTo} 
                   onValueChange={setAssignedTo}
+                  disabled={isSubmitting}
                 >
                   <SelectTrigger className="bg-scrum-background border-scrum-border text-scrum-text focus:ring-scrum-accent focus:border-scrum-border">
                     <SelectValue placeholder="Assign to..." />
@@ -450,6 +485,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
                   onChange={(e) => setAssignedTo(e.target.value)}
                   className="scrum-input"
                   placeholder="Enter name or email"
+                  disabled={isSubmitting}
                 />
               )
             )}
@@ -460,14 +496,16 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
               type="button"
               onClick={onClose}
               className="scrum-button-secondary"
+              disabled={isSubmitting}
             >
               Cancel
             </button>
             <button
               type="submit"
               className="scrum-button"
+              disabled={isSubmitting}
             >
-              Update Task
+              {isSubmitting ? "Updating..." : "Update Task"}
             </button>
           </div>
         </form>
