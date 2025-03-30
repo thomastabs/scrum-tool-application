@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
@@ -134,6 +133,7 @@ const SprintBoard: React.FC = () => {
     fetchSprintData();
   }, [sprintId, user]);
 
+  // Improved handleDragEnd with optimistic updates and better error handling
   const handleDragEnd = async (result: any) => {
     const { destination, source, draggableId } = result;
     
@@ -149,6 +149,10 @@ const SprintBoard: React.FC = () => {
     const sourceColumn = columns[source.droppableId];
     const destColumn = columns[destination.droppableId];
     
+    // Store the original columns state for rollback in case of error
+    const originalColumns = {...columns};
+    
+    // Optimistic UI update
     if (source.droppableId === destination.droppableId) {
       const newTaskIds = Array.from(sourceColumn.taskIds);
       newTaskIds.splice(source.index, 1);
@@ -183,6 +187,13 @@ const SprintBoard: React.FC = () => {
         },
       });
       
+      // Also update tasks state to reflect the new status
+      setTasks(prevTasks => 
+        prevTasks.map(task => 
+          task.id === draggableId ? { ...task, status: destination.droppableId } : task
+        )
+      );
+      
       try {
         const { error } = await supabase
           .from('tasks')
@@ -191,11 +202,7 @@ const SprintBoard: React.FC = () => {
           
         if (error) throw error;
         
-        setTasks(prevTasks => 
-          prevTasks.map(task => 
-            task.id === draggableId ? { ...task, status: destination.droppableId } : task
-          )
-        );
+        // Success - keep the UI updates we've already made
         
         try {
           await updateTask(draggableId, {
@@ -208,21 +215,18 @@ const SprintBoard: React.FC = () => {
         console.error("Error updating task status:", error);
         toast.error("Failed to update task status");
         
-        setColumns({
-          ...columns,
-          [source.droppableId]: {
-            ...sourceColumn,
-            taskIds: Array.from(sourceColumn.taskIds),
-          },
-          [destination.droppableId]: {
-            ...destColumn,
-            taskIds: Array.from(destColumn.taskIds).filter(id => id !== draggableId),
-          },
-        });
+        // Rollback UI to original state
+        setColumns(originalColumns);
+        setTasks(prevTasks => 
+          prevTasks.map(task => 
+            task.id === draggableId ? { ...task, status: source.droppableId } : task
+          )
+        );
       }
     }
   };
   
+  // Improved handler to ensure proper state updates
   const handleTaskDeleted = (taskId: string) => {
     setColumns(prevColumns => {
       const newColumns = { ...prevColumns };
@@ -245,7 +249,14 @@ const SprintBoard: React.FC = () => {
     setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
   };
   
+  // Improved handler for task updates to properly maintain state
   const handleTaskUpdated = (updatedTask: any) => {
+    console.log("Task updated in SprintBoard:", updatedTask);
+    
+    // Keep a reference to the current state for potential rollback
+    const previousTasksState = [...tasks];
+    const previousColumnsState = {...columns};
+    
     // Update the tasks state with the new task data
     setTasks(prevTasks => 
       prevTasks.map(task => 
@@ -265,10 +276,7 @@ const SprintBoard: React.FC = () => {
       )
     );
     
-    console.log("Task updated in SprintBoard:", updatedTask);
-    
     // Also update the columns state to ensure the task appears in the correct column
-    // This is crucial for immediate UI updates
     setColumns(prevColumns => {
       const newColumns = { ...prevColumns };
       
@@ -289,11 +297,30 @@ const SprintBoard: React.FC = () => {
           taskIds: newColumns[currentColumnId].taskIds.filter(id => id !== updatedTask.id)
         };
         
-        // Add to new column
+        // Add to new column if it exists
         if (newColumns[updatedTask.status]) {
-          newColumns[updatedTask.status] = {
-            ...newColumns[updatedTask.status],
-            taskIds: [...newColumns[updatedTask.status].taskIds, updatedTask.id]
+          if (!newColumns[updatedTask.status].taskIds.includes(updatedTask.id)) {
+            newColumns[updatedTask.status] = {
+              ...newColumns[updatedTask.status],
+              taskIds: [...newColumns[updatedTask.status].taskIds, updatedTask.id]
+            };
+          }
+        } else {
+          // Fallback - if the column doesn't exist, add to todo
+          if (!newColumns.todo.taskIds.includes(updatedTask.id)) {
+            newColumns.todo = {
+              ...newColumns.todo,
+              taskIds: [...newColumns.todo.taskIds, updatedTask.id]
+            };
+          }
+        }
+      } else if (!currentColumnId) {
+        // Task wasn't in any column, add it to the correct one
+        const targetColumn = newColumns[updatedTask.status] ? updatedTask.status : 'todo';
+        if (!newColumns[targetColumn].taskIds.includes(updatedTask.id)) {
+          newColumns[targetColumn] = {
+            ...newColumns[targetColumn],
+            taskIds: [...newColumns[targetColumn].taskIds, updatedTask.id]
           };
         }
       }
@@ -394,15 +421,18 @@ const SprintBoard: React.FC = () => {
             
             if (!column) return null;
             
-            const columnTasks = column.taskIds.map(taskId => 
-              tasks.find(task => task.id === taskId)
-            ).filter(Boolean);
+            const columnTasks = column.taskIds
+              .map(taskId => tasks.find(task => task.id === taskId))
+              .filter(Boolean);
             
             return (
               <div key={columnId} className="min-w-[270px] max-w-[270px] flex-shrink-0">
                 <div className="bg-scrum-card border border-scrum-border rounded-md h-full flex flex-col">
                   <div className="flex items-center justify-between p-3 border-b border-scrum-border">
                     <h4 className="font-medium text-sm">{column.title}</h4>
+                    <div className="text-xs text-scrum-text-secondary">
+                      {columnTasks.length} {columnTasks.length === 1 ? 'task' : 'tasks'}
+                    </div>
                   </div>
                   
                   <Droppable droppableId={columnId} isDropDisabled={sprint.status === "completed" || userRole === 'product_owner'}>

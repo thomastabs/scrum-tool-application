@@ -21,7 +21,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
           cancelButton:
             "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
         },
+        duration: 4000, // Increase toast duration for better visibility
       }}
+      position="top-right" // Consistent position
+      expand={false} // Don't expand on hover
       {...props}
     />
   )
