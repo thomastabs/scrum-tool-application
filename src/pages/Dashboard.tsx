@@ -132,21 +132,30 @@ const Dashboard: React.FC = () => {
         <div className="mb-8">
           <div className="flex items-center gap-2 bg-scrum-card rounded-md border border-scrum-border p-1 w-fit mb-6">
             <button 
-              className={`flex items-center px-3 py-1.5 rounded text-sm ${activeTab === "overview" ? "bg-scrum-background text-scrum-text-primary" : "text-scrum-text-secondary"}`}
+              className={`flex items-center px-3 py-1.5 rounded text-sm transition-colors duration-200 
+                ${activeTab === "overview" 
+                  ? "bg-scrum-background text-scrum-text-primary" 
+                  : "text-scrum-text-secondary hover:bg-scrum-background/50 hover:text-scrum-text-primary"}`}
               onClick={() => setActiveTab("overview")}
             >
               <LayoutDashboard className="h-4 w-4 mr-1" />
               <span>Overview</span>
             </button>
             <button 
-              className={`flex items-center px-3 py-1.5 rounded text-sm ${activeTab === "projects" ? "bg-scrum-background text-scrum-text-primary" : "text-scrum-text-secondary"}`}
+              className={`flex items-center px-3 py-1.5 rounded text-sm transition-colors duration-200
+                ${activeTab === "projects" 
+                  ? "bg-scrum-background text-scrum-text-primary" 
+                  : "text-scrum-text-secondary hover:bg-scrum-background/50 hover:text-scrum-text-primary"}`}
               onClick={() => setActiveTab("projects")}
             >
               <Folder className="h-4 w-4 mr-1" />
               <span>My Projects</span>
             </button>
             <button 
-              className={`flex items-center px-3 py-1.5 rounded text-sm ${activeTab === "collaborations" ? "bg-scrum-background text-scrum-text-primary" : "text-scrum-text-secondary"}`}
+              className={`flex items-center px-3 py-1.5 rounded text-sm transition-colors duration-200
+                ${activeTab === "collaborations" 
+                  ? "bg-scrum-background text-scrum-text-primary" 
+                  : "text-scrum-text-secondary hover:bg-scrum-background/50 hover:text-scrum-text-primary"}`}
               onClick={() => setActiveTab("collaborations")}
             >
               <Users className="h-4 w-4 mr-1" />

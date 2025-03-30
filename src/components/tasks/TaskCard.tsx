@@ -94,7 +94,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   const completionDate = safeTask.completionDate;
   
   return (
-    <div className="bg-scrum-background border border-scrum-border rounded-md p-3 hover:border-scrum-highlight transition-colors">
+    <div className="bg-scrum-background border border-scrum-border rounded-md p-3 hover:border-scrum-highlight transition-all duration-200 hover:shadow-md">
       <div className="flex items-start justify-between mb-2">
         <h4 className="font-medium text-sm line-clamp-2">{safeTask.title}</h4>
         
