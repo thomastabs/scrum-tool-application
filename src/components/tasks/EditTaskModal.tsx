@@ -41,29 +41,22 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
   const [completionDate, setCompletionDate] = useState<Date | undefined>(undefined);
   const [status, setStatus] = useState<string>("todo");
   const [isInitialized, setIsInitialized] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { getTask, updateTask } = useProjects();
   
   useEffect(() => {
     async function loadTaskData() {
-      try {
-        console.log("Loading task data for ID:", taskId);
+      const contextTask = getTask(taskId);
+      
+      if (contextTask) {
+        initializeTaskState(contextTask);
+        setProjectId(contextTask.projectId);
         
-        // Try to get the task from context first
-        const contextTask = getTask(taskId);
-        
-        if (contextTask) {
-          console.log("Task found in context:", contextTask);
-          initializeTaskState(contextTask);
-          setProjectId(contextTask.projectId);
-          
-          if (contextTask.projectId) {
-            fetchCollaborators(contextTask.projectId);
-          }
-        } else {
-          // Fallback to fetching from Supabase
-          console.log("Task not found in context, fetching from Supabase");
+        if (contextTask.projectId) {
+          fetchCollaborators(contextTask.projectId);
+        }
+      } else {
+        try {
           const { data, error } = await supabase
             .from('tasks')
             .select('*')
@@ -72,7 +65,6 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
             
           if (error) throw error;
           if (data) {
-            console.log("Task fetched from Supabase:", data);
             initializeTaskState(data);
             setProjectId(data.project_id);
             
@@ -80,11 +72,11 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
               fetchCollaborators(data.project_id);
             }
           }
+        } catch (error) {
+          console.error("Error fetching task data:", error);
+          toast.error("Failed to load task data");
+          onClose();
         }
-      } catch (error) {
-        console.error("Error fetching task data:", error);
-        toast.error("Failed to load task data");
-        onClose();
       }
     }
     
@@ -192,12 +184,6 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
       return;
     }
     
-    if (isSubmitting) {
-      return; // Prevent duplicate submissions
-    }
-    
-    setIsSubmitting(true);
-    
     try {
       const updatedData = {
         title,
@@ -208,8 +194,6 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
         status,
         completionDate: completionDate ? format(completionDate, "yyyy-MM-dd") : null
       };
-      
-      console.log("Submitting updated task data:", updatedData);
       
       const { data: updatedTask, error } = await supabase
         .from('tasks')
@@ -231,19 +215,9 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
         throw error;
       }
       
-      console.log("Task updated successfully in Supabase:", updatedTask);
+      await updateTask(taskId, updatedData);
       
-      // Update the task in context as well
-      try {
-        await updateTask(taskId, updatedData);
-      } catch (contextError) {
-        console.error("Error updating task in context:", contextError);
-        // Don't fail - we still updated the DB successfully
-      }
-      
-      // Call the callback with the updated task
       if (onTaskUpdated && updatedTask) {
-        console.log("Calling onTaskUpdated callback with:", updatedTask);
         onTaskUpdated(updatedTask);
       }
       
@@ -252,8 +226,6 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
     } catch (error) {
       console.error("Error updating task:", error);
       toast.error("Failed to update task");
-    } finally {
-      setIsSubmitting(false);
     }
   };
   
@@ -488,16 +460,14 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({
               type="button"
               onClick={onClose}
               className="scrum-button-secondary"
-              disabled={isSubmitting}
             >
               Cancel
             </button>
             <button
               type="submit"
               className="scrum-button"
-              disabled={isSubmitting}
             >
-              {isSubmitting ? "Updating..." : "Update Task"}
+              Update Task
             </button>
           </div>
         </form>
