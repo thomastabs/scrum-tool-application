@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Clock, ArrowUpRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +25,7 @@ const UserTasks: React.FC = () => {
   const { user } = useAuth();
   const [tasks, setTasks] = useState<ExtendedTask[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentSlide, setCurrentSlide] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -133,6 +135,10 @@ const UserTasks: React.FC = () => {
     </div>
   );
 
+  const handleSlideChange = (api: any) => {
+    setCurrentSlide(api.selectedScrollSnap());
+  };
+
   return (
     <Card className="mt-4 bg-scrum-card border border-scrum-border transition-all duration-300 hover:shadow-lg hover:scale-[1.01] hover:bg-scrum-card/80">
       <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
@@ -141,7 +147,7 @@ const UserTasks: React.FC = () => {
           My Tasks
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-4">
         {isLoading ? (
           <div className="space-y-3">
             <TasksSkeleton />
@@ -155,9 +161,12 @@ const UserTasks: React.FC = () => {
               }}
               enableMouseWheel={true}
               className="w-full"
+              setApi={(api) => {
+                api?.on('select', () => handleSlideChange(api));
+              }}
             >
               <CarouselContent className="-ml-2">
-                {tasks.map((task) => (
+                {tasks.map((task, index) => (
                   <CarouselItem key={task.id} className="pl-2 basis-full md:basis-1/3">
                     <div 
                       onClick={() => navigateToTask(task.projectId, task.sprintId)}
@@ -197,9 +206,27 @@ const UserTasks: React.FC = () => {
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              <div className="flex justify-end gap-1 mt-2">
-                <CarouselPrevious className="relative inset-auto h-7 w-7 -left-0" />
-                <CarouselNext className="relative inset-auto h-7 w-7 -right-0" />
+              
+              {/* Navigation controls with visual indicators */}
+              <div className="flex justify-between items-center mt-4">
+                <div className="flex items-center gap-2">
+                  <CarouselPrevious className="relative inset-auto h-7 w-7 -left-0" />
+                  <div className="text-xs text-scrum-text-secondary">
+                    {currentSlide + 1} of {Math.min(tasks.length, Math.ceil(tasks.length / 3))}
+                  </div>
+                  <CarouselNext className="relative inset-auto h-7 w-7 -right-0" />
+                </div>
+                
+                {tasks.length > 3 && (
+                  <div className="flex gap-1">
+                    {Array.from({ length: Math.ceil(tasks.length / 3) }).map((_, i) => (
+                      <div 
+                        key={i}
+                        className={`h-1.5 w-1.5 rounded-full ${currentSlide === i ? 'bg-primary' : 'bg-scrum-border'}`}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             </Carousel>
           </div>
