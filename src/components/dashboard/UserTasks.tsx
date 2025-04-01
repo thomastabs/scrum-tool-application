@@ -8,13 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Task } from "@/types";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
+import { Button } from "@/components/ui/button";
 
 // Define an extended Task interface that includes projectTitle
 interface ExtendedTask extends Task {
@@ -25,8 +19,11 @@ const UserTasks: React.FC = () => {
   const { user } = useAuth();
   const [tasks, setTasks] = useState<ExtendedTask[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const [currentPage, setCurrentPage] = useState(0);
   const navigate = useNavigate();
+  
+  const tasksPerPage = 3;
+  const totalPages = Math.ceil(tasks.length / tasksPerPage);
 
   useEffect(() => {
     const fetchUserTasks = async () => {
@@ -135,9 +132,19 @@ const UserTasks: React.FC = () => {
     </div>
   );
 
-  const handleSlideChange = (api: any) => {
-    setCurrentSlide(api.selectedScrollSnap());
+  const handlePrevPage = () => {
+    setCurrentPage(prev => Math.max(0, prev - 1));
   };
+
+  const handleNextPage = () => {
+    setCurrentPage(prev => Math.min(totalPages - 1, prev + 1));
+  };
+
+  // Get the current page of tasks
+  const currentTasks = tasks.slice(
+    currentPage * tasksPerPage,
+    (currentPage + 1) * tasksPerPage
+  );
 
   return (
     <Card className="mt-4 bg-scrum-card border border-scrum-border transition-all duration-300 hover:shadow-lg hover:scale-[1.01] hover:bg-scrum-card/80">
@@ -147,88 +154,96 @@ const UserTasks: React.FC = () => {
           My Tasks
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-4">
+      <CardContent className="pt-6">
         {isLoading ? (
           <div className="space-y-3">
             <TasksSkeleton />
           </div>
         ) : tasks.length > 0 ? (
           <div className="relative">
-            <Carousel
-              opts={{
-                align: "start",
-                loop: tasks.length > 3,
-              }}
-              enableMouseWheel={true}
-              className="w-full"
-              setApi={(api) => {
-                api?.on('select', () => handleSlideChange(api));
-              }}
-            >
-              <CarouselContent className="-ml-2">
-                {tasks.map((task, index) => (
-                  <CarouselItem key={task.id} className="pl-2 basis-full md:basis-1/3">
-                    <div 
-                      onClick={() => navigateToTask(task.projectId, task.sprintId)}
-                      className="border border-scrum-border rounded-md p-4 cursor-pointer hover:bg-scrum-background/50 transition-colors"
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {currentTasks.map((task) => (
+                <div 
+                  key={task.id}
+                  onClick={() => navigateToTask(task.projectId, task.sprintId)}
+                  className="border border-scrum-border rounded-md p-4 cursor-pointer hover:bg-scrum-background/50 transition-colors"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-medium text-sm line-clamp-1">{task.title}</h4>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigateToTask(task.projectId, task.sprintId);
+                      }}
+                      className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 ml-2"
                     >
-                      <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-medium text-sm line-clamp-1">{task.title}</h4>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigateToTask(task.projectId, task.sprintId);
-                          }}
-                          className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 ml-2"
-                        >
-                          <ArrowUpRight className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                      
-                      <div className="text-xs text-scrum-text-secondary mb-2">{task.projectTitle}</div>
-                      
-                      <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                        {getStatusBadge(task.status)}
-                        
-                        {task.priority && (
-                          <Badge className={getPriorityColor(task.priority)}>
-                            {task.priority}
-                          </Badge>
-                        )}
-                        
-                        {task.storyPoints && (
-                          <Badge variant="outline" className="ml-auto">
-                            {task.storyPoints} {task.storyPoints === 1 ? 'point' : 'points'}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              
-              {/* Navigation controls with visual indicators */}
-              <div className="flex justify-between items-center mt-4">
-                <div className="flex items-center gap-2">
-                  <CarouselPrevious className="relative inset-auto h-7 w-7 -left-0" />
-                  <div className="text-xs text-scrum-text-secondary">
-                    {currentSlide + 1} of {Math.min(tasks.length, Math.ceil(tasks.length / 3))}
+                      <ArrowUpRight className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                  <CarouselNext className="relative inset-auto h-7 w-7 -right-0" />
+                  
+                  <div className="text-xs text-scrum-text-secondary mb-2">{task.projectTitle}</div>
+                  
+                  <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                    {getStatusBadge(task.status)}
+                    
+                    {task.priority && (
+                      <Badge className={getPriorityColor(task.priority)}>
+                        {task.priority}
+                      </Badge>
+                    )}
+                    
+                    {task.storyPoints && (
+                      <Badge variant="outline" className="ml-auto">
+                        {task.storyPoints} {task.storyPoints === 1 ? 'point' : 'points'}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            {/* Navigation controls with clear boundaries */}
+            {tasks.length > tasksPerPage && (
+              <div className="flex justify-between items-center mt-5 border-t border-scrum-border pt-3">
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handlePrevPage} 
+                    disabled={currentPage === 0}
+                    className="h-8 w-8 p-0 rounded-full"
+                  >
+                    <ArrowUpRight className="h-4 w-4 rotate-225" />
+                    <span className="sr-only">Previous</span>
+                  </Button>
+                  
+                  <div className="text-xs text-scrum-text-secondary">
+                    {currentPage + 1} of {totalPages}
+                  </div>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleNextPage} 
+                    disabled={currentPage >= totalPages - 1}
+                    className="h-8 w-8 p-0 rounded-full"
+                  >
+                    <ArrowUpRight className="h-4 w-4 rotate-45" />
+                    <span className="sr-only">Next</span>
+                  </Button>
                 </div>
                 
-                {tasks.length > 3 && (
-                  <div className="flex gap-1">
-                    {Array.from({ length: Math.ceil(tasks.length / 3) }).map((_, i) => (
-                      <div 
-                        key={i}
-                        className={`h-1.5 w-1.5 rounded-full ${currentSlide === i ? 'bg-primary' : 'bg-scrum-border'}`}
-                      />
-                    ))}
-                  </div>
-                )}
+                <div className="flex gap-1">
+                  {Array.from({ length: totalPages }).map((_, i) => (
+                    <div 
+                      key={i}
+                      className={`h-1.5 w-1.5 rounded-full cursor-pointer ${currentPage === i ? 'bg-primary' : 'bg-scrum-border'}`}
+                      onClick={() => setCurrentPage(i)}
+                    />
+                  ))}
+                </div>
               </div>
-            </Carousel>
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-8 text-center">
