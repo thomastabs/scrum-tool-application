@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
@@ -20,7 +19,7 @@ import {
 
 const SprintBoard: React.FC = () => {
   const { sprintId } = useParams<{ sprintId: string }>();
-  const { updateSprint, updateTask } = useProjects();
+  const { updateSprint, updateTask, refreshProjectData } = useProjects();
   const { user } = useAuth();
   const navigate = useNavigate();
   
@@ -285,6 +284,11 @@ const SprintBoard: React.FC = () => {
           await updateTask(draggableId, {
             status: destination.droppableId
           });
+          
+          // Refresh project data in context to keep everything in sync
+          if (projectId && destination.droppableId === 'done') {
+            await refreshProjectData(projectId);
+          }
         } catch (contextError) {
           console.log("Context update failed but Supabase update succeeded:", contextError);
         }
@@ -427,6 +431,11 @@ const SprintBoard: React.FC = () => {
         console.log("Updated columns state:", newColumns);
         return newColumns;
       });
+      
+      // If task was marked as done, refresh project data to update burndown charts
+      if (updatedTask.status === 'done' && projectId) {
+        refreshProjectData(projectId);
+      }
     } catch (error) {
       console.error("Error updating task in UI:", error);
       toast.error("There was a problem updating the task. Refreshing data.");
@@ -447,6 +456,10 @@ const SprintBoard: React.FC = () => {
       return;
     }
     
+    await completeSprintAction();
+  };
+  
+  const completeSprintAction = async () => {
     try {
       const { error } = await supabase
         .from('sprints')
@@ -457,6 +470,11 @@ const SprintBoard: React.FC = () => {
       
       setSprint({ ...sprint, status: 'completed' });
       toast.success("Sprint marked as completed!");
+      
+      // Immediately refresh project data to update burndown charts and timelines
+      if (projectId) {
+        await refreshProjectData(projectId);
+      }
     } catch (error) {
       console.error("Error completing sprint:", error);
       toast.error("Failed to complete sprint");
@@ -465,15 +483,7 @@ const SprintBoard: React.FC = () => {
   
   const confirmCompleteSprint = async () => {
     try {
-      const { error } = await supabase
-        .from('sprints')
-        .update({ status: 'completed' })
-        .eq('id', sprint.id);
-        
-      if (error) throw error;
-      
-      setSprint({ ...sprint, status: 'completed' });
-      toast.success("Sprint marked as completed!");
+      await completeSprintAction();
       setIsCompleteDialogOpen(false);
     } catch (error) {
       console.error("Error completing sprint:", error);
