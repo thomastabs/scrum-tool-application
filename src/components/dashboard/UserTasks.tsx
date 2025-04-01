@@ -135,14 +135,14 @@ const UserTasks: React.FC = () => {
           My Tasks
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-4"> {/* Added pt-4 for more vertical space */}
+      <CardContent className="pt-4"> {/* Added pt-4 for more vertical spacing */}
         {isLoading ? (
           <div className="space-y-3">
             <TasksSkeleton />
           </div>
         ) : tasks.length > 0 ? (
-          <div className="max-h-[320px] overflow-y-auto pr-2 space-y-3">
-            {tasks.slice(0, Math.min(tasks.length, 3)).map((task) => (
+          <div className="space-y-3">
+            {tasks.map((task) => (
               <div 
                 key={task.id}
                 onClick={() => navigateToTask(task.projectId, task.sprintId)}
@@ -180,17 +180,6 @@ const UserTasks: React.FC = () => {
                 </div>
               </div>
             ))}
-            
-            {tasks.length > 3 && (
-              <div className="text-center py-2 text-sm text-scrum-text-secondary">
-                <button 
-                  onClick={() => navigate('/projects')}
-                  className="hover:underline hover:text-primary transition-colors"
-                >
-                  View all tasks ({tasks.length})
-                </button>
-              </div>
-            )}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-8 text-center">
