@@ -148,18 +148,16 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const fetchSprints = async (projectId: string, forceRefresh = false) => {
+  const fetchSprints = async (projectId: string) => {
     if (!user) return;
     
     const cacheKey = `sprints-${projectId}`;
-    if (!forceRefresh && !shouldRefetch(cacheKey) && sprints.some(s => s.projectId === projectId) && !fetchErrors[cacheKey]) {
+    if (!shouldRefetch(cacheKey) && sprints.some(s => s.projectId === projectId) && !fetchErrors[cacheKey]) {
       console.log(`Using cached sprints data for project ${projectId}`);
       return;
     }
 
     try {
-      console.log(`Fetching sprints for project: ${projectId}`);
-      
       const { data, error } = await withRetry(async () => {
         return await supabase
           .from('sprints')
@@ -168,8 +166,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
 
       if (error) throw error;
-
-      console.log(`Fetched sprints:`, data);
 
       if (data) {
         const formattedSprints: Sprint[] = data.map(sprint => ({
@@ -189,7 +185,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         updateFetchTime(cacheKey);
         
         for (const sprint of formattedSprints) {
-          await fetchTasksBySprint(sprint.id, forceRefresh);
+          await fetchTasksBySprint(sprint.id);
           await delay(300);
         }
       }
@@ -199,11 +195,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const fetchTasksBySprint = async (sprintId: string, forceRefresh = false) => {
+  const fetchTasksBySprint = async (sprintId: string) => {
     if (!user) return;
     
     const cacheKey = `tasks-sprint-${sprintId}`;
-    if (!forceRefresh && !shouldRefetch(cacheKey) && tasks.some(t => t.sprintId === sprintId) && !fetchErrors[cacheKey]) {
+    if (!shouldRefetch(cacheKey) && tasks.some(t => t.sprintId === sprintId) && !fetchErrors[cacheKey]) {
       console.log(`Using cached tasks data for sprint ${sprintId}`);
       return;
     }
@@ -245,11 +241,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const fetchBacklogTasks = async (projectId: string, forceRefresh = false) => {
+  const fetchBacklogTasks = async (projectId: string) => {
     if (!user) return;
     
     const cacheKey = `backlog-${projectId}`;
-    if (!forceRefresh && !shouldRefetch(cacheKey) && tasks.some(t => t.projectId === projectId && t.status === 'backlog' && !t.sprintId) && !fetchErrors[cacheKey]) {
+    if (!shouldRefetch(cacheKey) && tasks.some(t => t.projectId === projectId && t.status === 'backlog' && !t.sprintId) && !fetchErrors[cacheKey]) {
       console.log(`Using cached backlog data for project ${projectId}`);
       return;
     }
@@ -298,41 +294,25 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const refreshProjectData = async (projectId?: string) => {
     if (!user) return;
     
-    console.log(`Refreshing project data${projectId ? ` for project: ${projectId}` : ' for all projects'}`);
-    
-    try {
-      if (projectId) {
-        const projectCacheKeys = [
-          `sprints-${projectId}`,
-          `backlog-${projectId}`
-        ];
-        
-        const newFetchTime = {...lastFetchTime};
-        projectCacheKeys.forEach(key => delete newFetchTime[key]);
-        setLastFetchTime(newFetchTime);
-        
-        await fetchSprints(projectId, true);
-        await fetchBacklogTasks(projectId, true);
-        
-        const projectSprints = sprints.filter(s => s.projectId === projectId);
-        for (const sprint of projectSprints) {
-          const sprintKey = `tasks-sprint-${sprint.id}`;
-          delete newFetchTime[sprintKey];
-          await fetchTasksBySprint(sprint.id, true);
-        }
-        
-        toast.success("Project data refreshed successfully");
-      } else {
-        setLastFetchTime({});
-        await fetchProjects();
-        await fetchCollaborativeProjects();
-        
-        toast.success("All data refreshed successfully");
-      }
-    } catch (error) {
-      console.error("Error refreshing project data:", error);
-      toast.error("Failed to refresh project data");
+    if (projectId) {
+      const projectCacheKeys = [
+        `sprints-${projectId}`,
+        `backlog-${projectId}`
+      ];
+      
+      const newFetchTime = {...lastFetchTime};
+      projectCacheKeys.forEach(key => delete newFetchTime[key]);
+      setLastFetchTime(newFetchTime);
+      
+      await fetchSprints(projectId);
+      await fetchBacklogTasks(projectId);
+    } else {
+      setLastFetchTime({});
+      await fetchProjects();
+      await fetchCollaborativeProjects();
     }
+    
+    toast.success("Data refreshed successfully");
   };
 
   const generateId = () => `id-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -505,8 +485,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       setSprints(prev => [...prev, newSprint]);
       
-      await refreshProjectData(sprint.projectId);
-      
       return newSprint;
     } catch (error) {
       console.error('Error adding sprint:', error);
@@ -520,13 +498,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!user) throw new Error('User not authenticated');
 
     try {
-      const existingSprint = sprints.find(s => s.id === id);
-      if (!existingSprint) throw new Error('Sprint not found');
-      
-      const projectId = existingSprint.projectId;
-      
-      const isCompletingStatus = existingSprint.status !== 'completed' && sprint.status === 'completed';
-
       const { error } = await supabase
         .from('sprints')
         .update({
@@ -537,21 +508,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           status: sprint.status,
           updated_at: new Date().toISOString()
         })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user.id);
 
       if (error) throw error;
 
       const updatedSprint = {
-        ...existingSprint,
+        ...sprints.find(s => s.id === id)!,
         ...sprint,
       };
 
       setSprints(prev => prev.map(s => s.id === id ? updatedSprint : s));
-      
-      if (isCompletingStatus && projectId) {
-        console.log(`Sprint ${id} marked as completed, refreshing project ${projectId} data`);
-        await refreshProjectData(projectId);
-      }
       
       return updatedSprint;
     } catch (error) {
@@ -565,9 +532,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     try {
       console.log(`Attempting to delete sprint ${id}`);
-      
-      const targetSprint = sprints.find(s => s.id === id);
-      const projectId = targetSprint?.projectId;
       
       console.log("Deleting board columns for sprint:", id);
       const { data: columnsData, error: columnsQueryError } = await supabase
@@ -623,10 +587,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setSprints(prev => prev.filter(s => s.id !== id));
       setTasks(prev => prev.filter(t => t.sprintId !== id));
       toast.success("Sprint deleted successfully");
-      
-      if (projectId) {
-        await refreshProjectData(projectId);
-      }
       
     } catch (error) {
       console.error('Error deleting sprint:', error);
@@ -688,12 +648,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       };
 
       setTasks(prev => [...prev, newTask]);
-      
-      if (isBacklogTask) {
-        await fetchBacklogTasks(projectId, true);
-      } else if (task.sprintId) {
-        await fetchTasksBySprint(task.sprintId, true);
-      }
       
       if (!isBacklogTask && projectId && task.storyPoints) {
         updateBurndownData(
@@ -767,26 +721,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       setTasks(prev => prev.map(t => t.id === id ? updatedTask : t));
       
-      const movedToBacklog = task.status === 'backlog' && existingTask.status !== 'backlog';
-      const movedFromBacklog = task.status !== 'backlog' && existingTask.status === 'backlog';
-      const sprintChanged = task.sprintId !== undefined && task.sprintId !== existingTask.sprintId;
-      
-      if (sprintChanged || movedToBacklog || movedFromBacklog) {
-        console.log('Task moved between sprint/backlog, refreshing related data');
-        
-        if (existingTask.projectId) {
-          if (existingTask.sprintId) {
-            await fetchTasksBySprint(existingTask.sprintId, true);
-          }
-          
-          if (task.sprintId) {
-            await fetchTasksBySprint(task.sprintId, true);
-          }
-          
-          await fetchBacklogTasks(existingTask.projectId, true);
-        }
-      }
-      
       if (
         existingTask.status !== "done" && 
         updatedTask.status === "done" &&
@@ -825,12 +759,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (error) throw error;
 
       setTasks(prev => prev.filter(t => t.id !== id));
-      
-      if (taskToDelete.sprintId) {
-        await fetchTasksBySprint(taskToDelete.sprintId, true);
-      } else if (taskToDelete.projectId) {
-        await fetchBacklogTasks(taskToDelete.projectId, true);
-      }
       
       const sprint = getSprint(taskToDelete.sprintId);
       if (sprint && taskToDelete.storyPoints) {
@@ -945,4 +873,67 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             const project = item.projects as any;
             return {
               id: project.id,
-              title: project.
+              title: project.title,
+              description: project.description || '',
+              endGoal: project.end_goal,
+              createdAt: project.created_at,
+              updatedAt: project.updated_at,
+              ownerId: project.owner_id,
+              ownerName: project.owner?.username || '',
+              isCollaboration: true,
+              role: item.role
+            };
+          });
+
+        setProjects(prev => {
+          const existingIds = prev.map(p => p.id);
+          const newCollaborativeProjects = collaborativeProjects.filter(p => !existingIds.includes(p.id));
+          return [...prev, ...newCollaborativeProjects];
+        });
+        updateFetchTime('collaborations');
+
+        for (const project of collaborativeProjects) {
+          await fetchSprints(project.id);
+          await delay(500);
+          await fetchBacklogTasks(project.id);
+          await delay(500);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching collaborative projects:', error);
+      markFetchError('collaborations');
+      toast.error("Failed to load collaborative projects. Please try refreshing the page.");
+    }
+  };
+
+  return (
+    <ProjectContext.Provider
+      value={{
+        projects,
+        sprints,
+        tasks,
+        burndownData,
+        addProject,
+        getProject,
+        updateProject,
+        deleteProject,
+        addSprint,
+        getSprint,
+        updateSprint,
+        deleteSprint,
+        getSprintsByProject,
+        addTask,
+        getTask,
+        updateTask,
+        deleteTask,
+        getTasksBySprint,
+        getBacklogTasks,
+        getBurndownData,
+        fetchCollaborativeProjects,
+        refreshProjectData
+      }}
+    >
+      {children}
+    </ProjectContext.Provider>
+  );
+};

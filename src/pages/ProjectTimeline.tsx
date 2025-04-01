@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
@@ -11,18 +10,8 @@ const ProjectTimeline: React.FC = () => {
   const { getProject, getSprintsByProject, getTasksBySprint } = useProjects();
   const [sprints, setSprints] = useState<any[]>([]);
   const [tasks, setTasks] = useState<Record<string, any[]>>({});
-  const [lastRefreshTime, setLastRefreshTime] = useState<number>(Date.now());
   
   const project = getProject(projectId || "");
-  
-  // Refresh data every 15 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setLastRefreshTime(Date.now());
-    }, 15000);
-    
-    return () => clearInterval(interval);
-  }, []);
   
   useEffect(() => {
     const fetchSprints = async () => {
@@ -50,7 +39,7 @@ const ProjectTimeline: React.FC = () => {
     };
     
     fetchSprints();
-  }, [projectId, project, getSprintsByProject, lastRefreshTime]);
+  }, [projectId, project, getSprintsByProject]);
   
   useEffect(() => {
     const fetchTasks = async () => {
