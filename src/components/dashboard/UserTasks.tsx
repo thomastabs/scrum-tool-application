@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Clock, ArrowUpRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,13 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Task } from "@/types";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
 
 // Define an extended Task interface that includes projectTitle
 interface ExtendedTask extends Task {
@@ -141,67 +135,62 @@ const UserTasks: React.FC = () => {
           My Tasks
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-4"> {/* Added pt-4 for more vertical space */}
         {isLoading ? (
           <div className="space-y-3">
             <TasksSkeleton />
           </div>
         ) : tasks.length > 0 ? (
-          <div className="relative">
-            <Carousel
-              opts={{
-                align: "start",
-                loop: tasks.length > 3,
-              }}
-              enableMouseWheel={true}
-              className="w-full"
-            >
-              <CarouselContent className="-ml-2">
-                {tasks.map((task) => (
-                  <CarouselItem key={task.id} className="pl-2 basis-full md:basis-1/3">
-                    <div 
-                      onClick={() => navigateToTask(task.projectId, task.sprintId)}
-                      className="border border-scrum-border rounded-md p-4 cursor-pointer hover:bg-scrum-background/50 transition-colors"
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-medium text-sm line-clamp-1">{task.title}</h4>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigateToTask(task.projectId, task.sprintId);
-                          }}
-                          className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 ml-2"
-                        >
-                          <ArrowUpRight className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                      
-                      <div className="text-xs text-scrum-text-secondary mb-2">{task.projectTitle}</div>
-                      
-                      <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                        {getStatusBadge(task.status)}
-                        
-                        {task.priority && (
-                          <Badge className={getPriorityColor(task.priority)}>
-                            {task.priority}
-                          </Badge>
-                        )}
-                        
-                        {task.storyPoints && (
-                          <Badge variant="outline" className="ml-auto">
-                            {task.storyPoints} {task.storyPoints === 1 ? 'point' : 'points'}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <div className="flex justify-end gap-1 mt-2">
-                <CarouselPrevious className="relative inset-auto h-7 w-7 -left-0" />
-                <CarouselNext className="relative inset-auto h-7 w-7 -right-0" />
+          <div className="max-h-[320px] overflow-y-auto pr-2 space-y-3">
+            {tasks.slice(0, Math.min(tasks.length, 3)).map((task) => (
+              <div 
+                key={task.id}
+                onClick={() => navigateToTask(task.projectId, task.sprintId)}
+                className="border border-scrum-border rounded-md p-4 cursor-pointer hover:bg-scrum-background/50 transition-colors"
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <h4 className="font-medium text-sm line-clamp-1">{task.title}</h4>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigateToTask(task.projectId, task.sprintId);
+                    }}
+                    className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 ml-2"
+                  >
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                
+                <div className="text-xs text-scrum-text-secondary mb-2">{task.projectTitle}</div>
+                
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                  {getStatusBadge(task.status)}
+                  
+                  {task.priority && (
+                    <Badge className={getPriorityColor(task.priority)}>
+                      {task.priority}
+                    </Badge>
+                  )}
+                  
+                  {task.storyPoints && (
+                    <Badge variant="outline" className="ml-auto">
+                      {task.storyPoints} {task.storyPoints === 1 ? 'point' : 'points'}
+                    </Badge>
+                  )}
+                </div>
               </div>
-            </Carousel>
+            ))}
+            
+            {tasks.length > 3 && (
+              <div className="text-center py-2 text-sm text-scrum-text-secondary">
+                <button 
+                  onClick={() => navigate('/projects')}
+                  className="hover:underline hover:text-primary transition-colors"
+                >
+                  View all tasks ({tasks.length})
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-8 text-center">
