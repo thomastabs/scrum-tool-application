@@ -86,6 +86,7 @@ const ProductBacklog: React.FC = () => {
     }
   };
   
+  // Initial data fetching
   useEffect(() => {
     if (!projectId || !user) {
       setIsLoading(false);
@@ -129,15 +130,19 @@ const ProductBacklog: React.FC = () => {
     };
     
     fetchBacklogItems();
-  }, [projectId, user]);
+  }, [projectId, user]); // Only re-run when projectId or user changes
   
   // Update available sprints when all sprints change
   useEffect(() => {
+    // Only run this effect if allSprints has actually changed and contains data
     if (allSprints && allSprints.length > 0) {
       const nonCompletedSprints = allSprints.filter(sprint => sprint.status !== "completed");
-      setAvailableSprints(nonCompletedSprints);
+      // To prevent infinite loops, only update state if the data is different
+      if (JSON.stringify(nonCompletedSprints) !== JSON.stringify(availableSprints)) {
+        setAvailableSprints(nonCompletedSprints);
+      }
     }
-  }, [allSprints]);
+  }, [allSprints, availableSprints]); // Include availableSprints in dependencies to check for differences
   
   const handleRefresh = async () => {
     if (!projectId) return;
