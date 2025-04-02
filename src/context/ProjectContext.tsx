@@ -940,5 +940,3 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       toast.error("Failed to load collaborative projects. Please try refreshing the page.");
     }
   };
-
-  // Add the
