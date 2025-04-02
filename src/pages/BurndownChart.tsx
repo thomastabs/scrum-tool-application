@@ -153,6 +153,22 @@ const BurndownChart: React.FC = () => {
       return [];
     }
     
+    // Get all tasks for this project
+    const projectTasks: Task[] = [];
+    for (const sprint of projectSprints) {
+      const sprintTasks = getTasksBySprint(sprint.id);
+      projectTasks.push(...sprintTasks);
+    }
+    
+    // Filter tasks that have story points
+    const tasksWithPoints = projectTasks.filter(task => 
+      task.storyPoints !== undefined && task.storyPoints > 0
+    );
+    
+    if (tasksWithPoints.length === 0) {
+      return [];
+    }
+    
     let earliestStartDate: Date | null = null;
     let latestEndDate: Date | null = null;
     
@@ -176,14 +192,31 @@ const BurndownChart: React.FC = () => {
     const daysInProject = differenceInDays(latestEndDate, earliestStartDate) + 1;
     const timeframeDays = Math.max(daysInProject, 7);
     
-    const totalStoryPoints = calculateTotalStoryPoints(projectSprints);
+    // Calculate total story points across all tasks
+    const totalStoryPoints = tasksWithPoints.reduce((sum, task) => 
+      sum + (task.storyPoints || 0), 0
+    );
     
     if (totalStoryPoints === 0) {
       return [];
     }
     
-    const completedSprintsByDate = groupCompletedSprintsByEndDate(projectSprints);
+    // Group completed tasks by completion date
+    const completedTasksByDate = new Map<string, Task[]>();
+    tasksWithPoints.forEach(task => {
+      if (task.status === 'done' && task.completionDate) {
+        const dateKey = task.completionDate.split('T')[0];
+        if (!completedTasksByDate.has(dateKey)) {
+          completedTasksByDate.set(dateKey, []);
+        }
+        const tasks = completedTasksByDate.get(dateKey);
+        if (tasks) {
+          tasks.push(task);
+        }
+      }
+    });
     
+    // Create the ideal burndown line based on even distribution of work
     let remainingPoints = totalStoryPoints;
     const pointsPerDay = totalStoryPoints / timeframeDays;
     
@@ -192,31 +225,37 @@ const BurndownChart: React.FC = () => {
       const dateStr = date.toISOString().split('T')[0];
       const formattedDate = format(date, "MMM dd");
       
+      // Calculate ideal burndown (theoretical perfect progress)
       const idealRemaining = Math.max(0, totalStoryPoints - (i * pointsPerDay));
       
+      // Calculate actual burndown based on task completion dates
       let actualPoints: number | null = null;
       
       if (isBefore(date, today) || isToday(date)) {
-        if (completedSprintsByDate.has(dateStr)) {
-          const sprintsCompletedOnDate = completedSprintsByDate.get(dateStr) || [];
+        // Start with all points and subtract completed tasks up to this date
+        let completedPoints = 0;
+        
+        // Check all past dates up to and including current date
+        for (let j = 0; j <= i; j++) {
+          const checkDate = addDays(earliestStartDate, j);
+          const checkDateStr = checkDate.toISOString().split('T')[0];
           
-          for (const sprint of sprintsCompletedOnDate) {
-            const sprintTasks = getTasksBySprint(sprint.id);
-            const sprintPoints = sprintTasks.reduce((sum, task) => {
-              return sum + (task.storyPoints || 0);
-            }, 0);
+          if (completedTasksByDate.has(checkDateStr)) {
+            const tasksCompletedOnDate = completedTasksByDate.get(checkDateStr) || [];
             
-            remainingPoints = Math.max(0, remainingPoints - sprintPoints);
+            for (const task of tasksCompletedOnDate) {
+              completedPoints += (task.storyPoints || 0);
+            }
           }
         }
         
-        actualPoints = Math.round(remainingPoints);
+        actualPoints = Math.max(0, totalStoryPoints - completedPoints);
       }
       
       data.push({
         date: dateStr,
         ideal: Math.round(idealRemaining),
-        actual: actualPoints,
+        actual: actualPoints !== null ? Math.round(actualPoints) : null,
         formattedDate
       });
     }
@@ -430,7 +469,7 @@ const BurndownChart: React.FC = () => {
             <strong>Ideal Burndown</strong>: Shows the theoretical perfect progress where work is completed at a constant rate.
           </li>
           <li>
-            <strong>Actual Burndown</strong>: Shows the actual remaining work based on completed sprints.
+            <strong>Actual Burndown</strong>: Shows the actual remaining work based on completed tasks.
           </li>
           <li>
             When the Actual line is <strong>above</strong> the Ideal line, the project is <strong>behind schedule</strong>.
@@ -442,7 +481,7 @@ const BurndownChart: React.FC = () => {
             The <strong style={{ color: "hsl(var(--scrum-chart-reference))" }}>TODAY</strong> line marks the current date on the timeline.
           </li>
           <li>
-            Progress is calculated based on the <strong>end date of completed sprints</strong>, showing the total story points completed.
+            Progress is calculated based on the <strong>completion date of tasks</strong> in the DONE column of their respective SprintBoard.
           </li>
         </ul>
       </div>

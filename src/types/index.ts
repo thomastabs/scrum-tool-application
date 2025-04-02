@@ -40,7 +40,7 @@ export interface Task {
   createdAt: string;
   updatedAt: string;
   projectId?: string;
-  completionDate?: string; // New field to track when a task was completed
+  completionDate?: string; // This field tracks when a task was completed
   // Database field name versions
   story_points?: number;
   assign_to?: string;
