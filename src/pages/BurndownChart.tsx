@@ -130,9 +130,12 @@ const BurndownChart: React.FC = () => {
       const burndownData = await generateBurndownData();
       setChartData(burndownData);
       
-      const saved = await upsertBurndownData(projectId, user.id, burndownData);
-      if (!saved) {
-        console.warn("Failed to save burndown data to database");
+      // Only save if we have data to save
+      if (burndownData.length > 0) {
+        const saved = await upsertBurndownData(projectId, user.id, burndownData);
+        if (!saved) {
+          console.warn("Failed to save burndown data to database");
+        }
       }
       
       return burndownData;
@@ -201,7 +204,7 @@ const BurndownChart: React.FC = () => {
       return [];
     }
     
-    // Group completed tasks by completion date
+    // Group completed tasks by completion date - use a Map for data consistency
     const completedTasksByDate = new Map<string, Task[]>();
     tasksWithPoints.forEach(task => {
       if (task.status === 'done' && task.completionDate) {
@@ -215,6 +218,9 @@ const BurndownChart: React.FC = () => {
         }
       }
     });
+    
+    // Ensure we don't have duplicate dates in the final array
+    const uniqueData = new Map<string, BurndownDataPoint>();
     
     // Create the ideal burndown line based on even distribution of work
     let remainingPoints = totalStoryPoints;
@@ -252,7 +258,7 @@ const BurndownChart: React.FC = () => {
         actualPoints = Math.max(0, totalStoryPoints - completedPoints);
       }
       
-      data.push({
+      uniqueData.set(dateStr, {
         date: dateStr,
         ideal: Math.round(idealRemaining),
         actual: actualPoints !== null ? Math.round(actualPoints) : null,
@@ -260,7 +266,7 @@ const BurndownChart: React.FC = () => {
       });
     }
     
-    return data;
+    return Array.from(uniqueData.values());
   };
   
   const calculateTotalStoryPoints = (sprints: Sprint[]): number => {

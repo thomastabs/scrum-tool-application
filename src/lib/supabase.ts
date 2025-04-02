@@ -381,21 +381,35 @@ export const fetchBurndownData = async (projectId: string, userId: string): Prom
   }
 };
 
-// Improved helper to upsert burndown data with better handling
+// Improved helper to upsert burndown data with better duplicate handling
 export const upsertBurndownData = async (
   projectId: string, 
   userId: string,
   burndownData: BurndownDataType[]
 ): Promise<boolean> => {
   try {
-    // Process all data in a single operation using upsert
-    const dbData = burndownData.map(item => ({
-      project_id: projectId,
-      user_id: userId,
-      date: item.date,
-      ideal_points: item.ideal || 0,
-      actual_points: item.actual !== null && item.actual !== undefined ? item.actual : 0
-    }));
+    // Deduplicate data by date to prevent the "affect row a second time" error
+    const uniqueData = new Map();
+    
+    burndownData.forEach(item => {
+      // Use date as the unique key
+      uniqueData.set(item.date, {
+        project_id: projectId,
+        user_id: userId,
+        date: item.date,
+        ideal_points: item.ideal || 0,
+        actual_points: item.actual !== null && item.actual !== undefined ? item.actual : 0
+      });
+    });
+    
+    // Convert Map values back to array
+    const dbData = Array.from(uniqueData.values());
+    
+    if (dbData.length === 0) {
+      return true; // Nothing to update
+    }
+    
+    console.log('Upserting burndown data with deduplicated entries:', dbData.length);
     
     const { error } = await supabase
       .from('burndown_data')
