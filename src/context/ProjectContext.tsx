@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { Project, Sprint, Task, BurndownData } from "@/types";
 import { useAuth } from "./AuthContext";
@@ -939,3 +940,38 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.error('Error fetching collaborative projects:', error);
       markFetchError('collaborations');
       toast.error("Failed to load collaborative projects. Please try refreshing the page.");
+    }
+  };
+
+  // Add the missing context value and return statement
+  const contextValue: ProjectContextType = {
+    projects,
+    sprints,
+    tasks,
+    burndownData,
+    addProject,
+    getProject,
+    updateProject,
+    deleteProject,
+    addSprint,
+    getSprint,
+    updateSprint,
+    deleteSprint,
+    getSprintsByProject,
+    addTask,
+    getTask,
+    updateTask,
+    deleteTask,
+    getTasksBySprint,
+    getBacklogTasks,
+    getBurndownData,
+    fetchCollaborativeProjects,
+    refreshProjectData
+  };
+
+  return (
+    <ProjectContext.Provider value={contextValue}>
+      {children}
+    </ProjectContext.Provider>
+  );
+};
