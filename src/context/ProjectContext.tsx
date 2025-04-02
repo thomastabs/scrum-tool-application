@@ -230,7 +230,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           priority: task.priority as 'low' | 'medium' | 'high',
           createdAt: task.created_at,
           updatedAt: task.created_at,
-          projectId: task.project_id
+          projectId: task.project_id,
+          completionDate: task.completion_date
         }));
 
         setTasks(prev => {
@@ -278,7 +279,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           priority: task.priority as 'low' | 'medium' | 'high',
           createdAt: task.created_at,
           updatedAt: task.updated_at,
-          projectId: task.project_id
+          projectId: task.project_id,
+          completionDate: task.completion_date
         }));
 
         setTasks(prev => {
@@ -365,6 +367,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         updatedAt: data.updated_at,
         ownerId: data.owner_id,
         ownerName: data.owner?.username || '',
+        ownerEmail: data.owner?.email || '',
         isCollaboration: false
       };
 
@@ -684,7 +687,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         priority: data.priority as 'low' | 'medium' | 'high',
         createdAt: data.created_at,
         updatedAt: data.created_at,
-        projectId: data.project_id
+        projectId: data.project_id,
+        completionDate: data.completion_date
       };
 
       setTasks(prev => [...prev, newTask]);
@@ -693,14 +697,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         await fetchBacklogTasks(projectId, true);
       } else if (task.sprintId) {
         await fetchTasksBySprint(task.sprintId, true);
-      }
-      
-      if (!isBacklogTask && projectId && task.storyPoints) {
-        updateBurndownData(
-          projectId,
-          task.storyPoints,
-          "add"
-        );
       }
       
       return newTask;
@@ -755,16 +751,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         updatedTask.completionDate = existingTask.completionDate;
       }
       
-      if (task.status === 'done' && existingTask.status !== 'done' && !updatedTask.completionDate) {
-        const today = new Date().toISOString().split('T')[0];
-        updatedTask.completionDate = today;
-        
-        await supabase
-          .from('tasks')
-          .update({ completion_date: today })
-          .eq('id', id);
-      }
-
       setTasks(prev => prev.map(t => t.id === id ? updatedTask : t));
       
       const movedToBacklog = task.status === 'backlog' && existingTask.status !== 'backlog';
@@ -784,21 +770,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           }
           
           await fetchBacklogTasks(existingTask.projectId, true);
-        }
-      }
-      
-      if (
-        existingTask.status !== "done" && 
-        updatedTask.status === "done" &&
-        existingTask.storyPoints
-      ) {
-        const sprint = getSprint(existingTask.sprintId);
-        if (sprint) {
-          updateBurndownData(
-            sprint.projectId,
-            existingTask.storyPoints,
-            "complete"
-          );
         }
       }
       
@@ -831,15 +802,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       } else if (taskToDelete.projectId) {
         await fetchBacklogTasks(taskToDelete.projectId, true);
       }
-      
-      const sprint = getSprint(taskToDelete.sprintId);
-      if (sprint && taskToDelete.storyPoints) {
-        updateBurndownData(
-          sprint.projectId,
-          taskToDelete.storyPoints,
-          taskToDelete.status === "done" ? "complete" : "add"
-        );
-      }
     } catch (error) {
       console.error('Error deleting task:', error);
       throw error;
@@ -864,6 +826,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         date: date.toISOString().split("T")[0],
         ideal: 0,
         actual: 0,
+        formattedDate: ""
       });
     }
     
@@ -976,37 +939,3 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.error('Error fetching collaborative projects:', error);
       markFetchError('collaborations');
       toast.error("Failed to load collaborative projects. Please try refreshing the page.");
-    }
-  };
-
-  return (
-    <ProjectContext.Provider
-      value={{
-        projects,
-        sprints,
-        tasks,
-        burndownData,
-        addProject,
-        getProject,
-        updateProject,
-        deleteProject,
-        addSprint,
-        getSprint,
-        updateSprint,
-        deleteSprint,
-        getSprintsByProject,
-        addTask,
-        getTask,
-        updateTask,
-        deleteTask,
-        getTasksBySprint,
-        getBacklogTasks,
-        getBurndownData,
-        fetchCollaborativeProjects,
-        refreshProjectData,
-      }}
-    >
-      {children}
-    </ProjectContext.Provider>
-  );
-};
