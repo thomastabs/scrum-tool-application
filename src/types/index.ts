@@ -51,7 +51,6 @@ export interface BurndownData {
   date: string;
   ideal: number;
   actual: number;
-  formattedDate?: string; // Add the missing property with optional type
 }
 
 export type ProjectRole = 'product_owner' | 'team_member' | 'scrum_master';

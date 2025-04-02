@@ -416,7 +416,7 @@ export const upsertBurndownData = async (
   }
 };
 
-// Update the function responsible for task completion date handling
+// Helper function to update a task with completion date - IMPROVED PERSISTENCE
 export const updateTaskWithCompletionDate = async (taskId: string, data: {
   title?: string;
   description?: string;
@@ -446,11 +446,10 @@ export const updateTaskWithCompletionDate = async (taskId: string, data: {
       
       let updateData = { ...data };
       
-      // Enhanced completion date logic:
+      // Handle completion date logic:
       // 1. If explicitly provided in update (even if null), use the new value
       // 2. If changing to "done" status and no completion date exists, set to today
-      // 3. If moving from "done" to another status and completion_date not specified, keep completion date for burndown tracking
-      // 4. If task already has a completion date, preserve it
+      // 3. If task already has a completion date, preserve it
       if ('completion_date' in data) {
         // Case 1: Use explicitly provided completion date (even if null)
         console.log(`Setting completion date to provided value: ${data.completion_date}`);
@@ -461,7 +460,7 @@ export const updateTaskWithCompletionDate = async (taskId: string, data: {
         console.log(`Setting completion date to today: ${todayDate}`);
         updateData.completion_date = todayDate;
       } else if (existingTask.completion_date && !('completion_date' in data)) {
-        // Case 3 & 4: Preserve existing completion date if it exists and not explicitly trying to change it
+        // Case 3: Preserve existing completion date if it exists and not explicitly trying to change it
         console.log(`Preserving existing completion date: ${existingTask.completion_date}`);
         updateData.completion_date = existingTask.completion_date;
       }

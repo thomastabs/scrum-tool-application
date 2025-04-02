@@ -211,7 +211,6 @@ const SprintBoard: React.FC = () => {
     fetchSprintData();
   }, [sprintId, user]);
 
-  // Modify the handleDragEnd function to ensure completion dates are set when moving to 'done'
   const handleDragEnd = async (result: any) => {
     const { destination, source, draggableId } = result;
     
@@ -262,52 +261,28 @@ const SprintBoard: React.FC = () => {
       });
       
       try {
-        // Check if moving to 'done' column, set completion date to today if so
-        const updateData: any = { status: destination.droppableId };
-        
-        if (destination.droppableId === 'done' && source.droppableId !== 'done') {
-          const today = new Date().toISOString().split('T')[0];
-          updateData.completion_date = today;
-          console.log(`Task ${draggableId} marked as done, setting completion date to today:`, today);
-        }
-        
         const { error } = await supabase
           .from('tasks')
-          .update(updateData)
+          .update({ status: destination.droppableId })
           .eq('id', draggableId);
           
         if (error) throw error;
         
-        // Update the task in tasks array and taskMap with status and completion date if applicable
+        // Update the task in tasks array and taskMap
         setTasks(prevTasks => 
           prevTasks.map(task => 
-            task.id === draggableId ? { 
-              ...task, 
-              status: destination.droppableId,
-              ...(destination.droppableId === 'done' && source.droppableId !== 'done' 
-                ? { completionDate: new Date().toISOString().split('T')[0] } 
-                : {})
-            } : task
+            task.id === draggableId ? { ...task, status: destination.droppableId } : task
           )
         );
         
         setTaskMap(prevMap => ({
           ...prevMap,
-          [draggableId]: { 
-            ...prevMap[draggableId], 
-            status: destination.droppableId,
-            ...(destination.droppableId === 'done' && source.droppableId !== 'done'
-              ? { completion_date: new Date().toISOString().split('T')[0] } 
-              : {})
-          }
+          [draggableId]: { ...prevMap[draggableId], status: destination.droppableId }
         }));
         
         try {
           await updateTask(draggableId, {
-            status: destination.droppableId,
-            ...(destination.droppableId === 'done' && source.droppableId !== 'done'
-              ? { completionDate: new Date().toISOString().split('T')[0] } 
-              : {})
+            status: destination.droppableId
           });
           
           // Refresh project data in context to keep everything in sync

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
@@ -183,15 +182,7 @@ const BurndownChart: React.FC = () => {
       return [];
     }
     
-    // Get all project tasks
-    const allProjectTasks: Task[] = [];
-    for (const sprint of projectSprints) {
-      const sprintTasks = getTasksBySprint(sprint.id);
-      allProjectTasks.push(...sprintTasks);
-    }
-    
-    // Group completed tasks by their completion date
-    const completedTasksByDate = groupCompletedTasksByDate(allProjectTasks);
+    const completedSprintsByDate = groupCompletedSprintsByEndDate(projectSprints);
     
     let remainingPoints = totalStoryPoints;
     const pointsPerDay = totalStoryPoints / timeframeDays;
@@ -206,15 +197,17 @@ const BurndownChart: React.FC = () => {
       let actualPoints: number | null = null;
       
       if (isBefore(date, today) || isToday(date)) {
-        if (completedTasksByDate.has(dateStr)) {
-          const tasksCompletedOnDate = completedTasksByDate.get(dateStr) || [];
+        if (completedSprintsByDate.has(dateStr)) {
+          const sprintsCompletedOnDate = completedSprintsByDate.get(dateStr) || [];
           
-          // Sum up story points from tasks completed on this date
-          const completedPoints = tasksCompletedOnDate.reduce((sum, task) => {
-            return sum + (task.storyPoints || 0);
-          }, 0);
-          
-          remainingPoints = Math.max(0, remainingPoints - completedPoints);
+          for (const sprint of sprintsCompletedOnDate) {
+            const sprintTasks = getTasksBySprint(sprint.id);
+            const sprintPoints = sprintTasks.reduce((sum, task) => {
+              return sum + (task.storyPoints || 0);
+            }, 0);
+            
+            remainingPoints = Math.max(0, remainingPoints - sprintPoints);
+          }
         }
         
         actualPoints = Math.round(remainingPoints);
@@ -244,26 +237,25 @@ const BurndownChart: React.FC = () => {
     return totalPoints;
   };
   
-  const groupCompletedTasksByDate = (tasks: Task[]): Map<string, Task[]> => {
-    const tasksByCompletionDate = new Map<string, Task[]>();
+  const groupCompletedSprintsByEndDate = (sprints: Sprint[]): Map<string, Sprint[]> => {
+    const sprintsByEndDate = new Map<string, Sprint[]>();
     
-    for (const task of tasks) {
-      // Only consider tasks in 'done' status that have a completion date
-      if (task.status === 'done' && task.completionDate) {
-        const completionDateStr = task.completionDate.split('T')[0];
+    for (const sprint of sprints) {
+      if (sprint.status === 'completed') {
+        const endDateStr = sprint.endDate.split('T')[0];
         
-        if (!tasksByCompletionDate.has(completionDateStr)) {
-          tasksByCompletionDate.set(completionDateStr, []);
+        if (!sprintsByEndDate.has(endDateStr)) {
+          sprintsByEndDate.set(endDateStr, []);
         }
         
-        const tasks = tasksByCompletionDate.get(completionDateStr);
-        if (tasks) {
-          tasks.push(task);
+        const sprints = sprintsByEndDate.get(endDateStr);
+        if (sprints) {
+          sprints.push(sprint);
         }
       }
     }
     
-    return tasksByCompletionDate;
+    return sprintsByEndDate;
   };
   
   if (isLoading) {
@@ -438,7 +430,7 @@ const BurndownChart: React.FC = () => {
             <strong>Ideal Burndown</strong>: Shows the theoretical perfect progress where work is completed at a constant rate.
           </li>
           <li>
-            <strong>Actual Burndown</strong>: Shows the actual remaining work based on the completion date of tasks in the DONE column.
+            <strong>Actual Burndown</strong>: Shows the actual remaining work based on completed sprints.
           </li>
           <li>
             When the Actual line is <strong>above</strong> the Ideal line, the project is <strong>behind schedule</strong>.
@@ -450,7 +442,7 @@ const BurndownChart: React.FC = () => {
             The <strong style={{ color: "hsl(var(--scrum-chart-reference))" }}>TODAY</strong> line marks the current date on the timeline.
           </li>
           <li>
-            Progress is calculated based on the <strong>completion date of each task</strong> marked as DONE, showing the total story points completed.
+            Progress is calculated based on the <strong>end date of completed sprints</strong>, showing the total story points completed.
           </li>
         </ul>
       </div>
