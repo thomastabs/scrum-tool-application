@@ -20,7 +20,7 @@ interface ProjectContextType {
   getSprintsByProject: (projectId: string) => Sprint[];
   addTask: (task: Omit<Task, "id" | "createdAt" | "updatedAt">) => Promise<Task>;
   getTask: (id: string) => Task | undefined;
-  updateTask: (id: string, task: Partial<Omit<Task, "id\">>) => Promise<Task>;
+  updateTask: (id: string, task: Partial<Omit<Task, "id">>) => Promise<Task>;
   deleteTask: (id: string) => Promise<void>;
   getTasksBySprint: (sprintId: string) => Task[];
   getBacklogTasks: (projectId: string) => Task[];
