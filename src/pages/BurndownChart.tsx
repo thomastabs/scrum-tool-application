@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
@@ -41,7 +40,6 @@ const BurndownChart: React.FC = () => {
   const project = getProject(projectId || "");
   const projectSprints = projectId ? getSprintsByProject(projectId) : [];
   
-  // Load data only if we have sprints
   useEffect(() => {
     if (!projectId || !user) return;
     
@@ -50,7 +48,6 @@ const BurndownChart: React.FC = () => {
       dataFetchedRef.current = false;
       
       try {
-        // Check if there are any sprints before loading data
         const availableSprints = getSprintsByProject(projectId);
         
         if (availableSprints.length === 0) {
@@ -72,13 +69,11 @@ const BurndownChart: React.FC = () => {
         }
       } catch (error) {
         console.error("Error loading burndown data:", error);
-        // Only try to generate data if we have sprints
         const availableSprints = getSprintsByProject(projectId);
         if (availableSprints.length > 0) {
           await generateAndSaveBurndownData();
         }
       } finally {
-        // Use a timeout to prevent the loading indicator from flickering
         if (loadingTimeoutRef.current) window.clearTimeout(loadingTimeoutRef.current);
         loadingTimeoutRef.current = window.setTimeout(() => {
           setIsLoading(false);
@@ -99,7 +94,6 @@ const BurndownChart: React.FC = () => {
   useEffect(() => {
     if (!projectId || !user || isLoading || !dataFetchedRef.current) return;
     
-    // Don't update if there are no sprints
     const projectSprints = getSprintsByProject(projectId);
     if (projectSprints.length === 0) return;
     
@@ -155,7 +149,6 @@ const BurndownChart: React.FC = () => {
     
     const projectSprints = getSprintsByProject(projectId || "");
     
-    // Return empty data if no sprints exist
     if (projectSprints.length === 0) {
       return [];
     }
@@ -183,14 +176,12 @@ const BurndownChart: React.FC = () => {
     const daysInProject = differenceInDays(latestEndDate, earliestStartDate) + 1;
     const timeframeDays = Math.max(daysInProject, 7);
     
-    // Calculate total story points across all sprints in the project
     const totalStoryPoints = calculateTotalStoryPoints(projectSprints);
     
     if (totalStoryPoints === 0) {
       return [];
     }
     
-    // Group completed sprints by end date
     const completedSprintsByDate = groupCompletedSprintsByEndDate(projectSprints);
     
     let remainingPoints = totalStoryPoints;
@@ -206,12 +197,10 @@ const BurndownChart: React.FC = () => {
       let actualPoints: number | null = null;
       
       if (isBefore(date, today) || isToday(date)) {
-        // For the actual burndown line, use sprint completion dates
         if (completedSprintsByDate.has(dateStr)) {
           const sprintsCompletedOnDate = completedSprintsByDate.get(dateStr) || [];
           
           for (const sprint of sprintsCompletedOnDate) {
-            // Reduce the remaining points by the total story points in this sprint
             const sprintTasks = getTasksBySprint(sprint.id);
             const sprintPoints = sprintTasks.reduce((sum, task) => {
               return sum + (task.storyPoints || 0);
@@ -280,7 +269,6 @@ const BurndownChart: React.FC = () => {
     );
   }
   
-  // Check if there are sprints after loading
   if (projectSprints.length === 0) {
     return (
       <div className="text-center py-12 bg-scrum-card border border-scrum-border rounded-lg">
@@ -292,7 +280,6 @@ const BurndownChart: React.FC = () => {
     );
   }
   
-  // If we have sprints but no chart data, show a message
   if (chartData.length === 0) {
     return (
       <div className="text-center py-12 bg-scrum-card border border-scrum-border rounded-lg">
@@ -304,9 +291,12 @@ const BurndownChart: React.FC = () => {
     );
   }
   
-  const todayStr = new Date().toISOString().split('T')[0];
+  const today = startOfDay(new Date());
+  const todayStr = today.toISOString().split('T')[0];
   const todayIndex = chartData.findIndex(d => d.date === todayStr);
-  const todayLabel = todayIndex >= 0 && chartData[todayIndex] ? chartData[todayIndex].formattedDate : format(new Date(), "MMM dd");
+  const todayLabel = todayIndex >= 0 && chartData[todayIndex] 
+    ? chartData[todayIndex].formattedDate 
+    : format(today, "MMM dd");
   
   const lastActualIndex = chartData.reduce((lastIdx, point, idx) => {
     return point.actual !== null ? idx : lastIdx;

@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Task } from "@/types";
 import { Button } from "@/components/ui/button";
 
-// Define an extended Task interface that includes projectTitle
+// Define an extended    Task interface that includes projectTitle
 interface ExtendedTask extends Task {
   projectTitle?: string;
 }
@@ -95,6 +95,7 @@ const UserTasks: React.FC = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'in progress':
+      case 'in-progress':
         return <Badge variant="default" className="bg-blue-500">In Progress</Badge>;
       case 'todo':
         return <Badge variant="outline">To Do</Badge>;
@@ -154,7 +155,7 @@ const UserTasks: React.FC = () => {
           My Tasks
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-6">
+      <CardContent className="pt-8">
         {isLoading ? (
           <div className="space-y-3">
             <TasksSkeleton />
