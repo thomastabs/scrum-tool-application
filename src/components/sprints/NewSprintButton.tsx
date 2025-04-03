@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useProjects } from "@/context/ProjectContext";
 import { useAuth } from "@/context/AuthContext";
@@ -17,7 +16,7 @@ const NewSprintButton: React.FC<NewSprintButtonProps> = ({ projectId }) => {
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const { addSprint } = useProjects();
+  const { addSprint, refreshProjectData } = useProjects();
   const { user, isOwner, userRole } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<{
@@ -132,7 +131,6 @@ const NewSprintButton: React.FC<NewSprintButtonProps> = ({ projectId }) => {
         status: "in-progress"
       });
       
-      // Direct Supabase insert with clearer error handling
       const { data, error } = await supabase
         .from('sprints')
         .insert({
@@ -142,7 +140,7 @@ const NewSprintButton: React.FC<NewSprintButtonProps> = ({ projectId }) => {
           user_id: user.id,
           start_date: startDate,
           end_date: endDate,
-          status: "in-progress" // Always set to in-progress
+          status: "in-progress"
         })
         .select();
       
@@ -159,8 +157,9 @@ const NewSprintButton: React.FC<NewSprintButtonProps> = ({ projectId }) => {
       setStartDate("");
       setEndDate("");
       
-      // Refresh the UI
-      window.location.reload();
+      // Instead of window.location.reload(), use the context's refresh function
+      await refreshProjectData(projectId);
+      
     } catch (error: any) {
       console.error("Sprint creation error:", error);
       toast.error(`Failed to create sprint: ${error.message || "Unknown error"}`);
