@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useProjects } from "@/context/ProjectContext";
@@ -13,10 +14,13 @@ import {
   Legend,
   ResponsiveContainer,
   ReferenceLine,
+  TooltipProps,
 } from "recharts";
 import { format, parseISO, startOfDay, addDays, isBefore, isAfter, isToday, differenceInDays } from "date-fns";
 import { toast } from "sonner";
 import { Task, Sprint } from "@/types";
+import { ChartContainer, ChartTooltipContent, ChartLegendContent } from "@/components/ui/chart";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface BurndownDataPoint {
   date: string;
@@ -130,7 +134,6 @@ const BurndownChart: React.FC = () => {
       const burndownData = await generateBurndownData();
       setChartData(burndownData);
       
-      // Only save if we have data to save
       if (burndownData.length > 0) {
         const saved = await upsertBurndownData(projectId, user.id, burndownData);
         if (!saved) {
@@ -156,14 +159,12 @@ const BurndownChart: React.FC = () => {
       return [];
     }
     
-    // Get all tasks for this project
     const projectTasks: Task[] = [];
     for (const sprint of projectSprints) {
       const sprintTasks = getTasksBySprint(sprint.id);
       projectTasks.push(...sprintTasks);
     }
     
-    // Filter tasks that have story points
     const tasksWithPoints = projectTasks.filter(task => 
       task.storyPoints !== undefined && task.storyPoints > 0
     );
@@ -195,7 +196,6 @@ const BurndownChart: React.FC = () => {
     const daysInProject = differenceInDays(latestEndDate, earliestStartDate) + 1;
     const timeframeDays = Math.max(daysInProject, 7);
     
-    // Calculate total story points across all tasks
     const totalStoryPoints = tasksWithPoints.reduce((sum, task) => 
       sum + (task.storyPoints || 0), 0
     );
@@ -204,7 +204,6 @@ const BurndownChart: React.FC = () => {
       return [];
     }
     
-    // Group completed tasks by completion date - use a Map for data consistency
     const completedTasksByDate = new Map<string, Task[]>();
     tasksWithPoints.forEach(task => {
       if (task.status === 'done' && task.completionDate) {
@@ -219,10 +218,8 @@ const BurndownChart: React.FC = () => {
       }
     });
     
-    // Ensure we don't have duplicate dates in the final array
     const uniqueData = new Map<string, BurndownDataPoint>();
     
-    // Create the ideal burndown line based on even distribution of work
     let remainingPoints = totalStoryPoints;
     const pointsPerDay = totalStoryPoints / timeframeDays;
     
@@ -231,17 +228,13 @@ const BurndownChart: React.FC = () => {
       const dateStr = date.toISOString().split('T')[0];
       const formattedDate = format(date, "MMM dd");
       
-      // Calculate ideal burndown (theoretical perfect progress)
       const idealRemaining = Math.max(0, totalStoryPoints - (i * pointsPerDay));
       
-      // Calculate actual burndown based on task completion dates
       let actualPoints: number | null = null;
       
       if (isBefore(date, today) || isToday(date)) {
-        // Start with all points and subtract completed tasks up to this date
         let completedPoints = 0;
         
-        // Check all past dates up to and including current date
         for (let j = 0; j <= i; j++) {
           const checkDate = addDays(earliestStartDate, j);
           const checkDateStr = checkDate.toISOString().split('T')[0];
@@ -305,10 +298,76 @@ const BurndownChart: React.FC = () => {
   
   if (isLoading) {
     return (
-      <div className="text-center py-12 opacity-100 transition-opacity duration-300">
-        <div className="flex flex-col items-center justify-center gap-4">
-          <div className="h-12 w-12 rounded-full border-4 border-scrum-accent border-t-transparent animate-spin"></div>
-          <p className="text-scrum-text-secondary">Loading burndown chart data...</p>
+      <div className="animate-fade-in">
+        <div className="scrum-card mb-6">
+          <h2 className="text-xl font-bold mb-2">Project Burndown Chart</h2>
+          <p className="text-scrum-text-secondary">
+            Loading chart data...
+          </p>
+        </div>
+        
+        <div className="scrum-card h-[500px]">
+          <div className="w-full h-full flex flex-col items-center justify-center p-6">
+            <div className="w-full h-full flex flex-col">
+              <div className="flex justify-between mb-4">
+                <Skeleton className="h-5 w-32" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-5 w-16" />
+                  <Skeleton className="h-5 w-16" />
+                </div>
+              </div>
+              
+              <div className="flex-1 w-full relative">
+                <div className="absolute inset-0 grid grid-cols-6 grid-rows-5 gap-y-4">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={`h-line-${i}`} className="col-span-6 border-t border-scrum-border opacity-20" />
+                  ))}
+                  
+                  {Array.from({ length: 7 }).map((_, i) => (
+                    <div 
+                      key={`v-line-${i}`} 
+                      className="row-span-5 border-l border-scrum-border opacity-20"
+                      style={{gridColumnStart: i+1}} 
+                    />
+                  ))}
+                </div>
+                
+                <div className="absolute left-0 top-0 bottom-0 w-10 flex flex-col justify-between py-2">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={`y-${i}`} className="h-4 w-8 opacity-70" />
+                  ))}
+                </div>
+                
+                <div className="absolute left-10 right-0 bottom-0 flex justify-between pb-2">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Skeleton key={`x-${i}`} className="h-4 w-12 opacity-70" />
+                  ))}
+                </div>
+                
+                <div className="absolute inset-0 pt-8 pb-8 px-12">
+                  {/* Ideal line */}
+                  <div className="h-1 w-full bg-scrum-border opacity-70 transform -rotate-12 origin-top-left mt-4 rounded-full"></div>
+                  
+                  {/* Actual line segments with subtle variations */}
+                  <div className="relative h-full">
+                    <div className="h-1 w-3/4 bg-scrum-chart-line-2 opacity-30 absolute top-1/4 transform -rotate-6 origin-left rounded-full"></div>
+                    <div className="h-1 w-1/2 bg-scrum-chart-line-2 opacity-30 absolute top-1/2 transform -rotate-3 origin-left rounded-full"></div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-center gap-8 mt-6">
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-sm bg-scrum-chart-line-1 opacity-70"></div>
+                  <Skeleton className="h-5 w-24 opacity-70" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-sm bg-scrum-chart-line-2 opacity-70"></div>
+                  <Skeleton className="h-5 w-24 opacity-70" />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -316,7 +375,7 @@ const BurndownChart: React.FC = () => {
   
   if (projectSprints.length === 0) {
     return (
-      <div className="text-center py-12 bg-scrum-card border border-scrum-border rounded-lg">
+      <div className="text-center py-12 bg-scrum-card border border-scrum-border rounded-lg animate-fade-in">
         <h2 className="text-xl font-bold mb-4">Project Burndown Chart</h2>
         <p className="text-scrum-text-secondary mb-4">
           No sprints available. Create sprints to view the burndown chart.
@@ -327,7 +386,7 @@ const BurndownChart: React.FC = () => {
   
   if (chartData.length === 0) {
     return (
-      <div className="text-center py-12 bg-scrum-card border border-scrum-border rounded-lg">
+      <div className="text-center py-12 bg-scrum-card border border-scrum-border rounded-lg animate-fade-in">
         <h2 className="text-xl font-bold mb-4">Project Burndown Chart</h2>
         <p className="text-scrum-text-secondary mb-4">
           Unable to generate burndown chart. Make sure your sprints have tasks with story points.
@@ -346,9 +405,14 @@ const BurndownChart: React.FC = () => {
   const lastActualIndex = chartData.reduce((lastIdx, point, idx) => {
     return point.actual !== null ? idx : lastIdx;
   }, -1);
+
+  const config = {
+    ideal: { color: "hsl(var(--scrum-chart-line-1))", label: "Ideal Burndown" },
+    actual: { color: "hsl(var(--scrum-chart-line-2))", label: "Actual Burndown" }
+  };
   
   return (
-    <div>
+    <div className="animate-fade-in">
       <div className="scrum-card mb-6">
         <h2 className="text-xl font-bold mb-2">Project Burndown Chart</h2>
         <p className="text-scrum-text-secondary">
@@ -356,8 +420,8 @@ const BurndownChart: React.FC = () => {
         </p>
       </div>
       
-      <div className="scrum-card h-[500px] opacity-100 transition-opacity duration-500">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="scrum-card h-[500px]">
+        <ChartContainer config={config} className="w-full h-full">
           <LineChart
             data={chartData}
             margin={{
@@ -386,36 +450,25 @@ const BurndownChart: React.FC = () => {
               axisLine={{ stroke: "hsl(var(--scrum-chart-grid))" }}
             />
             <Tooltip
-              content={({ active, payload }) => {
-                if (active && payload && payload.length) {
-                  const idealValue = payload[0]?.value !== undefined ? payload[0].value : null;
-                  const actualValue = payload.length > 1 && payload[1]?.value !== undefined ? payload[1].value : null;
-                  
-                  return (
-                    <div className="bg-scrum-card border border-scrum-border p-3 rounded">
-                      <p className="font-medium">{payload[0]?.payload?.formattedDate || ""}</p>
-                      <div className="mt-2 space-y-1">
-                        {idealValue !== null && (
-                          <p className="flex items-center text-sm">
-                            <span className="h-2 w-2 rounded-full bg-[hsl(var(--scrum-chart-line-1))] mr-2"></span>
-                            <span>Ideal: {idealValue} points</span>
-                          </p>
-                        )}
-                        {actualValue !== null && (
-                          <p className="flex items-center text-sm">
-                            <span className="h-2 w-2 rounded-full bg-[hsl(var(--scrum-chart-line-2))] mr-2"></span>
-                            <span>Actual: {actualValue} points</span>
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  );
+              content={
+                (props) => {
+                  return React.createElement(ChartTooltipContent as any, {
+                    ...props,
+                    nameKey: "dataKey",
+                    indicator: "dot"
+                  });
                 }
-                return null;
-              }}
+              }
             />
             <Legend
-              wrapperStyle={{ color: "inherit" }}
+              content={
+                (props) => {
+                  return React.createElement(ChartLegendContent as any, {
+                    ...props
+                  });
+                }
+              }
+              verticalAlign="bottom"
             />
             {todayLabel && (
               <ReferenceLine 
@@ -437,7 +490,7 @@ const BurndownChart: React.FC = () => {
               dataKey="ideal"
               stroke="hsl(var(--scrum-chart-line-1))"
               strokeWidth={2}
-              name="Ideal Burndown"
+              name="ideal"
               dot={false}
               activeDot={{ r: 8 }}
             />
@@ -446,7 +499,7 @@ const BurndownChart: React.FC = () => {
               dataKey="actual"
               stroke="hsl(var(--scrum-chart-line-2))"
               strokeWidth={2}
-              name="Actual Burndown"
+              name="actual"
               dot={(props) => {
                 const { cx, cy, payload, index } = props;
                 if (!payload || payload.actual === null || payload.actual === undefined) return null;
@@ -465,7 +518,7 @@ const BurndownChart: React.FC = () => {
               connectNulls={false}
             />
           </LineChart>
-        </ResponsiveContainer>
+        </ChartContainer>
       </div>
       
       <div className="scrum-card mt-6 p-4">
